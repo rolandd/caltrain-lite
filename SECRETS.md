@@ -6,12 +6,12 @@ This project uses secrets in two places: GitHub Actions (for CI/CD) and Cloudfla
 
 These secrets are needed for the `.github/workflows/sync-schedule.yml` workflow to fetch data from 511.org and upload it to Cloudflare KV.
 
-| Secret Name             | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| `TRANSIT_511_API_KEY`   | API Key from 511.org Open Data                    |
-| `CLOUDFLARE_API_TOKEN`  | Cloudflare API Token with Workers/KV write access|
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare Account ID                       |
-| `CLOUDFLARE_KV_NAMESPACE_ID`| The ID of the `transit-kv` namespace         |
+| Secret Name                  | Description                                       |
+| ---------------------------- | ------------------------------------------------- |
+| `TRANSIT_511_API_KEY`        | API Key from 511.org Open Data                    |
+| `CLOUDFLARE_API_TOKEN`       | Cloudflare API Token with Workers/KV write access |
+| `CLOUDFLARE_ACCOUNT_ID`      | Your Cloudflare Account ID                        |
+| `CLOUDFLARE_KV_NAMESPACE_ID` | The ID of the `transit-kv` namespace              |
 
 ### Restricted GitHub Actions Token
 
