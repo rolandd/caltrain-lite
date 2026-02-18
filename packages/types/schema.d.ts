@@ -188,41 +188,41 @@ export interface FareRules {
  */
 export interface RealtimeStatus {
   /** Feed timestamp (epoch seconds). */
-  timestamp: number;
+  t: number;
   /** Per-trip real-time updates. */
-  entities: RealtimeEntity[];
+  e: RealtimeEntity[];
   /** Active service alerts. */
-  alerts: ServiceAlert[];
+  a: ServiceAlert[];
 }
 
 export interface RealtimeEntity {
   /** Trip ID. */
-  id: string;
+  i: string;
   /** Delay in seconds. */
-  delay?: number;
+  d?: number;
   /** Current or next stop ID. */
-  stop?: string;
+  s?: string;
   /** 0 = Incoming, 1 = Stopped, 2 = In Transit. */
-  status?: number;
+  st?: number;
   /** Vehicle position. */
-  position?: VehiclePosition;
+  p?: VehiclePosition;
 }
 
 export interface VehiclePosition {
-  lat: number;
-  lon: number;
-  bearing?: number;
-  speed?: number;
+  la: number;
+  lo: number;
+  b?: number;
+  sp?: number;
 }
 
 export interface ServiceAlert {
-  header: string;
-  description: string;
-  cause?: string;
-  effect?: string;
-  stops?: string[];
-  start?: number;
-  end?: number;
+  h: string;
+  d: string;
+  c?: string;
+  e?: string;
+  s?: string[];
+  st?: number;
+  en?: number;
 }
 
 // ---------------------------------------------------------------------------

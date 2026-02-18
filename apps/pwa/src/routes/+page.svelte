@@ -126,10 +126,9 @@
 
   const getDelay = (trainNum: string): number | undefined => {
     if (!realtime || !isToday) return undefined;
-    // Realtime entities use trip_id. For Caltrain this matches train number in static schedule
-    // but we need to ensure type safety.
-    const entity = realtime.entities.find((e) => e.id === trainNum);
-    return entity?.delay;
+    // Realtime entities use trip_id (i). For Caltrain this matches train number in static schedule
+    const entity = realtime.e.find((e) => e.i === trainNum);
+    return entity?.d;
   };
 
   const formatDelay = (delaySec: number): string => {
@@ -168,11 +167,11 @@
     <header>
       <h1>🚂 Caltrain</h1>
       <!-- Service Alerts -->
-      {#if realtime && realtime.alerts.length > 0}
+      {#if realtime && realtime.a.length > 0}
         <div class="alerts" role="alert">
-          {#each realtime.alerts as alert (alert.header)}
+          {#each realtime.a as alert (alert.h)}
             <div class="alert-item">
-              <strong>{alert.header}</strong>: {alert.description}
+              <strong>{alert.h}</strong>: {alert.d}
             </div>
           {/each}
         </div>

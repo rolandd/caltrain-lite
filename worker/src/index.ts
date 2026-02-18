@@ -36,21 +36,21 @@ export default {
       const sa = parseFeed(saBuf);
 
       // 3. Merge Vehicle Positions into Trip Updates
-      const entities = tu.entities;
+      const entities = tu.e;
       for (const entity of entities) {
-        if (vp.positions.has(entity.id)) {
-          entity.position = vp.positions.get(entity.id);
+        if (vp.p.has(entity.i)) {
+          entity.p = vp.p.get(entity.i);
         }
       }
 
       // 4. Construct unified status
       // Use the latest timestamp from the feeds
-      const timestamp = Math.max(tu.timestamp, vp.timestamp, sa.timestamp);
+      const t = Math.max(tu.t, vp.t, sa.t);
 
       const status = {
-        timestamp,
-        entities,
-        alerts: sa.alerts,
+        t,
+        e: entities,
+        a: sa.a,
       };
 
       // Store in KV
@@ -58,9 +58,7 @@ export default {
         expirationTtl: 180, // 3 minutes
       });
 
-      console.log(
-        `Updated RT: ${entities.length} trips, ${sa.alerts.length} alerts, ts=${timestamp}`,
-      );
+      console.log(`Updated RT: ${entities.length} trips, ${sa.a.length} alerts, ts=${t}`);
     } catch (err) {
       console.error('Error fetching/parsing GTFS-RT:', err);
     }
