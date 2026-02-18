@@ -9,6 +9,25 @@ export interface ParsedFeed {
   alerts: ServiceAlert[];
 }
 
+/** Minimal types for protobuf-parsed GTFS-RT alert structures. */
+interface GtfsTranslation {
+  text: string;
+  language: string;
+}
+
+interface GtfsTranslatedString {
+  translation?: GtfsTranslation[];
+}
+
+interface GtfsInformedEntity {
+  stop_id?: string;
+}
+
+/** Extract English text from a GTFS-RT TranslatedString. */
+function extractTranslation(txt: GtfsTranslatedString | undefined): string {
+  return txt?.translation?.find((t) => t.language === 'en')?.text || '';
+}
+
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   const pbf = new Pbf(new Uint8Array(buffer));
   const feed = readFeedMessage(pbf);
@@ -59,17 +78,15 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     // 3. Service Alert
     if (entity.alert) {
       const a = entity.alert;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const extractText = (txt: any) =>
-        txt?.translation?.find((t: any) => t.language === 'en')?.text || '';
 
       alerts.push({
-        header: extractText(a.header_text),
-        description: extractText(a.description_text),
+        header: extractTranslation(a.header_text),
+        description: extractTranslation(a.description_text),
         cause: a.cause ? String(a.cause) : undefined,
         effect: a.effect ? String(a.effect) : undefined,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        stops: a.informed_entity?.map((e: any) => e.stop_id).filter(Boolean),
+        stops: a.informed_entity
+          ?.map((e: GtfsInformedEntity) => e.stop_id)
+          .filter(Boolean),
         start: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         end: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
