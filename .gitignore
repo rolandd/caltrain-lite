@@ -1,3 +1,4 @@
 .envrc
 API_KEY
+node_modules/
 *~

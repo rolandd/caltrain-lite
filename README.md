@@ -102,7 +102,8 @@ interface StaticSchedule {
     d: 0 | 1;           // Direction: 0 = Northbound, 1 = Southbound
     st: number[];       // Stop Times: [arr0, dep0, arr1, dep1, ...]
                         // minutes from midnight; arr === dep when dwell is 0
-    rt: string;         // Route type: "Local" | "Limited" | "Bullet"
+    rt: string;         // Route type from GTFS routes.txt route_short_name
+                        // (e.g. "Local", "Limited", "Bullet" — not hardcoded)
   }>;
   r: {                  // Service Rules
     c: Record<string, { // Calendar
