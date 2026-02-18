@@ -100,9 +100,9 @@ The Pages project was created by Terraform. Now we connect it to Git (one-time s
     *   Select your repo (`roland/Transit`).
     *   Branch: `main`.
     *   Build settings (already configured by TF, but verify):
-        *   Command: `npm run build`
-        *   Output: `build`
-        *   Root: `apps/pwa`
+        *   Command: `npm run build --prefix apps/pwa`
+        *   Output: `apps/pwa/build`
+        *   Root: `/` (Repository root)
         *   Env Vars: `NODE_VERSION: 24`
 
 ---

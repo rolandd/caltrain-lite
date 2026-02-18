@@ -45,9 +45,9 @@ resource "cloudflare_pages_project" "pwa" {
   }
 
   build_config {
-    build_command   = "npm run build"
-    destination_dir = "build"
-    root_dir        = "apps/pwa"
+    build_command   = "npm run build --prefix apps/pwa"
+    destination_dir = "apps/pwa/build"
+    root_dir        = ""
   }
 
   deployment_configs {
