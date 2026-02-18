@@ -4,7 +4,7 @@
   "description": "The system is built on an \"Offline-First, Real-Time Second\" philosophy, specifically optimized for Smartphone/Mobile use and designed for Open Source distribution.",
   "main": "index.js",
   "scripts": {
-    "test": "npm test --prefix scripts && npm test --prefix worker",
+    "test": "npm test --prefix scripts && npm test --prefix worker && npm test --prefix apps/pwa",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -14,7 +14,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.14.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.15.0",
