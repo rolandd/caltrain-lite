@@ -7,6 +7,15 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["packages/**/*", ".eslintrc.cjs"],
-  "exclude": ["node_modules", "dist", "apps", "scripts"]
+  "include": [
+    "packages/**/*",
+    "eslint.config.mjs"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "apps",
+    "scripts",
+    "worker"
+  ]
 }

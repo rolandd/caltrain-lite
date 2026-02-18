@@ -1,6 +1,6 @@
 import Pbf from 'pbf';
 import { readFeedMessage } from './gtfs-realtime.js';
-import type { RealtimeEntity, VehiclePosition, ServiceAlert } from '../../packages/types/schema';
+import type { RealtimeEntity, VehiclePosition, ServiceAlert } from '@packages/types/schema';
 
 export interface ParsedFeed {
   timestamp: number;
