@@ -221,6 +221,30 @@ trip1,26:00:00,26:00:00,stop_a1,2`;
     expect(result.t).toHaveLength(1);
     expect(Object.keys(result.s)).toHaveLength(2);
   });
+
+  it('6: strips "Caltrain Station" from station names', async () => {
+    const stopsWithCaltrainStation = `stop_id,stop_code,stop_name,stop_lat,stop_lon,zone_id,location_type,parent_station
+station_a,station_a,San Bruno Caltrain Station,37.7,-122.4,Z1,1,
+stop_a1,stop_a1,San Bruno NB,37.7,-122.4,Z1,0,station_a
+station_b,station_b,Bayshore Caltrain Station Northbound,37.5,-122.2,Z2,1,
+stop_b1,stop_b1,Bayshore NB,37.5,-122.2,Z2,0,station_b`;
+
+    const zipBuf = await buildGtfsZip({
+      'agency.txt': AGENCY,
+      'routes.txt': ROUTES,
+      'stops.txt': stopsWithCaltrainStation,
+      'trips.txt': TRIPS_MINIMAL,
+      'stop_times.txt': STOP_TIMES_MINIMAL,
+      'calendar.txt': CALENDAR_MINIMAL,
+    });
+
+    const result = await parseGtfsZip(zipBuf);
+
+    // "San Bruno Caltrain Station" → "San Bruno" (no trailing space)
+    expect(result.s['station_a'].n).toBe('San Bruno');
+    // "Bayshore Caltrain Station Northbound" → "Bayshore Northbound" (mid-string)
+    expect(result.s['station_b'].n).toBe('Bayshore Northbound');
+  });
 });
 
 // ---------------------------------------------------------------------------

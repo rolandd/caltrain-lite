@@ -109,6 +109,11 @@ function priceToCents(price: string): number {
   return Math.round(parseFloat(price) * 100);
 }
 
+/** Strip redundant "Caltrain Station" from stop names, collapsing whitespace. */
+function cleanStationName(name: string): string {
+  return name.replace(/\s*Caltrain Station\s*/g, ' ').trim();
+}
+
 /**
  * Deduplicate stop sequences into shared patterns.
  * Returns the pattern map and updates each trip's pattern ID.
@@ -194,7 +199,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
   for (const stop of stops) {
     if (stop.location_type === '1') {
       stationMap[stop.stop_id] = {
-        n: stop.stop_name,
+        n: cleanStationName(stop.stop_name),
         z: '', // Will be derived from child stops
         ids: [],
       };
