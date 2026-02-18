@@ -19,8 +19,35 @@ resource "cloudflare_workers_kv_namespace" "transit_kv" {
 resource "local_file" "wrangler_toml" {
   content = templatefile("${path.module}/../worker/wrangler.toml.tftpl", {
     kv_id = cloudflare_workers_kv_namespace.transit_kv.id
+    zone_id = var.cloudflare_zone_id
+    domain = var.domain
   })
   filename = "${path.module}/../worker/wrangler.toml"
+}
+
+resource "cloudflare_pages_project" "pwa" {
+  account_id        = var.cloudflare_account_id
+  name              = "transit-pwa"
+  production_branch = "main"
+
+  build_config {
+    build_command   = "npm run build"
+    destination_dir = "build"
+    root_dir        = "apps/pwa"
+  }
+
+  deployment_configs {
+    production {
+      environment_variables = {
+        NODE_VERSION = "24"
+      }
+    }
+    preview {
+      environment_variables = {
+        NODE_VERSION = "24"
+      }
+    }
+  }
 }
 
 output "kv_namespace_id" {

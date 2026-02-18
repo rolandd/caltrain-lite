@@ -8,5 +8,9 @@ kv_namespaces = [
   { binding = "TRANSIT_DATA", id = "${kv_id}" }
 ]
 
+routes = [
+	{ pattern = "${domain}/api/*", zone_id = "${zone_id}" }
+]
+
 [triggers]
 crons = ["*/2 * * * *"] # Run every 2 minutes
