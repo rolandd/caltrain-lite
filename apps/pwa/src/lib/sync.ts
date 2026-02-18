@@ -55,9 +55,7 @@ async function checkForUpdate(
   await cacheMeta(meta);
 
   if (meta.v !== currentVersion || meta.sv !== currentSchemaVersion) {
-    console.log(
-      `New schedule available (v=${meta.v.slice(0, 8)}, sv=${meta.sv}), downloading...`,
-    );
+    console.log(`New schedule available (v=${meta.v.slice(0, 8)}, sv=${meta.sv}), downloading...`);
     const schedule = await fetchSchedule();
     await cacheSchedule(schedule);
     console.log('Schedule updated in background.');
