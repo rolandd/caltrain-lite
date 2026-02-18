@@ -12,6 +12,19 @@ These secrets are needed for the `.github/workflows/sync-schedule.yml` workflow 
 | `CLOUDFLARE_API_TOKEN`  | Cloudflare API Token with Workers/KV write access|
 | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare Account ID                       |
 
+### Restricted GitHub Actions Token
+
+**Do not use your administrative Terraform token in GitHub Actions.** Instead, create a restricted token with only the permissions necessary for the sync workflow.
+
+#### To create the restricted token:
+1.  Go to **Cloudflare Dashboard** > **My Profile** > **API Tokens** > **Create Token**.
+2.  Use the **Create Custom Token** option.
+3.  **Permissions**:
+    *   **Account** > **Workers KV Storage** > **Edit**
+4.  **Account Resources**:
+    *   **Include** > **Specific account** > (Select your account)
+5.  Set this token as the `CLOUDFLARE_API_TOKEN` secret in GitHub.
+
 ### Setting Secrets via CLI
 
 You can populate these secrets using the GitHub CLI (`gh`):
@@ -20,8 +33,8 @@ You can populate these secrets using the GitHub CLI (`gh`):
 # 511.org API Key
 gh secret set TRANSIT_511_API_KEY < api_key.txt
 
-# Cloudflare Credentials
-gh secret set CLOUDFLARE_API_TOKEN < cloudflare_token.txt
+# Cloudflare Credentials (using the RESTRICTED token)
+gh secret set CLOUDFLARE_API_TOKEN < cloudflare_restricted_token.txt
 gh secret set CLOUDFLARE_ACCOUNT_ID < cloudflare_account_id.txt
 ```
 

@@ -53,7 +53,7 @@ cp infra/terraform.tfvars.example infra/terraform.tfvars
 
 # 2. Fill in your Cloudflare credentials
 vim infra/terraform.tfvars
-# (Add updated variables: cloudflare_api_token, cloudflare_account_id, cloudflare_zone_id, domain)
+# (Add updated variables: cloudflare_api_token, cloudflare_account_id, cloudflare_zone_id, domain, github_owner, github_repo)
 
 # 3. Apply Terraform
 cd infra
