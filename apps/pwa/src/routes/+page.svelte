@@ -118,6 +118,42 @@
     if (searched) search();
   };
 
+
+  // Returns Tailwind classes for the trip column based on route type
+  const getRouteStyle = (
+    routeType: string,
+  ): { bg: string; border: string; badge: string; label: string } => {
+    const rt = routeType.toLowerCase();
+    if (rt.includes('bullet') || rt.includes('express')) {
+      return {
+        bg: 'bg-[#2a0d0d]',
+        border: 'border-[#5a1a1a]',
+        badge: 'bg-[#ff6b6b33] text-[#ff8080]',
+        label: 'Bullet',
+      };
+    }
+    if (rt.includes('limited')) {
+      return {
+        bg: 'bg-[#0d2230]',
+        border: 'border-[#1a4a60]',
+        badge: 'bg-[#99d7dc33] text-[#99d7dc]',
+        label: 'Ltd',
+      };
+    }
+    return {
+      bg: 'bg-transit-bg-card',
+      border: 'border-transit-border',
+      badge: 'bg-[#333] text-[#aaa]',
+      label: 'Local',
+    };
+  };
+
+  // Truncate station name to ~13 chars for the fixed left panel
+  const truncateStation = (name: string, maxLen = 13): string => {
+    if (name.length <= maxLen) return name;
+    return name.slice(0, maxLen - 1) + '…';
+  };
+
   const getDelay = (trainNum: string): number | undefined => {
     if (!realtime || !isToday) return undefined;
     // Realtime entities use trip_id (i). For Caltrain this matches train number in static schedule
@@ -269,62 +305,131 @@
     </section>
 
     {#if searched}
-      <section class="results" aria-live="polite">
+      <section aria-live="polite">
         {#if results.length > 0}
-          <div class="flex justify-between mb-2 text-[0.8125rem] text-[#888]">
+          <!-- Status bar -->
+          <div class="flex justify-between mb-3 text-[0.8125rem] text-[#888]">
             <span>{results.length} trips</span>
-            {#if realtime}<span class="text-transit-blue font-semibold animate-pulse">● Live</span
-              >{/if}
+            {#if realtime && isToday}
+              <span class="text-transit-blue font-semibold animate-pulse">● Live</span>
+            {/if}
           </div>
 
-          <div class="flex flex-col gap-3">
-            {#each results as trip (trip.trainNumber)}
-              {@const delay = getDelay(trip.trainNumber)}
+          <!--
+            Route table: fixed left panel + horizontally scrollable trip columns.
+            The outer wrapper clips overflow; the inner flex row holds both panels.
+          -->
+          <div class="relative rounded-xl overflow-hidden border border-transit-border">
+            <div class="flex overflow-x-auto">
+              <!-- Fixed left panel: origin → fare → destination -->
               <div
-                class="bg-transit-bg-card rounded-xl p-4 flex justify-between items-center border-l-3 border-transparent hover:bg-[#20202a]"
+                class="sticky left-0 z-10 flex-shrink-0 w-[108px] bg-transit-bg-card border-r border-transit-border flex flex-col"
+                aria-label="Route"
               >
-                <div class="flex flex-col gap-1">
-                  <div class="dept">
-                    <span class="text-xl font-bold text-white">{trip.departure}</span>
-                  </div>
-                  <div class="flex gap-2 items-baseline text-transit-text opacity-70">
-                    <span class="text-sm">{trip.arrival}</span>
-                    <span class="text-[0.75rem] opacity-60">{trip.duration}</span>
-                  </div>
-                </div>
+                <!-- Header spacer (matches trip column header height) -->
+                <div class="h-[52px] border-b border-transit-border"></div>
 
-                <div class="text-right">
-                  <div class="flex gap-2 justify-end items-center mb-1.5">
-                    <span class="text-[0.75rem] text-[#555] font-mono">#{trip.trainNumber}</span>
-                    <span
-                      class="text-[0.6875rem] font-bold px-1.5 py-0.5 rounded uppercase {trip.routeType
-                        .toLowerCase()
-                        .includes('limited')
-                        ? 'bg-[#99d7dc33] text-[#99d7dc]'
-                        : trip.routeType.toLowerCase().includes('express')
-                          ? 'bg-[#ff6b6b33] text-transit-red'
-                          : trip.routeType.toLowerCase().includes('bullet')
-                            ? 'bg-[#ff6b6b4d] text-[#ff5b5b] border border-[#ce202f66]'
-                            : 'bg-[#333] text-[#ccc]'}"
-                    >
-                      {trip.routeType}
-                    </span>
+                <!-- Station info body -->
+                <div class="flex flex-col flex-1 items-center justify-between px-2 py-3 gap-1">
+                  <!-- Origin -->
+                  <div class="text-center">
+                    <div class="text-[0.65rem] text-[#666] uppercase tracking-wider mb-0.5">
+                      From
+                    </div>
+                    <div class="text-[0.8rem] font-semibold text-transit-text leading-tight">
+                      {truncateStation(getStationName(origin))}
+                    </div>
                   </div>
 
-                  {#if delay !== undefined}
-                    <span
-                      class="text-[0.75rem] font-semibold {Math.round(delay / 60) >= 10
-                        ? 'text-[#eb5757]'
-                        : Math.round(delay / 60) >= 5
-                          ? 'text-[#f2994a]'
-                          : 'text-[#f2c94c]'}"
-                    >
-                      {formatDelay(delay)}
-                    </span>
-                  {/if}
+                  <!-- Fare connector -->
+                  <div class="flex flex-col items-center gap-0.5 my-1">
+                    <div class="w-px h-3 bg-transit-border"></div>
+                    {#if currentFare !== null}
+                      <div
+                        class="text-[0.7rem] font-bold text-transit-blue px-1.5 py-0.5 bg-[#4e9bff15] rounded-full border border-[#4e9bff33]"
+                      >
+                        ${(currentFare / 100).toFixed(2)}
+                      </div>
+                    {/if}
+                    <div class="w-px h-3 bg-transit-border"></div>
+                  </div>
+
+                  <!-- Destination -->
+                  <div class="text-center">
+                    <div class="text-[0.65rem] text-[#666] uppercase tracking-wider mb-0.5">To</div>
+                    <div class="text-[0.8rem] font-semibold text-transit-text leading-tight">
+                      {truncateStation(getStationName(destination))}
+                    </div>
+                  </div>
                 </div>
               </div>
-            {/each}
+
+              <!-- Scrollable trip columns -->
+              <div class="flex flex-row" role="list" aria-label="Trips">
+                {#each results as trip (trip.trainNumber)}
+                  {@const delay = getDelay(trip.trainNumber)}
+                  {@const style = getRouteStyle(trip.routeType)}
+                  <div
+                    class="flex-shrink-0 w-[84px] flex flex-col border-r border-transit-border last:border-r-0 {style.bg}"
+                    role="listitem"
+                  >
+                    <!-- Column header: train number + route badge -->
+                    <div
+                      class="h-[52px] flex flex-col items-center justify-center gap-1 px-1 border-b {style.border}"
+                    >
+                      <span class="text-[0.7rem] font-mono text-[#666]">#{trip.trainNumber}</span>
+                      <span
+                        class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full uppercase {style.badge}"
+                      >
+                        {style.label}
+                      </span>
+                    </div>
+
+                    <!-- Trip body: departure / middle info / arrival -->
+                    <div class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2">
+                      <!-- Departure + optional delay -->
+                      <div class="flex flex-col items-center gap-0.5">
+                        <span class="text-[1rem] font-bold text-white tabular-nums"
+                          >{trip.departure}</span
+                        >
+                        {#if delay !== undefined}
+                          <span
+                            class="text-[0.6rem] font-semibold leading-tight text-center {Math.round(
+                              delay / 60,
+                            ) >= 10
+                              ? 'text-[#eb5757]'
+                              : Math.round(delay / 60) >= 5
+                                ? 'text-[#f2994a]'
+                                : 'text-[#f2c94c]'}"
+                          >
+                            {formatDelay(delay)}
+                          </span>
+                        {/if}
+                      </div>
+
+                      <!-- Duration + intermediate stops -->
+                      <div class="flex flex-col items-center gap-0.5 text-center">
+                        <span class="text-[0.7rem] text-[#666]">{trip.durationMinutes}m</span>
+                        <span class="text-[0.65rem] text-[#555]">
+                          {trip.intermediateStops === 0
+                            ? 'non-stop'
+                            : trip.intermediateStops === 1
+                              ? '1 stop'
+                              : `${trip.intermediateStops} stops`}
+                        </span>
+                      </div>
+
+                      <!-- Arrival -->
+                      <div class="flex flex-col items-center">
+                        <span class="text-[0.875rem] font-semibold text-[#aaa] tabular-nums"
+                          >{trip.arrival}</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </div>
           </div>
         {:else}
           <div class="text-center p-8 opacity-60">

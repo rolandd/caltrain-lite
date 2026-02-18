@@ -182,6 +182,24 @@ describe('queryTrips', () => {
     expect(t.arrival).toBe('11:00');
     expect(t.duration).toBe('1h');
   });
+
+  it('includes raw durationMinutes', () => {
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-08T12:00:00'));
+    const t = trips[0]; // train 101: dep 600, arr 660
+    expect(t.durationMinutes).toBe(60);
+  });
+
+  it('counts intermediate stops for local trip (p1: st1→st2→st3)', () => {
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-08T12:00:00'));
+    // p1 pattern: [st1, st2, st3] → originIdx=0, destIdx=2 → 1 intermediate stop
+    expect(trips[0].intermediateStops).toBe(1);
+  });
+
+  it('counts intermediate stops for express trip (p2: st1→st3, skips st2)', () => {
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-06T12:00:00')); // Saturday
+    // p2 pattern: [st1, st3] → originIdx=0, destIdx=1 → 0 intermediate stops
+    expect(trips[0].intermediateStops).toBe(0);
+  });
 });
 
 // ---- Fare Calculation ----

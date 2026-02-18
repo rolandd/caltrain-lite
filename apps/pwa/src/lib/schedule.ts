@@ -64,6 +64,8 @@ export interface TripResult {
   departure: string; // formatted "HH:MM"
   arrival: string; // formatted "HH:MM"
   duration: string; // formatted "Xh YYm" or "YYm"
+  durationMinutes: number; // raw integer duration in minutes
+  intermediateStops: number; // stations between origin and destination (exclusive)
 }
 
 /**
@@ -207,6 +209,9 @@ export function queryTrips(
     const departureMinutes = trip.st[originIdx * 2 + 1]; // departure from origin
     const arrivalMinutes = trip.st[destIdx * 2]; // arrival at destination
     const durationMinutes = arrivalMinutes - departureMinutes;
+    // Intermediate stops: stations in the pattern between origin and destination (exclusive).
+    // Express/limited patterns have fewer stops than local, so this naturally reflects skipped stations.
+    const intermediateStops = destIdx - originIdx - 1;
 
     results.push({
       trainNumber: trip.i,
@@ -216,6 +221,8 @@ export function queryTrips(
       departure: formatTime(departureMinutes),
       arrival: formatTime(arrivalMinutes),
       duration: formatDuration(durationMinutes),
+      durationMinutes,
+      intermediateStops,
     });
   }
 

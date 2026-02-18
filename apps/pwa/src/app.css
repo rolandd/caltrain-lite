@@ -12,6 +12,19 @@
   --color-transit-blue: #4e9bff;
   --color-transit-red: #ff6b6b;
   --color-transit-alert-bg: #933;
+
+  /* Route-type column tints (dark-mode) */
+  --color-route-local-bg: #1a1a22;
+  --color-route-local-border: #2a2a35;
+  --color-route-local-text: #aaa;
+
+  --color-route-limited-bg: #0d2230;
+  --color-route-limited-border: #1a4a60;
+  --color-route-limited-text: #99d7dc;
+
+  --color-route-bullet-bg: #2a0d0d;
+  --color-route-bullet-border: #5a1a1a;
+  --color-route-bullet-text: #ff8080;
 }
 
 @layer base {
