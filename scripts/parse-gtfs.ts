@@ -12,6 +12,17 @@ import type {
 } from '../packages/types/schema.d.ts';
 
 // ---------------------------------------------------------------------------
+// Constants & Types
+// ---------------------------------------------------------------------------
+
+/**
+ * Current schema version.
+ * Increment this to force all PWA clients to re-download the schedule,
+ * even if the GTFS data (version hash) hasn't changed.
+ */
+export const SCHEMA_VERSION = 1;
+
+// ---------------------------------------------------------------------------
 // CSV row types (raw GTFS)
 // ---------------------------------------------------------------------------
 
@@ -443,6 +454,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
       v: versionHash,
       e: maxEndDate,
       u: Math.floor(Date.now() / 1000),
+      sv: SCHEMA_VERSION,
     },
     p: patterns,
     t: outputTrips,

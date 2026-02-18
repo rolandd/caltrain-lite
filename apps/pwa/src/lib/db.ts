@@ -11,6 +11,8 @@ import type { StaticSchedule, ScheduleMeta } from '@packages/types/schema';
 export interface CachedSchedule {
   /** Version hash (primary key). Matches `StaticSchedule.m.v`. */
   version: string;
+  /** Schema version. Matches `StaticSchedule.m.sv`. */
+  schemaVersion: number;
   /** The full schedule bundle. */
   data: StaticSchedule;
   /** When this cache entry was written (epoch ms). */
@@ -46,7 +48,7 @@ class TransitDatabase extends Dexie {
   constructor() {
     super('transit-pwa');
 
-    this.version(1).stores({
+    this.version(2).stores({
       // Only indexed fields are listed; Dexie stores the full object.
       // '&' prefix = unique primary key (inlined key path).
       schedules: '&version',
@@ -76,6 +78,7 @@ export async function cacheSchedule(schedule: StaticSchedule): Promise<void> {
     // Store the new one
     await db.schedules.put({
       version: schedule.m.v,
+      schemaVersion: schedule.m.sv,
       data: schedule,
       cachedAt: Date.now(),
     });

@@ -20,7 +20,7 @@ export async function initSchedule(
     const cached = await getCachedSchedule();
     if (cached) {
       // Return immediately, but trigger background update
-      checkForUpdate(cached.version, onUpdate).catch((err) =>
+      checkForUpdate(cached.version, cached.schemaVersion, onUpdate).catch((err) =>
         console.warn('Background update check failed:', err),
       );
       return cached.data;
@@ -43,6 +43,7 @@ export async function initSchedule(
  */
 async function checkForUpdate(
   currentVersion: string,
+  currentSchemaVersion: number,
   onUpdate?: (schedule: StaticSchedule) => void,
 ) {
   const res = await fetch('/api/meta');
@@ -53,8 +54,10 @@ async function checkForUpdate(
   // Update metadata cache for UI/debug
   await cacheMeta(meta);
 
-  if (meta.v !== currentVersion) {
-    console.log(`New schedule available (v=${meta.v.slice(0, 8)}...), downloading...`);
+  if (meta.v !== currentVersion || meta.sv !== currentSchemaVersion) {
+    console.log(
+      `New schedule available (v=${meta.v.slice(0, 8)}, sv=${meta.sv}), downloading...`,
+    );
     const schedule = await fetchSchedule();
     await cacheSchedule(schedule);
     console.log('Schedule updated in background.');
