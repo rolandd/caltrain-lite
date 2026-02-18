@@ -4,7 +4,7 @@
   "description": "The system is built on an \"Offline-First, Real-Time Second\" philosophy, specifically optimized for Smartphone/Mobile use and designed for Open Source distribution.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm test --prefix scripts && npm test --prefix worker",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
