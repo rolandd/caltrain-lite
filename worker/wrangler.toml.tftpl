@@ -3,9 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2024-04-01"
 compatibility_flags = ["nodejs_compat"]
 
-# KV Namespace for Schedule & Realtime Data (preview/dev ID - overridden in prod)
+# KV Namespace for Schedule & Realtime Data
 kv_namespaces = [
-  { binding = "KV", id = "TRANSIT_DATA" }
+  { binding = "TRANSIT_DATA", id = "${kv_id}" }
 ]
 
 [triggers]

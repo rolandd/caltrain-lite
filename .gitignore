@@ -2,3 +2,9 @@
 API_KEY
 node_modules/
 *~
+worker/wrangler.toml
+
+.terraform/
+*.tfstate
+*.tfstate.backup
+infra/variables.tf
