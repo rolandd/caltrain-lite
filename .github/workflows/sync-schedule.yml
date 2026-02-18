@@ -35,7 +35,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.x'
-          command: kv:key put schedule:data --path=./static-schedule.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
+          command: kv key put schedule:data --path=./static-schedule.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
 
       - name: Upload Schedule Meta to KV
         uses: cloudflare/wrangler-action@v3
@@ -43,4 +43,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.x'
-          command: kv:key put schedule:meta --path=./meta.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
+          command: kv key put schedule:meta --path=./meta.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
