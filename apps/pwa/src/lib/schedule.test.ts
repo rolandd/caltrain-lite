@@ -17,6 +17,7 @@ const mockSchedule: StaticSchedule = {
     st2: { n: 'Station Bravo', z: '2', ids: ['st2'] },
     st3: { n: 'Station Charlie', z: '3', ids: ['st3'] },
   },
+  o: ['st3', 'st2', 'st1'], // Explicitly reverse order for testing
   p: {
     p1: ['st1', 'st2', 'st3'], // Local pattern: all 3 stops
     p2: ['st1', 'st3'], // Express pattern: skips st2
@@ -74,12 +75,44 @@ const mockSchedule: StaticSchedule = {
 // ---- Station List ----
 
 describe('getStationList', () => {
-  it('returns all stations sorted by name', () => {
+  it('returns stations in the order specified by the schedule', () => {
     const list = getStationList(mockSchedule);
     expect(list).toHaveLength(3);
+    expect(list[0].id).toBe('st3');
+    expect(list[1].id).toBe('st2');
+    expect(list[2].id).toBe('st1');
+  });
+
+  it('falls back to alphabetical sorting if order is missing', () => {
+    const scheduleWithoutOrder = { ...mockSchedule } as unknown as StaticSchedule;
+    delete (scheduleWithoutOrder as Partial<StaticSchedule>).o;
+    const list = getStationList(scheduleWithoutOrder);
     expect(list[0].name).toBe('Station Alpha');
     expect(list[1].name).toBe('Station Bravo');
     expect(list[2].name).toBe('Station Charlie');
+  });
+});
+
+import { normalizeDate } from './schedule';
+
+describe('normalizeDate', () => {
+  it('handles standard valid dates', () => {
+    expect(normalizeDate('2026-02-17')).toBe('2026-02-17');
+  });
+
+  it('normalizes Feb 30th to March 2nd', () => {
+    expect(normalizeDate('2026-02-30')).toBe('2026-03-02');
+  });
+
+  it('normalizes day 0 to the last day of previous month', () => {
+    // 2026-02-00 -> 2026-01-31
+    expect(normalizeDate('2026-02-00')).toBe('2026-01-31');
+  });
+
+  it('handles leap years correctly', () => {
+    // 2024 was a leap year
+    expect(normalizeDate('2024-02-29')).toBe('2024-02-29');
+    expect(normalizeDate('2026-02-29')).toBe('2026-03-01');
   });
 });
 

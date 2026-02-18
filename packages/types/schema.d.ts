@@ -101,6 +101,8 @@ export interface StaticSchedule {
    * overhead is negligible.
    */
   x: Record<string, string[]>;
+  /** Ordered list of canonical station IDs (North-to-South). */
+  o: string[];
 }
 
 export interface Trip {

@@ -373,6 +373,71 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
     if (cal.end > maxEndDate) maxEndDate = cal.end;
   }
 
+  // ----- Compute ordered station list (North-to-South) -----
+  // We use Direction 1 (Southbound) trips to derive the North-to-South order.
+  // We'll use a simple "most frequent sequence" approach or collect all pairs.
+  // For Caltrain, the pattern with the most stops is usually the full local line.
+  const southboundPatterns = new Set<string>();
+  for (const t of trips) {
+    if (t.direction_id === '1') {
+      const pId = tripPatternMap.get(t.trip_id);
+      if (pId) southboundPatterns.add(pId);
+    }
+  }
+
+  // Build a dependency map of stops
+  const successors = new Map<string, Set<string>>();
+  const allStopsInSSequence = new Set<string>();
+
+  for (const pId of southboundPatterns) {
+    const pStops = patterns[pId];
+    for (let i = 0; i < pStops.length; i++) {
+      allStopsInSSequence.add(pStops[i]);
+      if (!successors.has(pStops[i])) successors.set(pStops[i], new Set());
+      if (i < pStops.length - 1) {
+        successors.get(pStops[i])!.add(pStops[i + 1]);
+      }
+    }
+  }
+
+  // Topo sort (simplified for linear-ish routes)
+  const orderedStationIds: string[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  function visit(id: string) {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) return; // Cycle detected (unlikely in GTFS)
+    visiting.add(id);
+    const nextStops = successors.get(id) || new Set();
+    // Sort next stops by latitude as a tie-breaker/hint if multiple branches
+    const sortedNext = Array.from(nextStops).sort((a, b) => {
+      return (stationMap[b]?.lat || 0) - (stationMap[a]?.lat || 0);
+    });
+    for (const nextId of sortedNext) {
+      visit(nextId);
+    }
+    visiting.delete(id);
+    visited.add(id);
+    orderedStationIds.push(id);
+  }
+
+  // Start visits from stations with no predecessors or northernmost
+  const startStations = Array.from(allStopsInSSequence).sort((a, b) => {
+    return (stationMap[b]?.lat || 0) - (stationMap[a]?.lat || 0);
+  });
+  for (const id of startStations) {
+    visit(id);
+  }
+  orderedStationIds.reverse();
+
+  // If some stations are not in Southbound trips (unlikely for Caltrain),
+  // append them at the end sorted by latitude.
+  const remainingIds = Object.keys(stationMap)
+    .filter((id) => !visited.has(id))
+    .sort((a, b) => stationMap[b].lat - stationMap[a].lat);
+  orderedStationIds.push(...remainingIds);
+
   return {
     m: {
       v: versionHash,
@@ -386,6 +451,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
       e: calendarExceptions,
     },
     s: stationMap,
+    o: orderedStationIds,
     f: fareRulesOutput,
     x: pairIndex,
   };

@@ -4,6 +4,7 @@
     getStationList,
     queryTrips,
     calculateFare,
+    normalizeDate,
     type StaticSchedule,
     type TripResult,
   } from '$lib/schedule';
@@ -20,6 +21,11 @@
   let origin = $state('');
   let destination = $state('');
   let dateStr = $state(new Date().toISOString().slice(0, 10));
+  const dayOfWeek = $derived.by(() => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr + 'T12:00:00');
+    return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date);
+  });
   let results = $state<TripResult[]>([]);
   let searched = $state(false);
   let favorites = $state<string[]>([]);
@@ -65,7 +71,18 @@
     if (pollInterval) clearInterval(pollInterval);
   });
 
+  $effect(() => {
+    const normalized = normalizeDate(dateStr);
+    if (normalized !== dateStr) {
+      dateStr = normalized;
+    }
+  });
+
   // Search logic
+  function handleDateChange() {
+    search();
+  }
+
   const search = () => {
     if (!schedule || !origin || !destination || origin === destination) {
       results = [];
@@ -199,8 +216,14 @@
 
       <div class="row-2">
         <div class="field date-field">
-          <label for="date">Date</label>
-          <input id="date" type="date" bind:value={dateStr} onchange={search} />
+          <label for="date">Date <span class="day-label">({dayOfWeek})</span></label>
+          <input
+            id="date"
+            type="date"
+            bind:value={dateStr}
+            onchange={handleDateChange}
+            onblur={handleDateChange}
+          />
         </div>
 
         {#if currentFare !== null}

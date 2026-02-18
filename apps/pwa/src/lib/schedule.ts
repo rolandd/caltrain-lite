@@ -44,6 +44,7 @@ export interface StaticSchedule {
   t: Trip[];
   r: { c: Record<string, CalendarEntry>; e: Record<string, CalendarException[]> };
   s: Record<string, Station>;
+  o: string[];
   f: FareRules;
   x: Record<string, string[]>;
 }
@@ -64,11 +65,34 @@ export interface TripResult {
 
 /**
  * Get a sorted list of stations for the picker UI.
+ * Uses the pre-ordered list from the schedule (North-to-South).
  */
 export function getStationList(schedule: StaticSchedule): StationInfo[] {
+  if (schedule.o) {
+    return schedule.o.map((id) => ({ id, name: schedule.s[id]?.n || id }));
+  }
+  // Fallback to alphabetical if 'o' is missing
   return Object.entries(schedule.s)
     .map(([id, station]) => ({ id, name: station.n }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Normalizes a date string to the nearest valid date.
+ * For example, Feb 30th becomes March 2nd (or 1st in non-leap).
+ * Returns YYYY-MM-DD string.
+ */
+export function normalizeDate(dateStr: string): string {
+  if (!dateStr) return new Date().toISOString().slice(0, 10);
+  const [y, m, d] = dateStr.split('-').map((n) => parseInt(n, 10));
+  // Month is 0-indexed in JS Date constructor
+  const date = new Date(y, m - 1, d, 12, 0, 0);
+  if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+
+  const resY = date.getFullYear();
+  const resM = (date.getMonth() + 1).toString().padStart(2, '0');
+  const resD = date.getDate().toString().padStart(2, '0');
+  return `${resY}-${resM}-${resD}`;
 }
 
 /**

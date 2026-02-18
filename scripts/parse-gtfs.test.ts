@@ -245,6 +245,35 @@ stop_b1,stop_b1,Bayshore NB,37.5,-122.2,Z2,0,station_b`;
     // "Bayshore Caltrain Station Northbound" → "Bayshore Northbound" (mid-string)
     expect(result.s['station_b'].n).toBe('Bayshore Northbound');
   });
+
+  it('7: orders stations by trip sequence correctly', async () => {
+    // Trip 1 (SB): Alpha -> Bravo -> Charlie
+    const trips = `route_id,service_id,trip_id,trip_headsign,direction_id,trip_short_name
+Local,svc1,trip1,Charlie,1,101`;
+    const stopTimes = `trip_id,arrival_time,departure_time,stop_id,stop_sequence
+trip1,9:00:00,9:00:00,stop_a1,1
+trip1,9:30:00,9:30:00,stop_b1,2
+trip1,10:00:00,10:00:00,stop_c1,3`;
+    const stops = `stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+station_a,Station A,37.7,-122.4,1,
+stop_a1,Station A NB,37.7,-122.4,0,station_a
+station_b,Station B,37.5,-122.2,1,
+stop_b1,Station B NB,37.5,-122.2,0,station_b
+station_c,Station C,37.3,-122.0,1,
+stop_c1,Station C NB,37.3,-122.0,0,station_c`;
+
+    const zipBuf = await buildGtfsZip({
+      'agency.txt': AGENCY,
+      'routes.txt': ROUTES,
+      'stops.txt': stops,
+      'trips.txt': trips,
+      'stop_times.txt': stopTimes,
+      'calendar.txt': CALENDAR_MINIMAL,
+    });
+
+    const result = await parseGtfsZip(zipBuf);
+    expect(result.o).toEqual(['station_a', 'station_b', 'station_c']);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -311,5 +340,26 @@ describe('parseGtfsZip – real Caltrain fixture', () => {
         expect(tripIds.has(id)).toBe(true);
       }
     }
+  });
+
+  it('11: orders stations North-to-South (SF to Gilroy)', async () => {
+    const result = await getFixtureResult();
+    const orderedNames = result.o.map((id) => result.s[id].n);
+
+    // San Francisco should be first
+    expect(orderedNames[0]).toContain('San Francisco');
+    // Gilroy or San Jose should be near the end
+    const lastFew = orderedNames.slice(-3);
+    const hasGilroy = lastFew.some((n) => n.toLowerCase().includes('gilroy'));
+    const hasSJ = lastFew.some((n) => n.toLowerCase().includes('san jose'));
+    expect(hasGilroy || hasSJ).toBe(true);
+
+    // Verify some interior order
+    const sfIdx = orderedNames.findIndex((n) => n.includes('San Francisco'));
+    const paIdx = orderedNames.findIndex((n) => n.includes('Palo Alto'));
+    const sjIdx = orderedNames.findIndex((n) => n.includes('San Jose Diridon'));
+
+    expect(sfIdx).toBeLessThan(paIdx);
+    expect(paIdx).toBeLessThan(sjIdx);
   });
 });
