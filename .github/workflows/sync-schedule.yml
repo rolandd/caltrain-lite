@@ -34,11 +34,13 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: kv:key put schedule:data --path=./static-schedule.json --binding=TRANSIT_DATA
+          wranglerVersion: '3.x'
+          command: kv:key put schedule:data --path=./static-schedule.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
 
       - name: Upload Schedule Meta to KV
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: kv:key put schedule:meta --path=./meta.json --binding=TRANSIT_DATA
+          wranglerVersion: '3.x'
+          command: kv:key put schedule:meta --path=./meta.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
