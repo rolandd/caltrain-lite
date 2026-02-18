@@ -38,116 +38,120 @@ export type Direction = 0 | 1;
  * Target size: <100 KB.
  */
 export interface StaticSchedule {
-    /** Metadata. */
-    m: {
-        /** Version hash (SHA-256 of the source GTFS ZIP). */
-        v: string;
-        /** Max end date across all service calendars (YYYYMMDD integer). */
-        e: number;
-        /** Last updated timestamp (epoch seconds). */
-        u: number;
-    };
+  /** Metadata. */
+  m: {
+    /** Version hash (SHA-256 of the source GTFS ZIP). */
+    v: string;
+    /** Max end date across all service calendars (YYYYMMDD integer). */
+    e: number;
+    /** Last updated timestamp (epoch seconds). */
+    u: number;
+  };
+
+  /**
+   * Stop patterns.
+   *
+   * A pattern is an ordered list of canonical station IDs representing a
+   * unique sequence of stops. Multiple trips can share the same pattern.
+   *
+   * Example: `{ "p1": ["70011", "70021", "70031"] }`
+   */
+  p: Record<string, string[]>;
+
+  /** Trips. */
+  t: Trip[];
+
+  /** Service rules (calendar + exceptions). */
+  r: {
+    /**
+     * Regular calendars keyed by service ID.
+     *
+     * `days` is `[mon, tue, wed, thu, fri, sat, sun]` where each element
+     * is 0 (no service) or 1 (service runs).
+     */
+    c: Record<string, CalendarEntry>;
 
     /**
-     * Stop patterns.
+     * Calendar date exceptions keyed by service ID.
      *
-     * A pattern is an ordered list of canonical station IDs representing a
-     * unique sequence of stops. Multiple trips can share the same pattern.
-     *
-     * Example: `{ "p1": ["70011", "70021", "70031"] }`
+     * `type` 1 = service added, 2 = service removed.
      */
-    p: Record<string, string[]>;
+    e: Record<string, CalendarException[]>;
+  };
 
-    /** Trips. */
-    t: Trip[];
+  /**
+   * Canonical stations keyed by a stable station ID.
+   *
+   * Each station maps one or more GTFS `stop_id` values to a single
+   * logical station (e.g. platform-level IDs → station-level).
+   */
+  s: Record<string, Station>;
 
-    /** Service rules (calendar + exceptions). */
-    r: {
-        /**
-         * Regular calendars keyed by service ID.
-         *
-         * `days` is `[mon, tue, wed, thu, fri, sat, sun]` where each element
-         * is 0 (no service) or 1 (service runs).
-         */
-        c: Record<string, CalendarEntry>;
+  /** Fare rules. All amounts are in US cents. */
+  f: FareRules;
 
-        /**
-         * Calendar date exceptions keyed by service ID.
-         *
-         * `type` 1 = service added, 2 = service removed.
-         */
-        e: Record<string, CalendarException[]>;
-    };
-
-    /**
-     * Canonical stations keyed by a stable station ID.
-     *
-     * Each station maps one or more GTFS `stop_id` values to a single
-     * logical station (e.g. platform-level IDs → station-level).
-     */
-    s: Record<string, Station>;
-
-    /** Fare rules. All amounts are in US cents. */
-    f: FareRules;
-
-    /**
-     * Pre-computed station-pair index for O(1) trip lookup.
-     *
-     * Key format: `"<originStationId>→<destStationId>"`.
-     * Value: array of trip IDs that serve this origin→destination pair
-     * (in pattern stop order — origin appears before destination).
-     *
-     * With ~30 stations there are at most ~870 directed pairs, so the
-     * overhead is negligible.
-     */
-    x: Record<string, string[]>;
+  /**
+   * Pre-computed station-pair index for O(1) trip lookup.
+   *
+   * Key format: `"<originStationId>→<destStationId>"`.
+   * Value: array of trip IDs that serve this origin→destination pair
+   * (in pattern stop order — origin appears before destination).
+   *
+   * With ~30 stations there are at most ~870 directed pairs, so the
+   * overhead is negligible.
+   */
+  x: Record<string, string[]>;
 }
 
 export interface Trip {
-    /** Trip ID (typically the Caltrain train number, e.g. "101"). */
-    i: string;
-    /** Service ID (references `StaticSchedule.r.c` / `.r.e`). */
-    s: string;
-    /** Pattern ID (references `StaticSchedule.p`). */
-    p: string;
-    /** Direction: 0 = Northbound, 1 = Southbound. */
-    d: Direction;
-    /**
-     * Stop times as minutes from midnight, interleaved arrival/departure:
-     * `[arr0, dep0, arr1, dep1, ...]`
-     *
-     * The array length is `2 * patternStops.length`. For stops with no
-     * dwell time, `arr === dep`. Values may exceed 1440 (midnight) for
-     * trips that run past midnight.
-     */
-    st: number[];
-    /** Route / service type. */
-    rt: RouteType;
+  /** Trip ID (typically the Caltrain train number, e.g. "101"). */
+  i: string;
+  /** Service ID (references `StaticSchedule.r.c` / `.r.e`). */
+  s: string;
+  /** Pattern ID (references `StaticSchedule.p`). */
+  p: string;
+  /** Direction: 0 = Northbound, 1 = Southbound. */
+  d: Direction;
+  /**
+   * Stop times as minutes from midnight, interleaved arrival/departure:
+   * `[arr0, dep0, arr1, dep1, ...]`
+   *
+   * The array length is `2 * patternStops.length`. For stops with no
+   * dwell time, `arr === dep`. Values may exceed 1440 (midnight) for
+   * trips that run past midnight.
+   */
+  st: number[];
+  /** Route / service type. */
+  rt: RouteType;
 }
 
 export interface CalendarEntry {
-    /** `[mon, tue, wed, thu, fri, sat, sun]` — 0 or 1. */
-    days: (0 | 1)[];
-    /** Service start date (YYYYMMDD integer). */
-    start: number;
-    /** Service end date (YYYYMMDD integer). */
-    end: number;
+  /** `[mon, tue, wed, thu, fri, sat, sun]` — 0 or 1. */
+  days: (0 | 1)[];
+  /** Service start date (YYYYMMDD integer). */
+  start: number;
+  /** Service end date (YYYYMMDD integer). */
+  end: number;
 }
 
 export interface CalendarException {
-    /** Date (YYYYMMDD integer). */
-    date: number;
-    /** 1 = service added on this date, 2 = service removed. */
-    type: 1 | 2;
+  /** Date (YYYYMMDD integer). */
+  date: number;
+  /** 1 = service added on this date, 2 = service removed. */
+  type: 1 | 2;
 }
 
 export interface Station {
-    /** Human-readable name (e.g. "Menlo Park"). */
-    n: string;
-    /** Fare zone ID (references `FareRules.zones`). */
-    z: string;
-    /** GTFS `stop_id` values that map to this canonical station. */
-    ids: string[];
+  /** Human-readable name (e.g. "Menlo Park"). */
+  n: string;
+  /** Fare zone ID (references `FareRules.zones`). */
+  z: string;
+  /** GTFS `stop_id` values that map to this canonical station. */
+  ids: string[];
+  /** Latitude (decimal degrees). */
+  lat: number;
+  /** Longitude (decimal degrees). */
+  lon: number;
 }
 
 /**
@@ -160,13 +164,13 @@ export interface Station {
  * Lookup: `fares["<originZoneId>→<destZoneId>"]` → price in USD cents.
  */
 export interface FareRules {
-    /** Zone metadata keyed by zone ID. */
-    zones: Record<string, { name: string }>;
-    /**
-     * Fare lookup: `"<originZoneId>→<destZoneId>"` → price in USD cents.
-     * Covers all valid origin/destination zone pairs.
-     */
-    fares: Record<string, number>;
+  /** Zone metadata keyed by zone ID. */
+  zones: Record<string, { name: string }>;
+  /**
+   * Fare lookup: `"<originZoneId>→<destZoneId>"` → price in USD cents.
+   * Covers all valid origin/destination zone pairs.
+   */
+  fares: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -174,50 +178,47 @@ export interface FareRules {
 // ---------------------------------------------------------------------------
 
 /**
- * Generated by the Cloudflare Worker cron (every ~15s).
+ * Generated by the Cloudflare Worker cron (every ~1m).
  * Stored in KV (`realtime:status`).
  * Fetched by the PWA via `GET /api/realtime`.
- *
- * Contains only today's active trains + current service alerts.
- * Target size: ~5 KB.
  */
 export interface RealtimeStatus {
-    /** Update timestamp (epoch seconds). */
-    u: number;
-
-    /** Per-trip real-time updates. */
-    entities: TripUpdate[];
-
-    /** Active service alerts from GTFS-RT ServiceAlerts feed. */
-    alerts: ServiceAlert[];
+  /** Feed timestamp (epoch seconds). */
+  timestamp: number;
+  /** Per-trip real-time updates. */
+  entities: RealtimeEntity[];
+  /** Active service alerts. */
+  alerts: ServiceAlert[];
 }
 
-export interface TripUpdate {
-    /** Trip ID (train number — matches `Trip.i`). */
-    id: string;
-    /** Delay in seconds. Positive = late, negative = early, 0 = on time. */
-    delay: number;
-    /** Current or next stop ID (GTFS `stop_id`). */
-    stop: string;
-    /** 0 = Incoming At, 1 = Stopped At, 2 = In Transit To. */
-    status: 0 | 1 | 2;
+export interface RealtimeEntity {
+  /** Trip ID. */
+  id: string;
+  /** Delay in seconds. */
+  delay?: number;
+  /** Current or next stop ID. */
+  stop?: string;
+  /** 0 = Incoming, 1 = Stopped, 2 = In Transit. */
+  status?: number;
+  /** Vehicle position. */
+  position?: VehiclePosition;
+}
+
+export interface VehiclePosition {
+  lat: number;
+  lon: number;
+  bearing?: number;
+  speed?: number;
 }
 
 export interface ServiceAlert {
-    /** Alert headline. */
-    header: string;
-    /** Full alert description. */
-    description: string;
-    /** Active period start (epoch seconds). Omitted if open-ended. */
-    start?: number;
-    /** Active period end (epoch seconds). Omitted if open-ended. */
-    end?: number;
-    /** GTFS-RT cause enum as string (e.g. "CONSTRUCTION", "WEATHER"). */
-    cause?: string;
-    /** GTFS-RT effect enum as string (e.g. "NO_SERVICE", "DELAY", "DETOUR"). */
-    effect?: string;
-    /** Affected stop IDs. Empty or omitted = system-wide alert. */
-    stops?: string[];
+  header: string;
+  description: string;
+  cause?: string;
+  effect?: string;
+  stops?: string[];
+  start?: number;
+  end?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,12 +233,12 @@ export interface ServiceAlert {
  * Stored in KV (`schedule:meta`). ~100 bytes.
  */
 export interface ScheduleMeta {
-    /** Current schedule version hash (matches `StaticSchedule.m.v`). */
-    v: string;
-    /** Max end date (YYYYMMDD integer). */
-    e: number;
-    /** Last updated timestamp (epoch seconds). */
-    u: number;
-    /** Seconds since the last real-time update was written to KV. */
-    realtimeAge: number;
+  /** Current schedule version hash (matches `StaticSchedule.m.v`). */
+  v: string;
+  /** Max end date (YYYYMMDD integer). */
+  e: number;
+  /** Last updated timestamp (epoch seconds). */
+  u: number;
+  /** Seconds since the last real-time update was written to KV. */
+  realtimeAge: number;
 }

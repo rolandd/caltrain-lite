@@ -1,32 +1,22 @@
 {
-    "compilerOptions": {
-        "target": "ES2022",
-        "module": "ES2022",
-        "moduleResolution": "bundler",
-        "strict": true,
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "resolveJsonModule": true,
-        "allowImportingTsExtensions": true,
-        "noEmit": true,
-        "sourceMap": true,
-        "types": [
-            "node"
-        ],
-        "rootDir": ".",
-        "paths": {
-            "@transit/types": [
-                "../packages/types/schema.d.ts"
-            ]
-        }
-    },
-    "include": [
-        "*.ts",
-        "../packages/types/**/*.ts"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist"
-    ]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "sourceMap": true,
+    "types": ["node"],
+    "rootDir": ".",
+    "paths": {
+      "@transit/types": ["../packages/types/schema.d.ts"]
+    }
+  },
+  "include": ["*.ts", "../packages/types/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

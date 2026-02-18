@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx test/test-worker.ts",
+    "lint": "cd ../.. && npm run lint -- apps/worker",
+    "format": "cd ../.. && npm run format -- apps/worker",
+    "format:check": "cd ../.. && npm run format:check -- apps/worker"
   },
   "keywords": [],
   "author": "",

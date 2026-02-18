@@ -1,0 +1,28 @@
+{
+  "name": "transit.git",
+  "version": "1.0.0",
+  "description": "The system is built on an \"Offline-First, Real-Time Second\" philosophy, specifically optimized for Smartphone/Mobile use and designed for Open Source distribution.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-svelte": "^3.15.0",
+    "globals": "^17.3.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-svelte": "^3.4.1",
+    "svelte-check": "^4.4.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.0"
+  }
+}

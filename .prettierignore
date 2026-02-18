@@ -1,0 +1,8 @@
+node_modules
+.svelte-kit
+dist
+build
+package-lock.json
+# Generated files
+**/gtfs-realtime.js
+apps/pwa/src/lib/schedule-data.json

@@ -21,6 +21,8 @@ interface GtfsStop {
   zone_id: string;
   location_type: string;
   parent_station: string;
+  stop_lat: string;
+  stop_lon: string;
 }
 
 interface GtfsRoute {
@@ -202,6 +204,8 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
         n: cleanStationName(stop.stop_name),
         z: '', // Will be derived from child stops
         ids: [],
+        lat: parseFloat(stop.stop_lat),
+        lon: parseFloat(stop.stop_lon),
       };
     }
   }

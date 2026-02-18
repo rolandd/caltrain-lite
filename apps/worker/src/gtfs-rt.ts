@@ -1,78 +1,80 @@
 import Pbf from 'pbf';
 import { readFeedMessage } from './gtfs-realtime.js';
-import type { RealtimeStatus, TripUpdate, ServiceAlert } from '../../packages/types/schema.js';
+import type { RealtimeEntity, VehiclePosition, ServiceAlert } from '../../packages/types/schema';
 
-export function parseRealtimeStatus(buffer: ArrayBuffer): RealtimeStatus {
-    // 1. Decode PBF
-    const pbf = new Pbf(new Uint8Array(buffer));
-    const feed = readFeedMessage(pbf);
+export interface ParsedFeed {
+  timestamp: number;
+  entities: RealtimeEntity[];
+  positions: Map<string, VehiclePosition>;
+  alerts: ServiceAlert[];
+}
 
-    const timestamp = Number(feed.header.timestamp);
-    const entities: TripUpdate[] = [];
-    const alerts: ServiceAlert[] = [];
+export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
+  const pbf = new Pbf(new Uint8Array(buffer));
+  const feed = readFeedMessage(pbf);
+  const timestamp = Number(feed.header.timestamp || 0);
 
-    // 2. Transform entities
-    for (const entity of feed.entity) {
-        if (entity.trip_update) {
-            const tu = entity.trip_update;
-            const tripId = tu.trip.trip_id;
+  const entities: RealtimeEntity[] = [];
+  const positions = new Map<string, VehiclePosition>();
+  const alerts: ServiceAlert[] = [];
 
-            // Find the relevant update (first stop time update often has the delay)
-            // or the vehicle delay if available.
-            // 511.org usually provides stop_time_update list.
-            // We want the delay for the *current* situation.
-            // If we have a stop_time_update, take the first one's delay?
-            // Or explicitly looking for delay in stop_time_update.
+  for (const entity of feed.entity) {
+    // 1. Trip Update
+    if (entity.trip_update) {
+      const tu = entity.trip_update;
+      const tripId = tu.trip.trip_id;
+      let delay = 0;
+      let stopId = '';
 
-            let delay = 0;
-            let stopId = '';
-            let status = 2; // In Transit (default)
-
-            if (tu.stop_time_update && tu.stop_time_update.length > 0) {
-                const update = tu.stop_time_update[0];
-                // GTFS-RT delay is in seconds.
-                // arrival or departure? usually departure delay for next stop.
-                const event = update.departure || update.arrival;
-                if (event && event.delay !== null) {
-                    delay = event.delay;
-                }
-                stopId = update.stop_id;
-            }
-
-            // Map GTFS-RT status to our internal enum if needed (though our schema uses 0-2 too)
-            // But we don't have vehicle position here usually for status.
-            // If we don't have status from vehicle, we might infer?
-            // For now, simple mapping.
-
-            entities.push({
-                id: tripId,
-                delay,
-                stop: stopId,
-                status: 2 // Default to In Transit if unknown
-            });
+      if (tu.stop_time_update && tu.stop_time_update.length > 0) {
+        const update = tu.stop_time_update[0];
+        const event = update.departure || update.arrival;
+        if (event && event.delay !== null) {
+          delay = event.delay;
         }
+        stopId = update.stop_id;
+      }
 
-        if (entity.alert) {
-            const a = entity.alert;
-            // Extract English text
-            const header = a.header_text?.translation?.find((t: any) => t.language === 'en')?.text || '';
-            const description = a.description_text?.translation?.find((t: any) => t.language === 'en')?.text || '';
-
-            alerts.push({
-                header,
-                description,
-                start: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
-                end: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
-                cause: String(a.cause), // Enum as string for now
-                effect: String(a.effect),
-                stops: a.informed_entity?.map((e: any) => e.stop_id).filter(Boolean)
-            });
-        }
+      entities.push({
+        id: tripId,
+        delay,
+        stop: stopId, // Note: This might be string or number in raw data, schema expects string
+        status: 2, // Default to In Transit
+      });
     }
 
-    return {
-        u: timestamp,
-        entities,
-        alerts
-    };
+    // 2. Vehicle Position
+    if (entity.vehicle) {
+      const v = entity.vehicle;
+      if (v.trip && v.position) {
+        positions.set(v.trip.trip_id, {
+          lat: v.position.latitude,
+          lon: v.position.longitude,
+          bearing: v.position.bearing,
+          speed: v.position.speed,
+        });
+      }
+    }
+
+    // 3. Service Alert
+    if (entity.alert) {
+      const a = entity.alert;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const extractText = (txt: any) =>
+        txt?.translation?.find((t: any) => t.language === 'en')?.text || '';
+
+      alerts.push({
+        header: extractText(a.header_text),
+        description: extractText(a.description_text),
+        cause: a.cause ? String(a.cause) : undefined,
+        effect: a.effect ? String(a.effect) : undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        stops: a.informed_entity?.map((e: any) => e.stop_id).filter(Boolean),
+        start: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
+        end: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
+      });
+    }
+  }
+
+  return { timestamp, entities, positions, alerts };
 }

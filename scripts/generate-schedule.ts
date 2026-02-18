@@ -13,17 +13,17 @@ const fixturePath = resolve(__dirname, 'fixtures/caltrain-gtfs.zip');
 const outputPath = resolve(__dirname, '../apps/pwa/src/lib/schedule-data.json');
 
 async function main() {
-    console.error(`Reading: ${fixturePath}`);
-    const zipBuf = readFileSync(fixturePath);
-    const schedule = await parseGtfsZip(zipBuf);
-    const json = JSON.stringify(schedule);
-    writeFileSync(outputPath, json, 'utf-8');
-    console.error(`Wrote ${json.length} bytes to ${outputPath}`);
-    console.error(`  Stations: ${Object.keys(schedule.s).length}`);
-    console.error(`  Trips: ${schedule.t.length}`);
+  console.error(`Reading: ${fixturePath}`);
+  const zipBuf = readFileSync(fixturePath);
+  const schedule = await parseGtfsZip(zipBuf);
+  const json = JSON.stringify(schedule);
+  writeFileSync(outputPath, json, 'utf-8');
+  console.error(`Wrote ${json.length} bytes to ${outputPath}`);
+  console.error(`  Stations: ${Object.keys(schedule.s).length}`);
+  console.error(`  Trips: ${schedule.t.length}`);
 }
 
 main().catch((err) => {
-    console.error('Fatal:', err);
-    process.exit(1);
+  console.error('Fatal:', err);
+  process.exit(1);
 });
