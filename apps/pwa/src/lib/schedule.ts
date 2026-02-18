@@ -201,7 +201,11 @@ export function queryTrips(
  * Calculate fare between two stations.
  * Uses the pre-computed zone-pair matrix.
  */
-export function calculateFare(schedule: StaticSchedule, originId: string, destId: string): number | null {
+export function calculateFare(
+  schedule: StaticSchedule,
+  originId: string,
+  destId: string,
+): number | null {
   const originZone = schedule.s[originId]?.z;
   const destZone = schedule.s[destId]?.z;
 

@@ -5,12 +5,16 @@
   import { setContext } from 'svelte';
 
   let { children } = $props();
-  
+
   let schedule = $state<StaticSchedule | null>(null);
   let error = $state<string | null>(null);
 
   // Expose schedule to children via context
-  setContext('schedule', { get value() { return schedule; } });
+  setContext('schedule', {
+    get value() {
+      return schedule;
+    },
+  });
 
   $effect(() => {
     initSchedule((newSchedule) => {
@@ -70,14 +74,16 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .error {
     color: #ff6b6b;
     font-weight: 600;
   }
-  
+
   .error-icon {
     font-size: 2rem;
   }
