@@ -67,26 +67,88 @@ export default {
   },
 
   // HTTP: Serve from KV
+
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Access-Control-Request-Method': '*',
+      'Vary': 'Origin',
+    };
+
+    const securityHeaders = {
+      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'",
+      'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(), fullscreen=(self)',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'X-Frame-Options': 'DENY',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Resource-Policy': 'same-origin',
+    };
+
+    const headers = { ...corsHeaders, ...securityHeaders };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers,
+      });
+    }
+
+    if (url.pathname === '/api/schedule') {
+      const data = await env.TRANSIT_DATA.get('schedule:data', { type: 'stream' });
+      if (!data) {
+        return new Response(JSON.stringify({ error: 'No schedule data' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(data, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=3600', // 1 hour
+        },
+      });
+    }
+
+    if (url.pathname === '/api/meta') {
+      const data = await env.TRANSIT_DATA.get('schedule:meta');
+      if (!data) {
+        return new Response(JSON.stringify({ error: 'No meta data' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(data, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=60', // 1 minute
+        },
+      });
+    }
 
     if (url.pathname === '/api/realtime') {
       const data = await env.TRANSIT_DATA.get('realtime:status');
       if (!data) {
         return new Response('{"error": "No data"}', {
           status: 404,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...headers, 'Content-Type': 'application/json' },
         });
       }
       return new Response(data, {
         headers: {
+          ...headers,
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*', // Allow local/dev access
           'Cache-Control': 'no-cache',
         },
       });
     }
 
-    return new Response('Not found', { status: 404 });
+    return new Response('Not found', { status: 404, headers });
   },
 };
