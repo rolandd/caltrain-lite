@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintPluginSvelte from 'eslint-plugin-svelte';

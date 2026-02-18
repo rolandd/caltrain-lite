@@ -1,4 +1,7 @@
 <script lang="ts">
+  // SPDX-License-Identifier: MIT
+  // Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
   import favicon from '$lib/assets/favicon.svg';
   import { initSchedule } from '$lib/sync';
   import type { StaticSchedule } from '@packages/types/schema';

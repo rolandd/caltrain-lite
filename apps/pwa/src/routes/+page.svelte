@@ -1,4 +1,7 @@
 <script lang="ts">
+  // SPDX-License-Identifier: MIT
+  // Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
   import { getContext, onMount, onDestroy } from 'svelte';
   import {
     getStationList,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 /**
  * Cloudflare Pages Function middleware
  * Injects a cryptographic nonce into inline <script> tags and sets a

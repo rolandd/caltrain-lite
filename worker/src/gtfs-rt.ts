@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 import Pbf from 'pbf';
 import { readFeedMessage } from './gtfs-realtime.js';
 import type { RealtimeEntity, VehiclePosition, ServiceAlert } from '@packages/types/schema';

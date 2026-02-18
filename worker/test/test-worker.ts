@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 import { readFileSync } from 'node:fs';
 import { parseFeed } from '../src/gtfs-rt.js';
 

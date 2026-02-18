@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 import { parseFeed } from './gtfs-rt.js';
 
 export interface Env {

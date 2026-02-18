@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const apiKeyRaw = readFileSync('../../API_KEY', 'utf-8');

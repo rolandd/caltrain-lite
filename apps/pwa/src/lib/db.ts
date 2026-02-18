@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 import Dexie, { type EntityTable } from 'dexie';
 import type { StaticSchedule, ScheduleMeta } from '@packages/types/schema';
 

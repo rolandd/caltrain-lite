@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 variable "cloudflare_api_token" {
   description = "Cloudflare API Token"
   type        = string

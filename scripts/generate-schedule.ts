@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 /**
  * Generate schedule-data.json from the GTFS fixture for the PWA prototype.
  *

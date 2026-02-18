@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
 import { getCachedSchedule, cacheSchedule, cacheMeta } from './db';
 import type { StaticSchedule, ScheduleMeta } from '@packages/types/schema';
 
