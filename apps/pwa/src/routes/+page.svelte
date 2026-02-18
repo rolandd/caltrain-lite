@@ -1,9 +1,15 @@
 <script lang="ts">
   import { getContext, onMount, onDestroy } from 'svelte';
-  import { getStationList, queryTrips, calculateFare, type StaticSchedule, type TripResult } from '$lib/schedule';
+  import {
+    getStationList,
+    queryTrips,
+    calculateFare,
+    type StaticSchedule,
+    type TripResult,
+  } from '$lib/schedule';
   import { getFavorites, toggleFavorite, isFavorite } from '$lib/favorites';
   import { fetchRealtime } from '$lib/realtime';
-  import type { RealtimeStatus, RealtimeEntity } from '@packages/types/schema';
+  import type { RealtimeStatus } from '@packages/types/schema';
 
   // Context from layout
   const scheduleCtx = getContext<{ value: StaticSchedule }>('schedule');
@@ -18,7 +24,7 @@
   let searched = $state(false);
   let favorites = $state<string[]>([]);
   let realtime = $state<RealtimeStatus | null>(null);
-  let pollInterval: any;
+  let pollInterval: ReturnType<typeof setInterval> | undefined;
 
   // Favorites logic
   function loadFavorites() {
@@ -92,7 +98,7 @@
     if (!realtime) return undefined;
     // Realtime entities use trip_id. For Caltrain this matches train number in static schedule
     // but we need to ensure type safety.
-    const entity = realtime.entities.find(e => e.id === trainNum);
+    const entity = realtime.entities.find((e) => e.id === trainNum);
     return entity?.delay;
   };
 
@@ -101,7 +107,7 @@
     if (mins <= 0) return 'On Time';
     return `${mins} min late`;
   };
-  
+
   const delayClass = (delaySec: number): string => {
     const mins = Math.round(delaySec / 60);
     if (mins >= 10) return 'delay-severe';
@@ -118,7 +124,7 @@
 
   // Reactive Fare
   let currentFare = $derived(
-    (schedule && origin && destination) ? calculateFare(schedule, origin, destination) : null
+    schedule && origin && destination ? calculateFare(schedule, origin, destination) : null,
   );
 </script>
 
@@ -133,13 +139,13 @@
       <h1>🚂 Caltrain</h1>
       <!-- Service Alerts -->
       {#if realtime && realtime.alerts.length > 0}
-         <div class="alerts" role="alert">
-           {#each realtime.alerts as alert}
-             <div class="alert-item">
-               <strong>{alert.header}</strong>: {alert.description}
-             </div>
-           {/each}
-         </div>
+        <div class="alerts" role="alert">
+          {#each realtime.alerts as alert (alert.header)}
+            <div class="alert-item">
+              <strong>{alert.header}</strong>: {alert.description}
+            </div>
+          {/each}
+        </div>
       {/if}
     </header>
 
@@ -148,7 +154,7 @@
       <section class="favorites" aria-label="Favorite Trips">
         <h2>Favorites</h2>
         <div class="grid">
-          {#each favorites as pair}
+          {#each favorites as pair (pair)}
             <button class="fav-card" onclick={() => selectFavorite(pair)}>
               <span class="st">{getStationName(pair.split('-')[0])}</span>
               <span class="arrow">→</span>
@@ -196,19 +202,19 @@
           <label for="date">Date</label>
           <input id="date" type="date" bind:value={dateStr} onchange={search} />
         </div>
-        
+
         {#if currentFare !== null}
-           <div class="fare-display">
-             <span class="label">One-Way</span>
-             <span class="amount">${(currentFare / 100).toFixed(2)}</span>
-           </div>
+          <div class="fare-display">
+            <span class="label">One-Way</span>
+            <span class="amount">${(currentFare / 100).toFixed(2)}</span>
+          </div>
         {/if}
 
-        <button 
-          class="fav-toggle" 
+        <button
+          class="fav-toggle"
           onclick={handleToggleFavorite}
           disabled={!origin || !destination}
-          aria-label={isFavorite(origin, destination) ? "Remove favorite" : "Add favorite"}
+          aria-label={isFavorite(origin, destination) ? 'Remove favorite' : 'Add favorite'}
           aria-pressed={isFavorite(origin, destination)}
         >
           {isFavorite(origin, destination) ? '★' : '☆'}
@@ -223,34 +229,34 @@
             <span>{results.length} trips</span>
             {#if realtime}<span class="live-dot">● Live</span>{/if}
           </div>
-          
+
           <div class="card-list">
             {#each results as trip (trip.trainNumber)}
               {@const delay = getDelay(trip.trainNumber)}
               <div class="trip-card">
                 <div class="times">
-                   <div class="dept">
-                     <span class="t">{trip.departure}</span>
-                   </div>
-                   <div class="arr">
-                     <span class="t">{trip.arrival}</span>
-                     <span class="dur">{trip.duration}</span>
-                   </div>
+                  <div class="dept">
+                    <span class="t">{trip.departure}</span>
+                  </div>
+                  <div class="arr">
+                    <span class="t">{trip.arrival}</span>
+                    <span class="dur">{trip.duration}</span>
+                  </div>
                 </div>
-                
+
                 <div class="meta">
-                   <div class="top">
-                     <div class="badges">
-                        <span class="train-id">#{trip.trainNumber}</span>
-                        <span class={routeTypeClass(trip.routeType)}>{trip.routeType}</span>
-                     </div>
-                     
-                     {#if delay !== undefined}
-                       <span class="status-badge {delayClass(delay)}">
-                         {formatDelay(delay)}
-                       </span>
-                     {/if}
-                   </div>
+                  <div class="top">
+                    <div class="badges">
+                      <span class="train-id">#{trip.trainNumber}</span>
+                      <span class={routeTypeClass(trip.routeType)}>{trip.routeType}</span>
+                    </div>
+
+                    {#if delay !== undefined}
+                      <span class="status-badge {delayClass(delay)}">
+                        {formatDelay(delay)}
+                      </span>
+                    {/if}
+                  </div>
                 </div>
               </div>
             {/each}
@@ -272,13 +278,13 @@
 
 <style>
   /* Base styles inherited from layout generally, but we make specific component styles here */
-  
+
   :global(*, *::before, *::after) {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
   }
-  
+
   :global(html) {
     font-family: 'Inter', system-ui, sans-serif;
     background: #0f0f13;
@@ -349,7 +355,8 @@
     text-transform: uppercase;
   }
 
-  select, input {
+  select,
+  input {
     background: #12121a;
     border: 1px solid #2a2a35;
     border-radius: 10px;
@@ -370,7 +377,7 @@
     cursor: pointer;
     flex-shrink: 0;
   }
-  
+
   .fav-toggle {
     width: 44px;
     height: 44px;
@@ -395,13 +402,13 @@
     justify-content: center;
     padding-right: 0.5rem;
   }
-  
+
   .fare-display .label {
     font-size: 0.7rem;
     color: #888;
     text-transform: uppercase;
   }
-  
+
   .fare-display .amount {
     font-size: 1.125rem;
     font-weight: 700;
@@ -412,7 +419,7 @@
   .favorites {
     margin-bottom: 1.5rem;
   }
-  
+
   .favorites h2 {
     font-size: 0.875rem;
     color: #888;
@@ -420,13 +427,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  
+
   .grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
-  
+
   .fav-card {
     background: #1a1a22;
     border: 1px solid #2a2a35;
@@ -441,7 +448,7 @@
     cursor: pointer;
     text-align: left;
   }
-  
+
   .fav-card .arrow {
     color: #555;
     font-size: 0.875rem;
@@ -456,17 +463,23 @@
     font-size: 0.8125rem;
     color: #888;
   }
-  
+
   .live-dot {
     color: #4e9bff;
     font-weight: 600;
     animation: pulse 2s infinite;
   }
-  
+
   @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 1;
+    }
   }
 
   .card-list {
@@ -484,7 +497,7 @@
     align-items: center;
     border-left: 3px solid transparent;
   }
-  
+
   .trip-card:hover {
     background: #20202a;
   }
@@ -494,24 +507,24 @@
     flex-direction: column;
     gap: 0.25rem;
   }
-  
+
   .dept .t {
     font-size: 1.25rem;
     font-weight: 700;
     color: #fff;
   }
-  
+
   .arr {
     display: flex;
     gap: 0.5rem;
     align-items: baseline;
   }
-  
+
   .arr .t {
     font-size: 0.875rem;
     color: #bbb;
   }
-  
+
   .arr .dur {
     font-size: 0.75rem;
     color: #666;
@@ -520,7 +533,7 @@
   .meta {
     text-align: right;
   }
-  
+
   .badges {
     display: flex;
     gap: 0.5rem;
@@ -528,7 +541,7 @@
     align-items: center;
     margin-bottom: 0.375rem;
   }
-  
+
   .train-id {
     font-size: 0.75rem;
     color: #555;
@@ -542,20 +555,39 @@
     border-radius: 4px;
     text-transform: uppercase;
   }
-  
-  .badge.local { background: #333; color: #ccc; }
-  .badge.limited { background: rgba(153, 215, 220, 0.2); color: #99d7dc; }
-  .badge.express { background: rgba(206, 32, 47, 0.2); color: #ff6b6b; }
-  .badge.bullet { background: rgba(206, 32, 47, 0.3); color: #ff5b5b; border: 1px solid rgba(206,32,47,0.4); }
+
+  .badge.local {
+    background: #333;
+    color: #ccc;
+  }
+  .badge.limited {
+    background: rgba(153, 215, 220, 0.2);
+    color: #99d7dc;
+  }
+  .badge.express {
+    background: rgba(206, 32, 47, 0.2);
+    color: #ff6b6b;
+  }
+  .badge.bullet {
+    background: rgba(206, 32, 47, 0.3);
+    color: #ff5b5b;
+    border: 1px solid rgba(206, 32, 47, 0.4);
+  }
 
   .status-badge {
     font-size: 0.75rem;
     font-weight: 600;
   }
-  
-  .delay-minor { color: #f2c94c; } /* Yellow */
-  .delay-mod { color: #f2994a; }   /* Orange */
-  .delay-severe { color: #eb5757; } /* Red */
+
+  .delay-minor {
+    color: #f2c94c;
+  } /* Yellow */
+  .delay-mod {
+    color: #f2994a;
+  } /* Orange */
+  .delay-severe {
+    color: #eb5757;
+  } /* Red */
 
   @media (max-width: 480px) {
     .station-row {
