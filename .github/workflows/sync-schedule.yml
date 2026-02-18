@@ -1,0 +1,44 @@
+name: Sync Schedule
+
+on:
+  schedule:
+    - cron: '0 10 * * *' # 2am PST (UTC 10:00)
+  workflow_dispatch:
+
+jobs:
+  update-schedule:
+    runs-on: ubuntu-latest
+    name: Fetch and Update GTFS Schedule
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Fetch and Parse GTFS
+        env:
+          TRANSIT_511_API_KEY: ${{ secrets.TRANSIT_511_API_KEY }}
+        run: node scripts/parse-gtfs.ts > static-schedule.json
+
+      - name: Extract Metadata
+        run: jq .m static-schedule.json > meta.json
+
+      - name: Upload Schedule Data to KV
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: kv:key put schedule:data --path=./static-schedule.json --binding=TRANSIT_DATA
+
+      - name: Upload Schedule Meta to KV
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: kv:key put schedule:meta --path=./meta.json --binding=TRANSIT_DATA
