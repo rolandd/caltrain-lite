@@ -1,0 +1,31 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright 2026 Roland Dreier <roland@rolandd.dev> */
+
+@import 'tailwindcss';
+
+@theme {
+  --color-transit-bg: #0f0f13;
+  --color-transit-bg-card: #1a1a22;
+  --color-transit-bg-input: #12121a;
+  --color-transit-border: #2a2a35;
+  --color-transit-text: #e8e8ed;
+  --color-transit-blue: #4e9bff;
+  --color-transit-red: #ff6b6b;
+  --color-transit-alert-bg: #933;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--color-transit-bg);
+    color: var(--color-transit-text);
+  }
+}
