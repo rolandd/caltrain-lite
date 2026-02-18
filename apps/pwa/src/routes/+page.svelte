@@ -32,6 +32,19 @@
   let realtime = $state<RealtimeStatus | null>(null);
   let pollInterval: ReturnType<typeof setInterval> | undefined;
 
+  const isToday = $derived.by(() => {
+    if (!dateStr) return false;
+    const now = new Date();
+    // Use America/Los_Angeles timezone to stay consistent with Caltrain day
+    const californiaDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now);
+    return dateStr === californiaDate;
+  });
+
   // Favorites logic
   function loadFavorites() {
     favorites = getFavorites();
@@ -112,7 +125,7 @@
   };
 
   const getDelay = (trainNum: string): number | undefined => {
-    if (!realtime) return undefined;
+    if (!realtime || !isToday) return undefined;
     // Realtime entities use trip_id. For Caltrain this matches train number in static schedule
     // but we need to ensure type safety.
     const entity = realtime.entities.find((e) => e.id === trainNum);
@@ -121,7 +134,7 @@
 
   const formatDelay = (delaySec: number): string => {
     const mins = Math.round(delaySec / 60);
-    if (mins <= 0) return 'On Time';
+    if (mins <= 0) return 'on time';
     return `${mins} min late`;
   };
 
