@@ -1,0 +1,12 @@
+name = "transit-worker"
+main = "src/index.ts"
+compatibility_date = "2024-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# KV Namespace for Schedule & Realtime Data (preview/dev ID - overridden in prod)
+kv_namespaces = [
+  { binding = "KV", id = "TRANSIT_DATA" }
+]
+
+[triggers]
+crons = ["*/2 * * * *"] # Run every 2 minutes
