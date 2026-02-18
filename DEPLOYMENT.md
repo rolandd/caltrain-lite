@@ -25,17 +25,35 @@ This guide details how to deploy the Transit PWA and Worker stack to Cloudflare,
 
 ---
 
-## Step 1: Infrastructure Setup (One-Time)
+## Step 1: API Token Setup
+
+You need to create a Cloudflare API Token with specific permissions to allow Terraform to manage your infrastructure.
+
+1.  Go to **[Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens)** > **My Profile** > **API Tokens**.
+2.  Click **Create Token**.
+3.  Use the **Edit Cloudflare Workers** template as a base, but ensure the following permissions are set:
+    *   **Account Resources** (Include: `All accounts` or your specific account):
+        *   `Workers Scripts`: **Edit**
+        *   `Workers KV Storage`: **Edit**
+        *   `Pages`: **Edit**
+    *   **Zone Resources** (Include: `Specific zone` > `your-domain.com`):
+        *   `Workers Routes`: **Edit**
+        *   `DNS`: **Edit**
+        *   `SSL and Certificates`: **Read**
+
+---
+
+## Step 2: Infrastructure Setup (One-Time)
 
 Ensure you have run the Terraform configuration to create the KV Namespace.
 
 ```bash
 # 1. Copy example vars
-cp infra/variables.tf.example infra/variables.tf
+cp infra/terraform.tfvars.example infra/terraform.tfvars
 
 # 2. Fill in your Cloudflare credentials
 vim infra/terraform.tfvars
-# (Add updated variables: cloudflare_zone_id, domain)
+# (Add updated variables: cloudflare_api_token, cloudflare_account_id, cloudflare_zone_id, domain)
 
 # 3. Apply Terraform
 cd infra
@@ -50,7 +68,7 @@ terraform apply
 
 ---
 
-## Step 2: Deploy the Worker (Backend)
+## Step 3: Deploy the Worker (Backend)
 
 We deploy the Worker first.
 
@@ -72,7 +90,7 @@ We deploy the Worker first.
 
 ---
 
-## Step 3: Deploy the PWA (Frontend)
+## Step 4: Deploy the PWA (Frontend)
 
 The Pages project was created by Terraform. Now we connect it to Git (one-time setup) or just push to deploy if already connected.
 
@@ -89,7 +107,7 @@ The Pages project was created by Terraform. Now we connect it to Git (one-time s
 
 ---
 
-## Step 4: Configure Domain
+## Step 5: Configure Domain
 
 1.  **Go to Cloudflare Dashboard** > **Workers & Pages** > **transit-pwa** (your Pages project) > **Custom Domains**.
 2.  **Set up a Custom Domain**:
@@ -98,13 +116,13 @@ The Pages project was created by Terraform. Now we connect it to Git (one-time s
 
 ---
 
-## Step 5: Verification
+## Step 6: Verification
 
 1.  **Visit `https://transit.example.com`**: You should see the PWA.
 2.  **Visit `https://transit.example.com/api/realtime`**: You should see JSON output (handled by the Worker).
 3.  **Check Data**: Ensure the PWA loads (it might be empty until the GitHub Action runs).
 
-## Step 6: Initial Data Populate
+## Step 7: Initial Data Populate
 
 Trigger the GitHub Action manually to populate the KV store for the first time.
 

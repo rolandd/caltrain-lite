@@ -1,0 +1,4 @@
+cloudflare_api_token = "YOUR_API_TOKEN_HERE"
+cloudflare_account_id = "YOUR_ACCOUNT_ID_HERE"
+cloudflare_zone_id    = "YOUR_ZONE_ID_HERE"
+domain                = "transit.example.com"
