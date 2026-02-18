@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2020",
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["./**/*.ts"]
+}

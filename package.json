@@ -20,6 +20,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260218.0",
     "@eslint/js": "^9.14.0",
     "csv-parse": "^5.6.0",
     "eslint": "^9.39.2",
