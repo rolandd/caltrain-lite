@@ -14,6 +14,8 @@ interface Station {
   n: string;
   z: string;
   ids: string[];
+  lat: number;
+  lon: number;
 }
 
 interface Trip {
@@ -66,6 +68,7 @@ export interface TripResult {
   duration: string; // formatted "Xh YYm" or "YYm"
   durationMinutes: number; // raw integer duration in minutes
   intermediateStops: number; // stations between origin and destination (exclusive)
+  direction: 0 | 1;
 }
 
 /**
@@ -223,6 +226,7 @@ export function queryTrips(
       duration: formatDuration(durationMinutes),
       durationMinutes,
       intermediateStops,
+      direction: trip.d,
     });
   }
 

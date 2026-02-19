@@ -16,9 +16,9 @@ import type { StaticSchedule } from './schedule';
 const mockSchedule: StaticSchedule = {
   m: { v: 'test-v1', e: 2000000000, u: 1000000 },
   s: {
-    st1: { n: 'Station Alpha', z: '1', ids: ['st1'] },
-    st2: { n: 'Station Bravo', z: '2', ids: ['st2'] },
-    st3: { n: 'Station Charlie', z: '3', ids: ['st3'] },
+    st1: { n: 'Station Alpha', z: '1', ids: ['st1'], lat: 10, lon: 10 },
+    st2: { n: 'Station Bravo', z: '2', ids: ['st2'], lat: 20, lon: 20 },
+    st3: { n: 'Station Charlie', z: '3', ids: ['st3'], lat: 30, lon: 30 },
   },
   o: ['st3', 'st2', 'st1'], // Explicitly reverse order for testing
   p: {

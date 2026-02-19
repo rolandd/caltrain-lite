@@ -13,6 +13,7 @@
   } from '$lib/schedule';
   import { getFavorites, toggleFavorite } from '$lib/favorites';
   import { fetchRealtime } from '$lib/realtime';
+  import { getTrainLocationDescription } from '$lib/location';
   import type { RealtimeStatus } from '@packages/types/schema';
 
   // Context from layout
@@ -39,16 +40,30 @@
   let origin = $state('');
   let destination = $state('');
   let dateStr = $state(getCaliforniaDateStr());
-  const dayOfWeek = $derived.by(() => {
+
+  const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
     const date = new Date(dateStr + 'T12:00:00');
-    return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date);
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date);
   });
   let results = $state<TripResult[]>([]);
   let searched = $state(false);
   let favorites = $state<string[]>([]);
   let realtime = $state<RealtimeStatus | null>(null);
   let pollInterval: ReturnType<typeof setInterval> | undefined;
+
+  // Tooltip state for mobile/enhanced interaction
+  let activeTooltip = $state<{
+    id: string;
+    text: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Derived: is the current origin-destination pair a favorite?
   const isCurrentFavorite = $derived(
@@ -255,6 +270,53 @@
     return `${mins} min late`;
   };
 
+  /** Helper to get location description for a trip */
+  function getTooltipText(trainNum: string, direction: 0 | 1): string | undefined {
+    if (!realtime || !schedule) return undefined;
+    const entity = realtime.e.find((e) => e.i === trainNum);
+    if (entity?.p) {
+      return getTrainLocationDescription(entity.p, direction, schedule);
+    }
+    return undefined;
+  }
+
+  /**
+   * Handle click on the delay badge.
+   * On mobile/touch this acts as a toggle. On desktop it can also be used to "pin".
+   * For now, simplistic toggle logic.
+   */
+  function toggleTooltip(
+    event: (MouseEvent | KeyboardEvent) & { currentTarget: HTMLElement },
+    trip: TripResult,
+  ): void {
+    event.stopPropagation(); // prevent row click if we add one later
+
+    // If clicking the same one, toggle off
+    if (activeTooltip?.id === trip.trainNumber) {
+      activeTooltip = null;
+      return;
+    }
+
+    const text = getTooltipText(trip.trainNumber, trip.direction);
+    if (!text) return; // No location data, nothing to show
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    // Position centered below the element
+    const x = rect.left + rect.width / 2;
+    const y = rect.bottom + 8; // 8px gap
+
+    activeTooltip = {
+      id: trip.trainNumber,
+      text,
+      x,
+      y,
+    };
+  }
+
+  function closeTooltip() {
+    activeTooltip = null;
+  }
+
   $effect(() => {
     // If we have origin/dest set (e.g. from favorite), auto search when schedule loads
     if (schedule && origin && destination && !searched) {
@@ -279,19 +341,6 @@
       <h1 class="text-2xl font-bold text-white flex items-center justify-center gap-3">
         Caltrain <img src="/caltrain.svg" alt="Logo" class="h-8 w-auto" />
       </h1>
-      <!-- Service Alerts -->
-      {#if realtime && realtime.a.length > 0}
-        <div
-          class="mt-4 bg-transit-alert-bg text-white rounded-lg p-3 text-sm leading-[1.4] text-left"
-          role="alert"
-        >
-          {#each realtime.a as alert (alert.h)}
-            <div class="alert-item">
-              <strong>{alert.h}</strong>: {alert.d}
-            </div>
-          {/each}
-        </div>
-      {/if}
     </header>
 
     <!-- Favorites List -->
@@ -331,13 +380,14 @@
     {/if}
 
     <section class="bg-transit-bg-card border border-transit-border rounded-2xl p-4 mb-6">
-      <div class="flex items-end gap-2 mb-4 max-[480px]:flex-col max-[480px]:items-stretch">
-        <div class="flex-1 flex flex-col gap-1.5">
-          <label class="text-[0.75rem] font-semibold text-[#888] uppercase" for="origin">From</label
+      <div class="flex items-center gap-2 mb-4 max-[480px]:flex-col max-[480px]:items-stretch">
+        <div class="flex-1 flex items-center gap-3">
+          <label class="text-xs font-semibold text-[#888] uppercase w-8 text-right" for="origin"
+            >From</label
           >
           <select
             id="origin"
-            class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full"
+            class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full flex-1 min-w-0"
             bind:value={origin}
             onchange={search}
           >
@@ -349,22 +399,32 @@
         </div>
 
         <button
-          class="w-11 h-11 bg-[#22222e] border border-transit-border rounded-[10px] text-transit-blue text-xl cursor-pointer flex-shrink-0 max-[480px]:self-center"
+          class="w-11 h-11 bg-[#22222e] border border-transit-border rounded-[10px] text-transit-blue text-xl cursor-pointer flex-shrink-0 self-center hidden max-[480px]:flex items-center justify-center"
           onclick={swap}
           aria-label="Swap stations"
           disabled={!origin && !destination}
         >
-          <span class="max-[480px]:hidden">⇆</span>
-          <span class="hidden max-[480px]:inline">⇅</span>
+          ⇅
         </button>
 
-        <div class="flex-1 flex flex-col gap-1.5">
-          <label class="text-[0.75rem] font-semibold text-[#888] uppercase" for="destination"
-            >To</label
+        <!-- Desktop swap button (between inputs) -->
+        <button
+          class="w-8 h-8 bg-transparent border-none text-transit-blue text-xl cursor-pointer flex-shrink-0 self-center max-[480px]:hidden hover:text-white transition-colors"
+          onclick={swap}
+          aria-label="Swap stations"
+          disabled={!origin && !destination}
+        >
+          ⇆
+        </button>
+
+        <div class="flex-1 flex items-center gap-3">
+          <label
+            class="text-xs font-semibold text-[#888] uppercase w-8 text-right max-[480px]:text-left"
+            for="destination">To</label
           >
           <select
             id="destination"
-            class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full"
+            class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full flex-1 min-w-0"
             bind:value={destination}
             onchange={search}
           >
@@ -377,12 +437,12 @@
       </div>
 
       <div class="flex items-end gap-2 max-[480px]:flex-col max-[480px]:items-stretch">
-        <div class="flex-1 flex flex-col gap-1.5">
-          <label class="text-[0.75rem] font-semibold text-[#888] uppercase" for="date"
-            >Date <span class="lowercase">({dayOfWeek})</span></label
+        <div class="flex-1 flex items-center gap-3">
+          <label class="text-xs font-semibold text-[#888] uppercase w-8 text-right" for="date"
+            >Date</label
           >
           <!-- Date navigation: prev / input / next -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 flex-1 min-w-0">
             <button
               class="w-9 h-10 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0"
               onclick={prevDay}
@@ -390,7 +450,7 @@
             >
             <input
               id="date"
-              class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full min-w-0"
+              class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full min-w-0 text-center"
               type="date"
               bind:value={dateStr}
               onchange={handleDateChange}
@@ -439,10 +499,13 @@
       <section aria-live="polite">
         {#if results.length > 0}
           <!-- Status bar -->
-          <div class="flex justify-between mb-3 text-[0.8125rem] text-[#888]">
+          <div class="flex items-center justify-between mb-3 text-[0.8125rem] text-[#888]">
             <span>{results.length} trips</span>
+            <span class="font-medium text-transit-text">{formattedDate}</span>
             {#if realtime && isToday}
               <span class="text-transit-blue font-semibold animate-pulse">● Live</span>
+            {:else}
+              <span></span>
             {/if}
           </div>
 
@@ -520,22 +583,31 @@
                     <div class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2">
                       <!-- Departure + optional delay -->
                       <div class="flex flex-col items-center gap-0.5">
-                        <span class="text-[1rem] font-bold text-white tabular-nums"
-                          >{trip.departure}</span
+                        <div
+                          class="flex flex-col items-center"
+                          role="button"
+                          tabindex="0"
+                          onclick={(e) => toggleTooltip(e, trip)}
+                          onkeydown={(e) => e.key === 'Enter' && toggleTooltip(e, trip)}
+                          title={getTooltipText(trip.trainNumber, trip.direction)}
                         >
-                        {#if delay !== undefined}
-                          <span
-                            class="text-[0.6rem] font-semibold leading-tight text-center {Math.round(
-                              delay / 60,
-                            ) >= 10
-                              ? 'text-[#eb5757]'
-                              : Math.round(delay / 60) >= 5
-                                ? 'text-[#f2994a]'
-                                : 'text-[#f2c94c]'}"
+                          <span class="text-[1rem] font-bold text-white tabular-nums"
+                            >{trip.departure}</span
                           >
-                            {formatDelay(delay)}
-                          </span>
-                        {/if}
+                          {#if delay !== undefined}
+                            <span
+                              class="text-[0.6rem] font-semibold leading-tight text-center cursor-pointer {Math.round(
+                                delay / 60,
+                              ) >= 10
+                                ? 'text-[#eb5757]'
+                                : Math.round(delay / 60) >= 5
+                                  ? 'text-[#f2994a]'
+                                  : 'text-[#f2c94c]'}"
+                            >
+                              {formatDelay(delay)}
+                            </span>
+                          {/if}
+                        </div>
                       </div>
 
                       <!-- Duration + intermediate stops -->
@@ -573,6 +645,47 @@
           </div>
         {/if}
       </section>
+    {/if}
+    <!-- Service Alerts -->
+    {#if realtime && realtime.a.length > 0}
+      <div
+        class="mt-8 bg-transit-alert-bg text-white rounded-lg p-3 text-sm leading-[1.4] text-left border border-[#ff6b6b33]"
+        role="alert"
+      >
+        <h3 class="text-[#ff8080] font-bold text-xs uppercase mb-2">Service Alerts</h3>
+        {#each realtime.a as alert (alert.h)}
+          <div class="alert-item mb-2 last:mb-0">
+            <strong class="text-white block mb-0.5">{alert.h}</strong>
+            <span class="text-[#ddd]">{alert.d}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Spacer for better scrolling -->
+    <div class="h-32"></div>
+
+    <!-- Active Tooltip Overlay -->
+    {#if activeTooltip}
+      <!-- Backdrop to close on click outside -->
+      <button
+        class="fixed inset-0 cursor-default bg-transparent border-none w-full h-full z-40"
+        onclick={closeTooltip}
+        aria-label="Close tooltip"
+      ></button>
+
+      <!-- Tooltip Bubble -->
+      <div
+        class="fixed z-50 bg-[#222] text-white text-xs px-2 py-1 rounded shadow-lg border border-[#444] pointer-events-none whitespace-nowrap transform -translate-x-1/2"
+        style="top: {activeTooltip.y}px; left: {activeTooltip.x}px;"
+        role="tooltip"
+      >
+        {activeTooltip.text}
+        <!-- Arrow pointing up -->
+        <div
+          class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#222] border-l border-t border-[#444] transform rotate-45"
+        ></div>
+      </div>
     {/if}
   </div>
 </main>
