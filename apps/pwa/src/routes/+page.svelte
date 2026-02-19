@@ -182,7 +182,8 @@
   }
 
   // Scroll the trip table to the first non-departed train
-  let tripScrollEl: HTMLDivElement | undefined;
+  // Scroll the trip table to the first non-departed train
+  let tripScrollEl = $state<HTMLDivElement | undefined>();
 
   /** Return true if the "HH:MM" departure string is before the current LA time. */
   function hasDeparted(departureStr: string): boolean {
@@ -275,7 +276,9 @@
 <main class="p-4 max-w-[600px] mx-auto pb-12">
   <div class="container">
     <header class="text-center mb-6">
-      <h1 class="text-2xl font-bold text-white">🚂 Caltrain</h1>
+      <h1 class="text-2xl font-bold text-white flex items-center justify-center gap-3">
+        Caltrain <img src="/caltrain.svg" alt="Logo" class="h-8 w-auto" />
+      </h1>
       <!-- Service Alerts -->
       {#if realtime && realtime.a.length > 0}
         <div

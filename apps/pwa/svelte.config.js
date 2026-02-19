@@ -8,6 +8,7 @@ const config = {
   kit: {
     adapter: adapter({
       // SPA mode: single fallback page for all routes (Cloudflare Pages)
+      fallback: 'index.html',
     }),
     alias: {
       '@packages': '../../packages',
