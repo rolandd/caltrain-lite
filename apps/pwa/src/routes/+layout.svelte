@@ -19,6 +19,8 @@
     },
   });
 
+  import InstallPrompt from '$lib/components/InstallPrompt.svelte';
+
   $effect(() => {
     initSchedule((newSchedule) => {
       console.log('Schedule updated in background, refreshing UI...');
@@ -39,6 +41,8 @@
 <svelte:head>
   <link rel="icon" href="/icon.svg" />
 </svelte:head>
+
+<InstallPrompt />
 
 {#if schedule}
   {@render children()}

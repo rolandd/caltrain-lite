@@ -47,5 +47,15 @@ export function toggleFavorite(origin: string, destination: string): boolean {
   }
 
   localStorage.setItem(KEY, JSON.stringify(newFavorites));
+
+  // Dispatch event so other components (like InstallPrompt) can react
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('transit:favorite-toggled', {
+        detail: { hasFavorites: newFavorites.length > 0 },
+      }),
+    );
+  }
+
   return isNowFavorite;
 }
