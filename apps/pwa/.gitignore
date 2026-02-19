@@ -1,6 +1,5 @@
 node_modules
 /build
-src/lib/schedule-data.json
 
 # Output
 .output

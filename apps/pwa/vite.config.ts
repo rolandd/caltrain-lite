@@ -36,6 +36,16 @@ function devScheduleApiPlugin() {
           return;
         }
 
+        if (req.url === '/api/realtime') {
+          const realtimePath = resolve(__dirname, 'src/lib/realtime-snapshot.json');
+          const data = readFileSync(realtimePath, 'utf-8');
+
+          res.setHeader('Content-Type', 'application/json');
+          res.end(data);
+
+          return;
+        }
+
         if (req.url === '/api/meta') {
           // Build a lightweight meta stub so the PWA's version-check logic
           // doesn't trigger a redundant re-download on every dev reload.

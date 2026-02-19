@@ -6,3 +6,4 @@ package-lock.json
 # Generated files
 **/gtfs-realtime.js
 apps/pwa/src/lib/schedule-data.json
+apps/pwa/src/lib/realtime-snapshot.json
