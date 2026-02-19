@@ -1,7 +1,9 @@
+import devtoolsJson from 'vite-plugin-devtools-json';
+
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
-
 import { sveltekit } from '@sveltejs/kit/vite';
+
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'node:fs';
@@ -27,8 +29,10 @@ function devScheduleApiPlugin() {
       server.middlewares.use((req, res, next) => {
         if (req.url === '/api/schedule') {
           const data = readFileSync(scheduleDataPath, 'utf-8');
+
           res.setHeader('Content-Type', 'application/json');
           res.end(data);
+
           return;
         }
 
@@ -36,6 +40,7 @@ function devScheduleApiPlugin() {
           // Build a lightweight meta stub so the PWA's version-check logic
           // doesn't trigger a redundant re-download on every dev reload.
           const schedule = JSON.parse(readFileSync(scheduleDataPath, 'utf-8'));
+
           const meta = {
             v: schedule.m.v,
             e: schedule.m.e,
@@ -43,8 +48,10 @@ function devScheduleApiPlugin() {
             sv: schedule.m.sv,
             realtimeAge: 9999, // no realtime in dev
           };
+
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify(meta));
+
           return;
         }
 
@@ -55,5 +62,5 @@ function devScheduleApiPlugin() {
 }
 
 export default defineConfig({
-  plugins: [tailwindcss(), sveltekit(), devScheduleApiPlugin()],
+  plugins: [tailwindcss(), sveltekit(), devScheduleApiPlugin(), devtoolsJson()],
 });
