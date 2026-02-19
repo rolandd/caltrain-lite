@@ -2,7 +2,7 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import { getContext, onMount, onDestroy } from 'svelte';
+  import { getContext, onMount, onDestroy, tick } from 'svelte';
   import {
     getStationList,
     queryTrips,
@@ -11,7 +11,7 @@
     type StaticSchedule,
     type TripResult,
   } from '$lib/schedule';
-  import { getFavorites, toggleFavorite, isFavorite } from '$lib/favorites';
+  import { getFavorites, toggleFavorite } from '$lib/favorites';
   import { fetchRealtime } from '$lib/realtime';
   import type { RealtimeStatus } from '@packages/types/schema';
 
@@ -20,10 +20,25 @@
   const schedule = $derived(scheduleCtx.value);
   const stations = $derived(schedule ? getStationList(schedule) : []);
 
+  // --- localStorage keys for persisted UI state ---
+  const LS_ORIGIN = 'transit-origin';
+  const LS_DEST = 'transit-destination';
+  const LS_DATE = 'transit-date';
+
+  /** Return today's date string in the America/Los_Angeles timezone (YYYY-MM-DD). */
+  function getCaliforniaDateStr(): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  }
+
   // State
   let origin = $state('');
   let destination = $state('');
-  let dateStr = $state(new Date().toISOString().slice(0, 10));
+  let dateStr = $state(getCaliforniaDateStr());
   const dayOfWeek = $derived.by(() => {
     if (!dateStr) return '';
     const date = new Date(dateStr + 'T12:00:00');
@@ -34,6 +49,11 @@
   let favorites = $state<string[]>([]);
   let realtime = $state<RealtimeStatus | null>(null);
   let pollInterval: ReturnType<typeof setInterval> | undefined;
+
+  // Derived: is the current origin-destination pair a favorite?
+  const isCurrentFavorite = $derived(
+    origin && destination ? favorites.includes(`${origin}-${destination}`) : false,
+  );
 
   const isToday = $derived.by(() => {
     if (!dateStr) return false;
@@ -67,6 +87,18 @@
     search();
   }
 
+  /** Reset all form state and clear localStorage persistence. */
+  function clearState() {
+    origin = '';
+    destination = '';
+    dateStr = getCaliforniaDateStr();
+    results = [];
+    searched = false;
+    localStorage.removeItem(LS_ORIGIN);
+    localStorage.removeItem(LS_DEST);
+    localStorage.removeItem(LS_DATE);
+  }
+
   function getStationName(id: string) {
     return schedule?.s[id]?.n || id;
   }
@@ -79,12 +111,26 @@
 
   onMount(() => {
     loadFavorites();
+    // Restore persisted station/date selections
+    const savedOrigin = localStorage.getItem(LS_ORIGIN);
+    const savedDest = localStorage.getItem(LS_DEST);
+    const savedDate = localStorage.getItem(LS_DATE);
+    if (savedOrigin) origin = savedOrigin;
+    if (savedDest) destination = savedDest;
+    if (savedDate) dateStr = savedDate;
     updateRealtime();
     pollInterval = setInterval(updateRealtime, 60000);
   });
 
   onDestroy(() => {
     if (pollInterval) clearInterval(pollInterval);
+  });
+
+  // Persist form selections to localStorage whenever they change
+  $effect(() => {
+    localStorage.setItem(LS_ORIGIN, origin);
+    localStorage.setItem(LS_DEST, destination);
+    localStorage.setItem(LS_DATE, dateStr);
   });
 
   $effect(() => {
@@ -118,6 +164,47 @@
     if (searched) search();
   };
 
+  // Date navigation helpers
+  function shiftDate(days: number) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + days);
+    dateStr = d.toISOString().slice(0, 10);
+    search();
+  }
+  const prevDay = () => shiftDate(-1);
+  const nextDay = () => shiftDate(1);
+  function goNow() {
+    dateStr = getCaliforniaDateStr();
+    search();
+    // Wait one frame for Svelte to render the results, then scroll
+    tick().then(() => scrollToNow());
+  }
+
+  // Scroll the trip table to the first non-departed train
+  let tripScrollEl: HTMLDivElement | undefined;
+
+  /** Return true if the "HH:MM" departure string is before the current LA time. */
+  function hasDeparted(departureStr: string): boolean {
+    const [h, m] = departureStr.split(':').map(Number);
+    const depMins = h * 60 + m;
+    const laTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date());
+    const [nowH, nowM] = laTime.split(':').map(Number);
+    return depMins < nowH * 60 + nowM;
+  }
+
+  function scrollToNow() {
+    if (!tripScrollEl || !results.length) return;
+    const firstFutureIdx = results.findIndex((t) => !hasDeparted(t.departure));
+    if (firstFutureIdx > 0) {
+      tripScrollEl.scrollLeft = firstFutureIdx * 84;
+    }
+  }
 
   // Returns Tailwind classes for the trip column based on route type
   const getRouteStyle = (
@@ -210,14 +297,31 @@
         <h2 class="text-sm text-[#888] mb-3 uppercase tracking-wider">Favorites</h2>
         <div class="grid grid-cols-1 gap-3">
           {#each favorites as pair (pair)}
-            <button
-              class="bg-transit-bg-card border border-transit-border p-4 rounded-xl flex items-center justify-between text-white font-inherit text-base cursor-pointer text-left"
-              onclick={() => selectFavorite(pair)}
+            {@const [o, d] = pair.split('-')}
+            <div
+              class="bg-transit-bg-card border border-transit-border rounded-xl flex items-center justify-between p-1 pr-3 transition-colors hover:border-[#ffffff33]"
             >
-              <span class="st">{getStationName(pair.split('-')[0])}</span>
-              <span class="text-[#555] text-sm mx-2">→</span>
-              <span class="st">{getStationName(pair.split('-')[1])}</span>
-            </button>
+              <button
+                class="flex-1 text-left flex items-center gap-2 p-3 cursor-pointer bg-transparent border-none text-white text-base font-inherit"
+                onclick={() => selectFavorite(pair)}
+              >
+                <span class="font-semibold">{getStationName(o)}</span>
+                <span class="text-[#888] text-sm">→</span>
+                <span class="font-semibold">{getStationName(d)}</span>
+              </button>
+
+              <button
+                class="text-[#ffd700] text-xl cursor-pointer bg-transparent border-none p-2 rounded-full hover:bg-[#ffffff10] transition-colors flex items-center justify-center leading-none"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(o, d);
+                  loadFavorites();
+                }}
+                aria-label="Remove favorite"
+              >
+                ★
+              </button>
+            </div>
           {/each}
         </div>
       </section>
@@ -242,12 +346,13 @@
         </div>
 
         <button
-          class="w-11 h-11 bg-[#22222e] border border-transit-border rounded-[10px] text-transit-blue text-xl cursor-pointer flex-shrink-0"
+          class="w-11 h-11 bg-[#22222e] border border-transit-border rounded-[10px] text-transit-blue text-xl cursor-pointer flex-shrink-0 max-[480px]:self-center"
           onclick={swap}
           aria-label="Swap stations"
           disabled={!origin && !destination}
         >
-          ⇆
+          <span class="max-[480px]:hidden">⇆</span>
+          <span class="hidden max-[480px]:inline">⇅</span>
         </button>
 
         <div class="flex-1 flex flex-col gap-1.5">
@@ -268,39 +373,62 @@
         </div>
       </div>
 
-      <div class="flex items-end gap-4">
-        <div class="flex-1 flex flex-col gap-1.5 date-field">
+      <div class="flex items-end gap-2 max-[480px]:flex-col max-[480px]:items-stretch">
+        <div class="flex-1 flex flex-col gap-1.5">
           <label class="text-[0.75rem] font-semibold text-[#888] uppercase" for="date"
-            >Date <span class="day-label lowercase">({dayOfWeek})</span></label
+            >Date <span class="lowercase">({dayOfWeek})</span></label
           >
-          <input
-            id="date"
-            class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full"
-            type="date"
-            bind:value={dateStr}
-            onchange={handleDateChange}
-            onblur={handleDateChange}
-          />
-        </div>
-
-        {#if currentFare !== null}
-          <div class="flex-1 text-right flex flex-col justify-center pr-2">
-            <span class="text-[0.7rem] text-[#888] uppercase">One-Way</span>
-            <span class="text-lg font-bold text-transit-blue"
-              >${(currentFare / 100).toFixed(2)}</span
+          <!-- Date navigation: prev / input / next -->
+          <div class="flex items-center gap-1">
+            <button
+              class="w-9 h-10 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0"
+              onclick={prevDay}
+              aria-label="Previous day">‹</button
+            >
+            <input
+              id="date"
+              class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full min-w-0"
+              type="date"
+              bind:value={dateStr}
+              onchange={handleDateChange}
+              onblur={handleDateChange}
+            />
+            <button
+              class="w-9 h-10 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0"
+              onclick={nextDay}
+              aria-label="Next day">›</button
+            >
+            <button
+              class="h-10 px-2.5 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-blue text-xs font-semibold cursor-pointer flex-shrink-0 whitespace-nowrap"
+              onclick={goNow}
+              aria-label="Jump to now">Now</button
             >
           </div>
-        {/if}
+        </div>
 
-        <button
-          class="w-11 h-11 bg-transparent border border-transit-border rounded-[10px] text-[#ffd700] text-2xl cursor-pointer flex items-center justify-center leading-none pb-[3px]"
-          onclick={handleToggleFavorite}
-          disabled={!origin || !destination}
-          aria-label={isFavorite(origin, destination) ? 'Remove favorite' : 'Add favorite'}
-          aria-pressed={isFavorite(origin, destination)}
-        >
-          {isFavorite(origin, destination) ? '★' : '☆'}
-        </button>
+        <!-- Actions: Clear / Favorite -->
+        <div class="flex items-center gap-2 max-[480px]:justify-end">
+          {#if origin || destination}
+            <button
+              class="h-11 px-3 bg-transparent border border-transit-border rounded-[10px] text-[#888] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
+              onclick={clearState}
+              aria-label="Clear selections"
+            >
+              <span class="text-[#eb5757]">✕</span> Clear
+            </button>
+          {/if}
+
+          <button
+            class="h-11 px-3 bg-transparent border border-transit-border rounded-[10px] text-[#ffd700] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
+            onclick={handleToggleFavorite}
+            disabled={!origin || !destination}
+            aria-label={isCurrentFavorite ? 'Remove favorite' : 'Add favorite'}
+            aria-pressed={isCurrentFavorite}
+          >
+            <span class="text-lg leading-none pb-[2px]">{isCurrentFavorite ? '★' : '☆'}</span>
+            Fav
+          </button>
+        </div>
       </div>
     </section>
 
@@ -320,7 +448,7 @@
             The outer wrapper clips overflow; the inner flex row holds both panels.
           -->
           <div class="relative rounded-xl overflow-hidden border border-transit-border">
-            <div class="flex overflow-x-auto">
+            <div class="flex overflow-x-auto" bind:this={tripScrollEl}>
               <!-- Fixed left panel: origin → fare → destination -->
               <div
                 class="sticky left-0 z-10 flex-shrink-0 w-[108px] bg-transit-bg-card border-r border-transit-border flex flex-col"
