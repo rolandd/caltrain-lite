@@ -44,7 +44,7 @@ interface FareRules {
 }
 
 export interface StaticSchedule {
-  m: { v: string; e: number; u: number };
+  m: { v: string; e: number; sv: number };
   p: Record<string, string[]>;
   t: Trip[];
   r: { c: Record<string, CalendarEntry>; e: Record<string, CalendarException[]> };

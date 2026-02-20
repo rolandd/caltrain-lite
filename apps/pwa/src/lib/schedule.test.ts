@@ -14,7 +14,7 @@ import type { StaticSchedule } from './schedule';
  * Pair index x maps "origin→dest" to candidate trip IDs.
  */
 const mockSchedule: StaticSchedule = {
-  m: { v: 'test-v1', e: 2000000000, u: 1000000 },
+  m: { v: 'test-v1', e: 2000000000, sv: 1000000 },
   s: {
     st1: { n: 'Station Alpha', z: '1', ids: ['st1'], lat: 10, lon: 10 },
     st2: { n: 'Station Bravo', z: '2', ids: ['st2'], lat: 20, lon: 20 },
