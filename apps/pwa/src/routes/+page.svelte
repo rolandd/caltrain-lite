@@ -347,7 +347,7 @@
     <!-- Favorites List -->
     {#if !searched && favorites.length > 0}
       <section class="mb-6" aria-label="Favorite Trips">
-        <h2 class="text-sm text-[#888] mb-3 uppercase tracking-wider">Favorites</h2>
+        <h2 class="text-sm text-[#a3a3a3] mb-3 uppercase tracking-wider">Favorites</h2>
         <div class="grid grid-cols-1 gap-3">
           {#each favorites as pair (pair)}
             {@const [o, d] = pair.split('-')}
@@ -359,7 +359,7 @@
                 onclick={() => selectFavorite(pair)}
               >
                 <span class="font-semibold">{getStationName(o)}</span>
-                <span class="text-[#888] text-sm">→</span>
+                <span class="text-[#a3a3a3] text-sm">→</span>
                 <span class="font-semibold">{getStationName(d)}</span>
               </button>
 
@@ -383,7 +383,7 @@
     <section class="bg-transit-bg-card border border-transit-border rounded-2xl p-4 mb-6">
       <div class="flex items-center gap-2 mb-4 max-[480px]:flex-col max-[480px]:items-stretch">
         <div class="flex-1 flex items-center gap-3">
-          <label class="text-xs font-semibold text-[#888] uppercase w-8 text-right" for="origin"
+          <label class="text-xs font-semibold text-[#a3a3a3] uppercase w-8 text-right" for="origin"
             >From</label
           >
           <select
@@ -420,7 +420,7 @@
 
         <div class="flex-1 flex items-center gap-3">
           <label
-            class="text-xs font-semibold text-[#888] uppercase w-8 text-right max-[480px]:text-left"
+            class="text-xs font-semibold text-[#a3a3a3] uppercase w-8 text-right max-[480px]:text-left"
             for="destination">To</label
           >
           <select
@@ -439,51 +439,98 @@
 
       <div class="flex items-end gap-2 max-[480px]:flex-col max-[480px]:items-stretch">
         <div class="flex-1 flex items-center gap-3">
-          <label class="text-xs font-semibold text-[#888] uppercase w-8 text-right" for="date"
+          <label class="text-xs font-semibold text-[#a3a3a3] uppercase w-8 text-right" for="date"
             >Date</label
           >
           <!-- Date navigation: prev / input / next -->
           <div class="flex items-center gap-1 flex-1 min-w-0">
             <button
-              class="w-9 h-10 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0"
+              class="w-11 h-11 bg-transit-bg-input hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors"
               onclick={prevDay}
-              aria-label="Previous day">‹</button
+              aria-label="Previous day"
             >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2.5"
+                stroke="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                />
+              </svg>
+            </button>
             <input
               id="date"
-              class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full min-w-0 text-center"
+              class="h-11 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base px-2 w-full min-w-0 text-center uppercase"
               type="date"
               bind:value={dateStr}
               onchange={handleDateChange}
               onblur={handleDateChange}
             />
             <button
-              class="w-9 h-10 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0"
+              class="w-11 h-11 bg-transit-bg-input hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors"
               onclick={nextDay}
-              aria-label="Next day">›</button
+              aria-label="Next day"
             >
-            <button
-              class="h-10 px-2.5 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-blue text-xs font-semibold cursor-pointer flex-shrink-0 whitespace-nowrap"
-              onclick={goNow}
-              aria-label="Jump to now">Now</button
-            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2.5"
+                stroke="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                />
+              </svg>
+            </button>
           </div>
         </div>
 
-        <!-- Actions: Clear / Favorite -->
-        <div class="flex items-center gap-2 max-[480px]:justify-end">
+        <!-- Actions: Now / Clear / Favorite -->
+        <div class="flex items-center gap-2 max-[480px]:w-full">
+          <button
+            class="h-11 px-3 bg-transparent hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-transit-blue text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors"
+            onclick={goNow}
+            aria-label="Jump to now"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2.5"
+              stroke="currentColor"
+              class="w-4 h-4 mb-[1px]"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Now
+          </button>
+
           {#if origin || destination}
             <button
-              class="h-11 px-3 bg-transparent border border-transit-border rounded-[10px] text-[#888] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
+              class="h-11 px-3 bg-transparent hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-[#eb5757] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors"
               onclick={clearState}
               aria-label="Clear selections"
             >
-              <span class="text-[#eb5757]">✕</span> Clear
+              <span class="text-lg leading-none pb-[2px]">✕</span> Clear
             </button>
           {/if}
 
           <button
-            class="h-11 px-3 bg-transparent border border-transit-border rounded-[10px] text-[#ffd700] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
+            class="h-11 px-3 bg-transparent hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-[#ffd700] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onclick={handleToggleFavorite}
             disabled={!origin || !destination}
             aria-label={isCurrentFavorite ? 'Remove favorite' : 'Add favorite'}
@@ -500,7 +547,7 @@
       <section aria-live="polite">
         {#if results.length > 0}
           <!-- Status bar -->
-          <div class="flex items-center justify-between mb-3 text-[0.8125rem] text-[#888]">
+          <div class="flex items-center justify-between mb-3 text-[0.8125rem] text-[#a3a3a3]">
             <span>{results.length} trips</span>
             <span class="font-medium text-transit-text">{formattedDate}</span>
             {#if realtime && isToday}
@@ -528,7 +575,7 @@
                 <div class="flex flex-col flex-1 items-center justify-between px-2 py-3 gap-1">
                   <!-- Origin -->
                   <div class="text-center">
-                    <div class="text-[0.65rem] text-[#666] uppercase tracking-wider mb-0.5">
+                    <div class="text-[0.65rem] text-[#a3a3a3] uppercase tracking-wider mb-0.5">
                       From
                     </div>
                     <div class="text-[0.8rem] font-semibold text-transit-text leading-tight">
@@ -551,7 +598,9 @@
 
                   <!-- Destination -->
                   <div class="text-center">
-                    <div class="text-[0.65rem] text-[#666] uppercase tracking-wider mb-0.5">To</div>
+                    <div class="text-[0.65rem] text-[#a3a3a3] uppercase tracking-wider mb-0.5">
+                      To
+                    </div>
                     <div class="text-[0.8rem] font-semibold text-transit-text leading-tight">
                       {truncateStation(getStationName(destination))}
                     </div>
@@ -572,7 +621,8 @@
                     <div
                       class="h-[52px] flex flex-col items-center justify-center gap-1 px-1 border-b {style.border}"
                     >
-                      <span class="text-[0.7rem] font-mono text-[#666]">#{trip.trainNumber}</span>
+                      <span class="text-[0.7rem] font-mono text-[#a3a3a3]">#{trip.trainNumber}</span
+                      >
                       <span
                         class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full uppercase {style.badge}"
                       >
@@ -613,8 +663,8 @@
 
                       <!-- Duration + intermediate stops -->
                       <div class="flex flex-col items-center gap-0.5 text-center">
-                        <span class="text-[0.7rem] text-[#666]">{trip.durationMinutes}m</span>
-                        <span class="text-[0.65rem] text-[#555]">
+                        <span class="text-[0.7rem] text-[#a3a3a3]">{trip.durationMinutes}m</span>
+                        <span class="text-[0.65rem] text-[#a3a3a3]">
                           {trip.intermediateStops === 0
                             ? 'non-stop'
                             : trip.intermediateStops === 1
