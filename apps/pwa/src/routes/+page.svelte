@@ -261,7 +261,8 @@
     if (!realtime || !isToday) return undefined;
     // Realtime entities use trip_id (i). For Caltrain this matches train number in static schedule
     const entity = realtime.e.find((e) => e.i === trainNum);
-    return entity?.d;
+    if (!entity) return undefined;
+    return entity.d ?? 0;
   };
 
   const formatDelay = (delaySec: number): string => {
