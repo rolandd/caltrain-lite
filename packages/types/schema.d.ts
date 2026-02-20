@@ -47,8 +47,6 @@ export interface StaticSchedule {
     v: string;
     /** Max end date across all service calendars (YYYYMMDD integer). */
     e: number;
-    /** Last updated timestamp (epoch seconds). */
-    u: number;
     /** Schema version. Increment this to force a re-fetch of all clients. */
     sv: number;
   };
@@ -244,8 +242,6 @@ export interface ScheduleMeta {
   v: string;
   /** Max end date (YYYYMMDD integer). */
   e: number;
-  /** Last updated timestamp (epoch seconds). */
-  u: number;
   /** Schema version (matches `StaticSchedule.m.sv`). */
   sv: number;
   /** Seconds since the last real-time update was written to KV. */

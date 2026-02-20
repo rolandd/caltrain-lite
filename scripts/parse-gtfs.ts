@@ -456,7 +456,6 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
     m: {
       v: versionHash,
       e: maxEndDate,
-      u: Math.floor(Date.now() / 1000),
       sv: SCHEMA_VERSION,
     },
     p: patterns,

@@ -54,7 +54,6 @@ function devScheduleApiPlugin() {
           const meta = {
             v: schedule.m.v,
             e: schedule.m.e,
-            u: schedule.m.u,
             sv: schedule.m.sv,
             realtimeAge: 9999, // no realtime in dev
           };

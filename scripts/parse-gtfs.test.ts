@@ -81,7 +81,6 @@ describe('parseGtfsZip – synthetic data', () => {
     const expectedHash = createHash('sha256').update(zipBuf).digest('hex');
     expect(result.m.v).toBe(expectedHash);
     expect(result.m.e).toBe(20261231);
-    expect(result.m.u).toBeGreaterThan(0);
 
     // -- Stations --
     expect(Object.keys(result.s)).toHaveLength(2);
