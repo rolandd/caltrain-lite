@@ -8,7 +8,17 @@ export const handle: Handle = async ({ event, resolve }) => {
   return resolve(event, {
     transformPageChunk: ({ html }) => {
       // Prioritize environment variable, fallback to default for local dev if not defined
-      const domain = env.PUBLIC_DOMAIN || 'https://transit.example.com';
+      let domain = 'https://transit.example.com';
+      if (env.PUBLIC_DOMAIN) {
+        try {
+          const url = new URL(env.PUBLIC_DOMAIN);
+          if (url.protocol === 'https:') {
+            domain = url.origin;
+          }
+        } catch {
+          // ignore invalid URLs that fail to parse
+        }
+      }
 
       const metaTags = `
         <!-- OpenGraph / Facebook -->
