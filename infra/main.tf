@@ -56,12 +56,14 @@ resource "cloudflare_pages_project" "pwa" {
   deployment_configs {
     production {
       environment_variables = {
-        NODE_VERSION = "24"
+        NODE_VERSION  = "24"
+        PUBLIC_DOMAIN = "https://${var.domain}"
       }
     }
     preview {
       environment_variables = {
-        NODE_VERSION = "24"
+        NODE_VERSION  = "24"
+        PUBLIC_DOMAIN = "https://${var.domain}"
       }
     }
   }
