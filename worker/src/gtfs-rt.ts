@@ -57,24 +57,30 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
         stopId = update.stop_id;
       }
 
-      e.push({
+      const ent: RealtimeEntity = {
         i: tripId,
-        d: delay,
         s: stopId,
         st: 2, // Default to In Transit
-      });
+      };
+      if (delay !== 0) ent.d = delay;
+      e.push(ent);
     }
 
     // 2. Vehicle Position
+    // (round lat/lon to no more than 5 digits past decimal point
+    // because the RT feed has more but they imply false precision
+    // and just waste bytes on the wire)
     if (entity.vehicle) {
       const v = entity.vehicle;
       if (v.trip && v.position) {
-        positions.set(v.trip.trip_id, {
-          la: v.position.latitude,
-          lo: v.position.longitude,
-          b: v.position.bearing,
-          sp: v.position.speed,
-        });
+        const pos: VehiclePosition = {
+          la: Math.round(v.position.latitude * 100000) / 100000,
+          lo: Math.round(v.position.longitude * 100000) / 100000,
+        };
+        if (v.position.bearing) pos.b = v.position.bearing;
+        if (v.position.speed) pos.sp = v.position.speed;
+
+        positions.set(v.trip.trip_id, pos);
       }
     }
 
