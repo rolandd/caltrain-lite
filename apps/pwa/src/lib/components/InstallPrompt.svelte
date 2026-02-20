@@ -48,20 +48,27 @@
     platform = checkPlatform();
 
     // 5. Listen for Chromium prompt
-    window.addEventListener('beforeinstallprompt', (e) => {
+    const onBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       deferredPrompt = e as BeforeInstallPromptEvent;
       updateVisibility();
-    });
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
 
     // 6. Listen for favorite toggles
-    window.addEventListener('transit:favorite-toggled', ((e: CustomEvent) => {
+    const onFavoriteToggled = ((e: CustomEvent) => {
       hasFavorites = e.detail.hasFavorites;
       updateVisibility();
-    }) as EventListener);
+    }) as EventListener;
+    window.addEventListener('transit:favorite-toggled', onFavoriteToggled);
 
     // Initial check
     updateVisibility();
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('transit:favorite-toggled', onFavoriteToggled);
+    };
   });
 
   function updateVisibility() {
