@@ -6,6 +6,9 @@ import adapter from '@sveltejs/adapter-static';
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
   kit: {
+    version: {
+      pollInterval: 300000, // 5 minutes
+    },
     adapter: adapter({
       // SPA mode: single fallback page for all routes (Cloudflare Pages uses 404.html by default)
       fallback: '404.html',

@@ -20,6 +20,7 @@
   });
 
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
+  import UpdateBanner from '$lib/components/UpdateBanner.svelte';
 
   $effect(() => {
     initSchedule((newSchedule) => {
@@ -43,6 +44,7 @@
 </svelte:head>
 
 <InstallPrompt />
+<UpdateBanner />
 
 {#if schedule}
   {@render children()}
