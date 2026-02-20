@@ -20,12 +20,6 @@ export function getFavorites(): string[] {
   }
 }
 
-export function isFavorite(origin: string, destination: string): boolean {
-  const favorites = getFavorites();
-  const pair = `${origin}-${destination}`;
-  return favorites.includes(pair);
-}
-
 export function toggleFavorite(origin: string, destination: string): boolean {
   if (typeof localStorage === 'undefined') return false;
 

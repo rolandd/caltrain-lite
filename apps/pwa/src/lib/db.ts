@@ -89,14 +89,6 @@ export async function cacheSchedule(schedule: StaticSchedule): Promise<void> {
 }
 
 /**
- * Check if the cached schedule version matches the given version hash.
- */
-export async function isCacheCurrentVersion(version: string): Promise<boolean> {
-  const cached = await db.schedules.get(version);
-  return cached !== undefined;
-}
-
-/**
  * Store the latest meta check result.
  */
 export async function cacheMeta(meta: ScheduleMeta): Promise<void> {
@@ -107,9 +99,3 @@ export async function cacheMeta(meta: ScheduleMeta): Promise<void> {
   });
 }
 
-/**
- * Get the last cached meta, if any.
- */
-export async function getCachedMeta(): Promise<CachedMeta | undefined> {
-  return db.meta.get('current');
-}
