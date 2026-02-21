@@ -8,51 +8,16 @@
  * In the future these will come from @transit/types.
  */
 
-// Re-derive the types we need from the schema definition.
-// This avoids cross-package import issues in the SvelteKit dev context.
-interface Station {
-  n: string;
-  z: string;
-  ids: string[];
-  lat: number;
-  lon: number;
-}
+import type {
+  Station,
+  Trip,
+  CalendarEntry,
+  CalendarException,
+  FareRules,
+  StaticSchedule,
+} from '../../../../packages/types/schema';
 
-interface Trip {
-  i: string;
-  s: string;
-  p: string;
-  d: 0 | 1;
-  st: number[];
-  rt: string;
-}
-
-interface CalendarEntry {
-  days: (0 | 1)[];
-  start: number;
-  end: number;
-}
-
-interface CalendarException {
-  date: number;
-  type: 1 | 2;
-}
-
-interface FareRules {
-  zones: Record<string, { name: string }>;
-  fares: Record<string, number>;
-}
-
-export interface StaticSchedule {
-  m: { v: string; e: number; sv: number };
-  p: Record<string, string[]>;
-  t: Trip[];
-  r: { c: Record<string, CalendarEntry>; e: Record<string, CalendarException[]> };
-  s: Record<string, Station>;
-  o: string[];
-  f: FareRules;
-  x: Record<string, string[]>;
-}
+export type { StaticSchedule };
 export interface StationInfo {
   id: string;
   name: string;
