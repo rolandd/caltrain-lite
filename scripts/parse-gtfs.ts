@@ -487,7 +487,7 @@ async function main() {
     zipBuffer = readFileSync(inputPath);
   } else if (apiKey) {
     // Fetch from 511.org
-    const url = `http://api.511.org/transit/datafeeds?api_key=${apiKey}&operator_id=CT`;
+    const url = `https://api.511.org/transit/datafeeds?api_key=${apiKey}&operator_id=CT`;
     console.error('Fetching GTFS ZIP from 511.org...');
     const response = await fetch(url);
     if (!response.ok) {

@@ -19,7 +19,7 @@ export default {
 
     try {
       // 1. Fetch TripUpdates, VehiclePositions, ServiceAlerts in parallel
-      const baseUrl = 'http://api.511.org/Transit';
+      const baseUrl = 'https://api.511.org/Transit';
       const agency = 'CT';
       const fetchFeed = async (endpoint: string) => {
         const resp = await fetch(`${baseUrl}/${endpoint}?api_key=${apiKey}&agency=${agency}`);

@@ -7,7 +7,7 @@ const apiKeyRaw = readFileSync('../../API_KEY', 'utf-8');
 const match = apiKeyRaw.match(/TRANSIT_511_API_KEY="([^"]+)"/);
 if (!match) throw new Error('Could not parse API_KEY file');
 const apiKey = match[1];
-const url = `http://api.511.org/Transit/TripUpdates?api_key=${apiKey}&agency=CT`;
+const url = `https://api.511.org/Transit/TripUpdates?api_key=${apiKey}&agency=CT`;
 
 console.log(`Fetching ${url}...`);
 const response = await fetch(url);

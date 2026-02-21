@@ -12,7 +12,7 @@ const endpoints = ['ServiceAlerts', 'VehiclePositions'];
 
 async function check() {
   for (const ep of endpoints) {
-    const url = `http://api.511.org/Transit/${ep}?api_key=${apiKey}&agency=CT`;
+    const url = `https://api.511.org/Transit/${ep}?api_key=${apiKey}&agency=CT`;
     console.log(`Fetching ${ep}...`);
     try {
       const resp = await fetch(url);
