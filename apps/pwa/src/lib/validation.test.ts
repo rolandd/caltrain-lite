@@ -21,7 +21,7 @@ test('rejects invalid schedule data', () => {
   expect(() => typia.assert<StaticSchedule>(invalidSchedule)).toThrow();
 
   const missingMeta = { ...scheduleData };
-  delete (missingMeta as any).m;
+  delete (missingMeta as Record<string, unknown>).m;
   expect(() => typia.assert<StaticSchedule>(missingMeta)).toThrow();
 });
 

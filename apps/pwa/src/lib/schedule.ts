@@ -9,11 +9,7 @@
  */
 
 import type {
-  Station,
   Trip,
-  CalendarEntry,
-  CalendarException,
-  FareRules,
   StaticSchedule,
 } from '../../../../packages/types/schema';
 
