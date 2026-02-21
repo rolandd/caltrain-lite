@@ -14,7 +14,9 @@ export function getFavorites(): string[] {
   const raw = localStorage.getItem(KEY);
   if (!raw) return [];
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => typeof item === 'string');
   } catch {
     return [];
   }
