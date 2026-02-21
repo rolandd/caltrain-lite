@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-import { getCachedSchedule, cacheSchedule, cacheMeta } from './db';
+import { getCachedSchedule, cacheSchedule, cacheMeta, db } from './db';
 import type { StaticSchedule, ScheduleMeta } from '@packages/types/schema';
 import { assert } from 'typia';
 
@@ -23,6 +23,9 @@ export async function initSchedule(
   try {
     const cached = await getCachedSchedule();
     if (cached) {
+      // Validate the cached data hasn't structurally drifted or become corrupted
+      assert<StaticSchedule>(cached.data);
+
       // Return immediately, but trigger background update
       checkForUpdate(cached.version, cached.schemaVersion, onUpdate).catch((err) =>
         console.warn('Background update check failed:', err),
@@ -30,7 +33,14 @@ export async function initSchedule(
       return cached.data;
     }
   } catch (err) {
-    console.error('Failed to read from DB:', err);
+    console.error('Failed to read or validate schedule from DB:', err);
+    // If validation failed, clear the corrupt cache to ensure a clean slate
+    try {
+      await db.schedules.clear();
+      console.log('Cleared corrupt schedule cache');
+    } catch (clearErr) {
+      console.error('Failed to clear corrupt schedule cache:', clearErr);
+    }
     // Fallthrough to network fetch
   }
 

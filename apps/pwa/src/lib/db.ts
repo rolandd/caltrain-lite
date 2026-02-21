@@ -98,4 +98,3 @@ export async function cacheMeta(meta: ScheduleMeta): Promise<void> {
     checkedAt: Date.now(),
   });
 }
-
