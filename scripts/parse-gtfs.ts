@@ -364,19 +364,27 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
   const fareRulesOutput: FareRules = { zones, fares: fareLookup };
 
   // ----- Build station-pair index -----
-  const pairIndex: Record<string, string[]> = {};
-  for (const trip of outputTrips) {
-    const patternStops = patterns[trip.p];
-    if (!patternStops) continue;
-
+  // Precompute pair keys once per pattern, then assign trips.
+  const pairKeysByPattern = new Map<string, string[]>();
+  for (const [patternId, patternStops] of Object.entries(patterns)) {
+    const pairKeys: string[] = [];
     for (let i = 0; i < patternStops.length; i++) {
       for (let j = i + 1; j < patternStops.length; j++) {
-        const key = `${patternStops[i]}→${patternStops[j]}`;
-        if (!pairIndex[key]) {
-          pairIndex[key] = [];
-        }
-        pairIndex[key].push(trip.i);
+        pairKeys.push(`${patternStops[i]}→${patternStops[j]}`);
       }
+    }
+    pairKeysByPattern.set(patternId, pairKeys);
+  }
+
+  const pairIndex: Record<string, string[]> = {};
+  for (const trip of outputTrips) {
+    const pairKeys = pairKeysByPattern.get(trip.p);
+    if (!pairKeys) continue;
+    for (const key of pairKeys) {
+      if (!pairIndex[key]) {
+        pairIndex[key] = [];
+      }
+      pairIndex[key].push(trip.i);
     }
   }
 

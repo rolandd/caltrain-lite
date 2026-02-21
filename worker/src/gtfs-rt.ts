@@ -34,36 +34,40 @@ function extractTranslation(txt: GtfsTranslatedString | undefined): string {
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   const pbf = new Pbf(new Uint8Array(buffer));
   const feed = readFeedMessage(pbf);
-  const timestamp = Number(feed.header.timestamp || 0);
+  const timestamp = Number(feed.header?.timestamp || 0);
 
   const e: RealtimeEntity[] = [];
   const positions = new Map<string, VehiclePosition>();
   const alerts: ServiceAlert[] = [];
 
-  for (const entity of feed.entity) {
+  for (const entity of feed.entity ?? []) {
     // 1. Trip Update
     if (entity.trip_update) {
       const tu = entity.trip_update;
-      const tripId = tu.trip.trip_id;
-      let delay = 0;
-      let stopId = '';
+      const tripId = tu.trip?.trip_id;
+      if (tripId) {
+        let delay = 0;
+        let stopId = '';
 
-      if (tu.stop_time_update && tu.stop_time_update.length > 0) {
-        const update = tu.stop_time_update[0];
-        const event = update.departure || update.arrival;
-        if (event && event.delay !== null) {
-          delay = event.delay;
+        if (tu.stop_time_update && tu.stop_time_update.length > 0) {
+          const update = tu.stop_time_update[0];
+          const event = update.departure || update.arrival;
+          if (event && typeof event.delay === 'number') {
+            delay = event.delay;
+          }
+          if (update.stop_id) {
+            stopId = update.stop_id;
+          }
         }
-        stopId = update.stop_id;
-      }
 
-      const ent: RealtimeEntity = {
-        i: tripId,
-        s: stopId,
-        st: 2, // Default to In Transit
-      };
-      if (delay !== 0) ent.d = delay;
-      e.push(ent);
+        const ent: RealtimeEntity = {
+          i: tripId,
+          s: stopId,
+          st: 2, // Default to In Transit
+        };
+        if (delay !== 0) ent.d = delay;
+        e.push(ent);
+      }
     }
 
     // 2. Vehicle Position
@@ -72,15 +76,22 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     // and just waste bytes on the wire)
     if (entity.vehicle) {
       const v = entity.vehicle;
-      if (v.trip && v.position) {
+      const tripId = v.trip?.trip_id;
+      if (tripId && v.position) {
+        const la = Math.round(v.position.latitude * 100000) / 100000;
+        const lo = Math.round(v.position.longitude * 100000) / 100000;
+        if (!Number.isFinite(la) || !Number.isFinite(lo)) {
+          continue;
+        }
+
         const pos: VehiclePosition = {
-          la: Math.round(v.position.latitude * 100000) / 100000,
-          lo: Math.round(v.position.longitude * 100000) / 100000,
+          la,
+          lo,
         };
         if (v.position.bearing) pos.b = v.position.bearing;
         if (v.position.speed) pos.sp = v.position.speed;
 
-        positions.set(v.trip.trip_id, pos);
+        positions.set(tripId, pos);
       }
     }
 
