@@ -2,7 +2,13 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { describe, it, expect } from 'vitest';
-import { queryTrips, calculateFare, getStationList, isServiceActive } from './schedule';
+import {
+  queryTrips,
+  calculateFare,
+  getStationList,
+  isServiceActive,
+  getScheduleType,
+} from './schedule';
 import type { StaticSchedule } from './schedule';
 
 /**
@@ -140,6 +146,33 @@ describe('isServiceActive', () => {
 
   it('service outside date range is inactive', () => {
     expect(isServiceActive(mockSchedule, 'wkd', new Date('2030-01-07T12:00:00'))).toBe(false);
+  });
+});
+
+// ---- Schedule Type ----
+
+describe('getScheduleType', () => {
+  it('identifies standard weekday', () => {
+    // 2024-01-08 is a Monday
+    expect(getScheduleType(mockSchedule, new Date('2024-01-08T12:00:00'))).toBe('Weekday');
+  });
+
+  it('identifies standard weekend', () => {
+    // 2024-01-06 is a Saturday
+    expect(getScheduleType(mockSchedule, new Date('2024-01-06T12:00:00'))).toBe('Weekend');
+  });
+
+  it('identifies holiday as special (if a weekend schedule ran on a weekday)', () => {
+    // Let's add a mock holiday exception to the test schedule where Saturday schedule runs on a Monday
+    const sched = JSON.parse(JSON.stringify(mockSchedule)) as StaticSchedule;
+    sched.r.e['sat'] = [{ date: 20240115, type: 1 }]; // Add Sat service on Monday
+    // Note: mockSchedule already has wkd service removed on 2024-01-15 (MLK Day)
+    // 2024-01-15 is Monday, but running Saturday service (days[0] === 0).
+    expect(getScheduleType(sched, new Date('2024-01-15T12:00:00'))).toBe('Special');
+  });
+
+  it('identifies day with no active services as null', () => {
+    expect(getScheduleType(mockSchedule, new Date('2024-01-15T12:00:00'))).toBeNull();
   });
 });
 

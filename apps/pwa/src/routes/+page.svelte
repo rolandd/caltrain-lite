@@ -8,6 +8,7 @@
     queryTrips,
     calculateFare,
     normalizeDate,
+    getScheduleType,
     type StaticSchedule,
     type TripResult,
   } from '$lib/schedule';
@@ -51,6 +52,9 @@
       year: 'numeric',
     }).format(date);
   });
+  const scheduleType = $derived(
+    schedule && dateStr ? getScheduleType(schedule, new Date(dateStr + 'T12:00:00')) : null,
+  );
   let results = $state<TripResult[]>([]);
   let searched = $state(false);
   let favorites = $state<string[]>([]);
@@ -549,7 +553,12 @@
           <!-- Status bar -->
           <div class="flex items-center justify-between mb-3 text-[0.8125rem] text-[#a3a3a3]">
             <span>{results.length} trips</span>
-            <span class="font-medium text-transit-text">{formattedDate}</span>
+            <span class="font-medium text-transit-text">
+              {formattedDate}
+              {#if scheduleType}
+                <span class="text-[#a3a3a3] font-normal">· {scheduleType}</span>
+              {/if}
+            </span>
             {#if realtime && isToday}
               <span class="text-transit-blue font-semibold animate-pulse">● Live</span>
             {:else}
