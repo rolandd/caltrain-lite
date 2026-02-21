@@ -3,6 +3,7 @@
 
 import { getCachedSchedule, cacheSchedule, cacheMeta } from './db';
 import type { StaticSchedule, ScheduleMeta } from '@packages/types/schema';
+import { assert } from 'typia';
 
 /**
  * Initialize the schedule data.
@@ -52,7 +53,7 @@ async function checkForUpdate(
   const res = await fetch('/api/meta');
   if (!res.ok) throw new Error(`Meta fetch failed: ${res.status}`);
 
-  const meta: ScheduleMeta = await res.json();
+  const meta: ScheduleMeta = assert<ScheduleMeta>(await res.json());
 
   // Update metadata cache for UI/debug
   await cacheMeta(meta);
@@ -71,5 +72,5 @@ async function checkForUpdate(
 async function fetchSchedule(): Promise<StaticSchedule> {
   const res = await fetch('/api/schedule');
   if (!res.ok) throw new Error(`Schedule fetch failed: ${res.status}`);
-  return res.json();
+  return assert<StaticSchedule>(await res.json());
 }

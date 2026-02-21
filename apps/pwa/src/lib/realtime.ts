@@ -2,6 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import type { RealtimeStatus } from '@packages/types/schema';
+import { assert } from 'typia';
 
 /**
  * Fetch real-time status from the Worker API.
@@ -17,8 +18,7 @@ export async function fetchRealtime(): Promise<RealtimeStatus | null> {
       if (res.status === 404) return null; // No data yet (e.g. night)
       throw new Error(`RT API error: ${res.status}`);
     }
-    const data = await res.json();
-    return data as RealtimeStatus;
+    return assert<RealtimeStatus>(await res.json());
   } catch (err) {
     console.warn('Failed to fetch realtime data:', err);
     return null;

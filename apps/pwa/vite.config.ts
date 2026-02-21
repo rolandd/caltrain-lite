@@ -9,6 +9,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import UnpluginTypia from '@kennethwkz/unplugin-typia/vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scheduleDataPath = resolve(__dirname, 'src/lib/schedule-data.json');
@@ -71,5 +72,5 @@ function devScheduleApiPlugin() {
 }
 
 export default defineConfig({
-  plugins: [tailwindcss(), sveltekit(), devScheduleApiPlugin(), devtoolsJson()],
+  plugins: [UnpluginTypia(), tailwindcss(), sveltekit(), devScheduleApiPlugin(), devtoolsJson()],
 });
