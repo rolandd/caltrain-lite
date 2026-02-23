@@ -149,7 +149,7 @@ export default {
         headers: {
           ...headers,
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'public, max-age=30',
         },
       });
     }

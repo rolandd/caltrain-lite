@@ -7,9 +7,11 @@ import { assert } from 'typia';
 /**
  * Fetch real-time status from the Worker API.
  *
- * Relies on the browser's HTTP cache to respect the `max-age` (180s)
- * returned by the Worker. We do not manually persist this data
- * to localStorage to avoid showing stale data on app restart.
+ * Relies on the browser's HTTP cache to respect the `max-age` (30s)
+ * returned by the Worker. The app polls every 60s, so it will always get
+ * fresh data, while rapid navigations within 30s will hit the browser cache.
+ * We do not manually persist this data to localStorage to avoid showing
+ * stale data on app restart.
  */
 export async function fetchRealtime(): Promise<RealtimeStatus | null> {
   try {
