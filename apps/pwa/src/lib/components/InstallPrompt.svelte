@@ -49,9 +49,13 @@
 
     // 5. Listen for Chromium prompt
     const onBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
       deferredPrompt = e as BeforeInstallPromptEvent;
-      updateVisibility();
+      // Only suppress the native banner if we're actually ready to show ours.
+      // Calling preventDefault() is what triggers the Chrome console log.
+      if (hasFavorites) {
+        e.preventDefault();
+        updateVisibility();
+      }
     };
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
 
@@ -105,7 +109,7 @@
 
 {#if showPrompt}
   <div
-    class="fixed bottom- safe-area-bottom left-4 right-4 z-[100] flex flex-col items-center justify-center p-4 bg-[#1a1a22] border border-[#2a2a35] rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4"
+    class="fixed safe-area-bottom left-4 right-4 z-[100] flex flex-col items-center justify-center p-4 bg-[#1a1a22] border border-[#2a2a35] rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4"
     role="dialog"
     aria-labelledby="install-title"
   >
