@@ -36,7 +36,6 @@ test('validates valid schedule meta', () => {
     v: 'abcdef1234567890',
     e: 1,
     sv: 1,
-    realtimeAge: 9999,
   };
   expect(() => typia.assert<ScheduleMeta>(validMeta)).not.toThrow();
 });

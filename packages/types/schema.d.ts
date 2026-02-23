@@ -246,6 +246,4 @@ export interface ScheduleMeta {
   e: number;
   /** Schema version (matches `StaticSchedule.m.sv`). */
   sv: number;
-  /** Seconds since the last real-time update was written to KV. */
-  realtimeAge: number;
 }

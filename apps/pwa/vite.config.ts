@@ -56,7 +56,6 @@ function devScheduleApiPlugin() {
             v: schedule.m.v,
             e: schedule.m.e,
             sv: schedule.m.sv,
-            realtimeAge: 9999, // no realtime in dev
           };
 
           res.setHeader('Content-Type', 'application/json');
