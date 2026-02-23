@@ -64,7 +64,8 @@
   // Tooltip state for mobile/enhanced interaction
   let activeTooltip = $state<{
     id: string;
-    text: string;
+    text?: string;
+    stops: string[];
     x: number;
     y: number;
   } | null>(null);
@@ -285,6 +286,12 @@
     return undefined;
   }
 
+  function hasLocation(trainNum: string): boolean {
+    if (!realtime) return false;
+    const entity = realtime.e.find((e) => e.i === trainNum);
+    return !!entity?.p;
+  }
+
   /**
    * Handle click on the delay badge.
    * On mobile/touch this acts as a toggle. On desktop it can also be used to "pin".
@@ -303,16 +310,18 @@
     }
 
     const text = getTooltipText(trip.trainNumber, trip.direction);
-    if (!text) return; // No location data, nothing to show
+    // Allow tooltip if we have text or if we have stops to show
+    if (!text && trip.stopIds.length < 2) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
-    // Position centered below the element
+    // Position centered over the element
     const x = rect.left + rect.width / 2;
-    const y = rect.bottom + 8; // 8px gap
+    const y = rect.top + rect.height / 2;
 
     activeTooltip = {
       id: trip.trainNumber,
       text,
+      stops: trip.stopIds,
       x,
       y,
     };
@@ -640,23 +649,24 @@
                     </div>
 
                     <!-- Trip body: departure / middle info / arrival -->
-                    <div class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2">
+                    <div
+                      class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-[#ffffff08] transition-colors rounded"
+                      role="button"
+                      tabindex="0"
+                      onclick={(e) => toggleTooltip(e, trip)}
+                      onkeydown={(e) => e.key === 'Enter' && toggleTooltip(e, trip)}
+                      title={getTooltipText(trip.trainNumber, trip.direction) ||
+                        'View trip details'}
+                    >
                       <!-- Departure + optional delay -->
-                      <div class="flex flex-col items-center gap-0.5">
-                        <div
-                          class="flex flex-col items-center"
-                          role="button"
-                          tabindex="0"
-                          onclick={(e) => toggleTooltip(e, trip)}
-                          onkeydown={(e) => e.key === 'Enter' && toggleTooltip(e, trip)}
-                          title={getTooltipText(trip.trainNumber, trip.direction)}
-                        >
+                      <div class="flex flex-col items-center gap-0.5 pointer-events-none">
+                        <div class="flex flex-col items-center">
                           <span class="text-[1rem] font-bold text-white tabular-nums"
                             >{trip.departure}</span
                           >
                           {#if delay !== undefined}
                             <span
-                              class="text-[0.6rem] font-semibold leading-tight text-center cursor-pointer {Math.round(
+                              class="text-[0.6rem] font-semibold leading-tight text-center flex items-center gap-0.5 {Math.round(
                                 delay / 60,
                               ) >= 10
                                 ? 'text-[#eb5757]'
@@ -665,13 +675,29 @@
                                   : 'text-[#f2c94c]'}"
                             >
                               {formatDelay(delay)}
+                              {#if formatDelay(delay) === 'on time' && hasLocation(trip.trainNumber)}
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                  class="w-3 h-3 text-[#f2c94c]"
+                                >
+                                  <path
+                                    fill-rule="evenodd"
+                                    d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11-.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z"
+                                    clip-rule="evenodd"
+                                  />
+                                </svg>
+                              {/if}
                             </span>
                           {/if}
                         </div>
                       </div>
 
                       <!-- Duration + intermediate stops -->
-                      <div class="flex flex-col items-center gap-0.5 text-center">
+                      <div
+                        class="flex flex-col items-center gap-0.5 text-center pointer-events-none"
+                      >
                         <span class="text-[0.7rem] text-[#a3a3a3]">{trip.durationMinutes}m</span>
                         <span class="text-[0.65rem] text-[#a3a3a3]">
                           {trip.intermediateStops === 0
@@ -683,7 +709,7 @@
                       </div>
 
                       <!-- Arrival -->
-                      <div class="flex flex-col items-center">
+                      <div class="flex flex-col items-center pointer-events-none">
                         <span class="text-[0.875rem] font-semibold text-[#aaa] tabular-nums"
                           >{trip.arrival}</span
                         >
@@ -736,15 +762,50 @@
 
       <!-- Tooltip Bubble -->
       <div
-        class="fixed z-50 bg-[#222] text-white text-xs px-2 py-1 rounded shadow-lg border border-[#444] pointer-events-none whitespace-nowrap transform -translate-x-1/2"
+        class="fixed z-[50] w-[200px] flex flex-col bg-[#222] text-white text-[0.75rem] rounded-xl shadow-2xl border border-[#444] transform -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-auto"
         style="top: {activeTooltip.y}px; left: {activeTooltip.x}px;"
-        role="tooltip"
+        role="dialog"
+        aria-label="Trip Stops"
       >
-        {activeTooltip.text}
-        <!-- Arrow pointing up -->
-        <div
-          class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#222] border-l border-t border-[#444] transform rotate-45"
-        ></div>
+        <!-- Optional Realtime Location Header -->
+        {#if activeTooltip.text}
+          <div
+            class="bg-[#1a3a5a] text-[#8ab4f8] px-3 py-2 border-b border-[#333] font-medium leading-tight shadow-sm text-center"
+          >
+            {activeTooltip.text}
+          </div>
+        {/if}
+
+        <!-- Stop List -->
+        <div class="flex flex-col py-2 px-1 max-h-[300px] overflow-y-auto w-full box-border">
+          {#each activeTooltip.stops as stop, i (stop)}
+            <div class="flex items-stretch min-h-[1.75rem]">
+              <div class="w-8 flex flex-col items-center flex-shrink-0">
+                <div
+                  class="w-0.5 {i === 0 ? 'bg-transparent h-1/2 mt-auto' : 'bg-[#444] h-full'}"
+                ></div>
+                <div
+                  class="w-2 h-2 rounded-full {i === 0 || i === activeTooltip.stops.length - 1
+                    ? 'bg-transit-blue border border-[#222]'
+                    : 'bg-[#666]'} absolute top-1/2 -translate-y-1/2"
+                ></div>
+                <div
+                  class="w-0.5 {i === activeTooltip.stops.length - 1
+                    ? 'bg-transparent h-1/2 mb-auto'
+                    : 'bg-[#444] h-full'}"
+                ></div>
+              </div>
+              <div
+                class="flex-1 flex items-center py-1 pr-3 text-[0.8rem] {i === 0 ||
+                i === activeTooltip.stops.length - 1
+                  ? 'text-white font-medium'
+                  : 'text-[#aaa]'}"
+              >
+                {getStationName(stop)}
+              </div>
+            </div>
+          {/each}
+        </div>
       </div>
     {/if}
   </div>
