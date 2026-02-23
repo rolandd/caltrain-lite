@@ -693,7 +693,7 @@
                               class="text-[0.6rem] font-semibold leading-tight text-center flex items-center gap-0.5 {rt.delayClass}"
                             >
                               {rt.delayLabel}
-                              {#if rt.delayLabel === 'on time' && rt.hasLocation}
+                              {#if rt.hasLocation}
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
                                   viewBox="0 0 20 20"
