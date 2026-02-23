@@ -262,17 +262,22 @@
     return name.slice(0, maxLen - 1) + '…';
   };
 
+  const TOOLTIP_CACHE_MAX = 512;
+  const tooltipTextCache: Record<string, string> = Object.create(null);
+  let tooltipTextCacheSize = 0;
+
+  interface TripRealtimeRenderData {
+    delay?: number;
+    delayLabel?: string;
+    delayClass?: string;
+    hasLocation: boolean;
+    tooltipText?: string;
+  }
+
   function getRealtimeTrip(trainNum: string) {
     if (!realtime) return undefined;
     return realtime.byTrip[trainNum];
   }
-
-  const getDelay = (trainNum: string): number | undefined => {
-    if (!isToday) return undefined;
-    const entity = getRealtimeTrip(trainNum);
-    if (entity === undefined) return undefined;
-    return entity.d ?? 0;
-  };
 
   const formatDelay = (delaySec: number): string => {
     const mins = Math.round(delaySec / 60);
@@ -280,18 +285,57 @@
     return `${mins} min late`;
   };
 
-  /** Helper to get location description for a trip */
-  function getTooltipText(trainNum: string, direction: 0 | 1): string | undefined {
-    if (!schedule) return undefined;
-    const entity = getRealtimeTrip(trainNum);
-    if (entity?.p) {
-      return getTrainLocationDescription(entity.p, direction, schedule);
-    }
-    return undefined;
+  function getDelayClass(delayMins: number): string {
+    if (delayMins >= 10) return 'text-[#eb5757]';
+    if (delayMins >= 5) return 'text-[#f2994a]';
+    return 'text-[#f2c94c]';
   }
 
-  function hasLocation(trainNum: string): boolean {
-    return !!getRealtimeTrip(trainNum)?.p;
+  /** Helper to get location description for a trip */
+  function getTooltipText(trainNum: string, direction: 0 | 1): string | undefined {
+    if (!schedule || !realtime) return undefined;
+    const entity = getRealtimeTrip(trainNum);
+    if (!entity?.p) return undefined;
+
+    const cacheEpoch = `${schedule.m.v}:${realtime.t}`;
+    const cacheKey = `${cacheEpoch}:${trainNum}:${direction}`;
+    const cached = tooltipTextCache[cacheKey];
+    if (cached !== undefined) return cached;
+
+    const text = getTrainLocationDescription(entity.p, direction, schedule);
+    if (tooltipTextCacheSize > TOOLTIP_CACHE_MAX) {
+      for (const key in tooltipTextCache) {
+        delete tooltipTextCache[key];
+      }
+      tooltipTextCacheSize = 0;
+    }
+    tooltipTextCache[cacheKey] = text;
+    tooltipTextCacheSize += 1;
+    return text;
+  }
+
+  function getTripRealtimeRenderData(trainNum: string, direction: 0 | 1): TripRealtimeRenderData {
+    const entity = getRealtimeTrip(trainNum);
+    const hasLocation = !!entity?.p;
+    const tooltipText = hasLocation ? getTooltipText(trainNum, direction) : undefined;
+
+    if (!isToday || entity === undefined) {
+      return {
+        hasLocation,
+        tooltipText,
+      };
+    }
+
+    const delay = entity.d ?? 0;
+    const delayMins = Math.round(delay / 60);
+
+    return {
+      delay,
+      delayLabel: formatDelay(delay),
+      delayClass: getDelayClass(delayMins),
+      hasLocation,
+      tooltipText,
+    };
   }
 
   /**
@@ -302,6 +346,7 @@
   function toggleTooltip(
     event: (MouseEvent | KeyboardEvent) & { currentTarget: HTMLElement },
     trip: TripResult,
+    precomputedText?: string,
   ): void {
     event.stopPropagation(); // prevent row click if we add one later
 
@@ -311,7 +356,7 @@
       return;
     }
 
-    const text = getTooltipText(trip.trainNumber, trip.direction);
+    const text = precomputedText ?? getTooltipText(trip.trainNumber, trip.direction);
     // Allow tooltip if we have text or if we have stops to show
     if (!text && trip.stopIds.length < 2) return;
 
@@ -631,7 +676,7 @@
               <!-- Scrollable trip columns -->
               <div class="flex flex-row" role="list" aria-label="Trips">
                 {#each results as trip (trip.trainNumber)}
-                  {@const delay = getDelay(trip.trainNumber)}
+                  {@const rt = getTripRealtimeRenderData(trip.trainNumber, trip.direction)}
                   {@const style = getRouteStyle(trip.routeType)}
                   <div
                     class="flex-shrink-0 w-[84px] flex flex-col border-r border-transit-border last:border-r-0 {style.bg}"
@@ -655,10 +700,9 @@
                       class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-[#ffffff08] transition-colors rounded"
                       role="button"
                       tabindex="0"
-                      onclick={(e) => toggleTooltip(e, trip)}
-                      onkeydown={(e) => e.key === 'Enter' && toggleTooltip(e, trip)}
-                      title={getTooltipText(trip.trainNumber, trip.direction) ||
-                        'View trip details'}
+                      onclick={(e) => toggleTooltip(e, trip, rt.tooltipText)}
+                      onkeydown={(e) => e.key === 'Enter' && toggleTooltip(e, trip, rt.tooltipText)}
+                      title={rt.tooltipText || 'View trip details'}
                     >
                       <!-- Departure + optional delay -->
                       <div class="flex flex-col items-center gap-0.5 pointer-events-none">
@@ -666,18 +710,12 @@
                           <span class="text-[1rem] font-bold text-white tabular-nums"
                             >{trip.departure}</span
                           >
-                          {#if delay !== undefined}
+                          {#if rt.delay !== undefined}
                             <span
-                              class="text-[0.6rem] font-semibold leading-tight text-center flex items-center gap-0.5 {Math.round(
-                                delay / 60,
-                              ) >= 10
-                                ? 'text-[#eb5757]'
-                                : Math.round(delay / 60) >= 5
-                                  ? 'text-[#f2994a]'
-                                  : 'text-[#f2c94c]'}"
+                              class="text-[0.6rem] font-semibold leading-tight text-center flex items-center gap-0.5 {rt.delayClass}"
                             >
-                              {formatDelay(delay)}
-                              {#if formatDelay(delay) === 'on time' && hasLocation(trip.trainNumber)}
+                              {rt.delayLabel}
+                              {#if rt.delayLabel === 'on time' && rt.hasLocation}
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
                                   viewBox="0 0 20 20"
