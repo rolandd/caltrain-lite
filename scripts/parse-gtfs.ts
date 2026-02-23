@@ -3,6 +3,7 @@
 
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
+import util from 'node:util';
 import JSZip from 'jszip';
 import { parse } from 'csv-parse/sync';
 import type {
@@ -128,6 +129,12 @@ function priceToCents(price: string): number {
 /** Strip redundant "Caltrain Station" from stop names, collapsing whitespace. */
 function cleanStationName(name: string): string {
   return name.replace(/\s*Caltrain Station\s*/g, ' ').trim();
+}
+
+/** Redact secret from string. */
+export function redact(str: string, secret: string): string {
+  if (!secret) return str;
+  return str.replaceAll(secret, '[REDACTED]');
 }
 
 /**
@@ -495,9 +502,13 @@ async function main() {
     zipBuffer = readFileSync(inputPath);
   } else if (apiKey) {
     // Fetch from 511.org
-    const url = `https://api.511.org/transit/datafeeds?api_key=${apiKey}&operator_id=CT`;
+    const url = new URL('https://api.511.org/transit/datafeeds');
+    url.searchParams.set('api_key', apiKey);
+    url.searchParams.set('operator_id', 'CT');
+
     console.error('Fetching GTFS ZIP from 511.org...');
-    const response = await fetch(url);
+    const response = await fetch(url.toString());
+
     if (!response.ok) {
       throw new Error(`Failed to fetch GTFS: ${response.status} ${response.statusText}`);
     }
@@ -534,7 +545,8 @@ async function main() {
 const isMainModule = process.argv[1]?.endsWith('parse-gtfs.ts');
 if (isMainModule) {
   main().catch((err) => {
-    console.error('Fatal:', err);
+    const apiKey = process.env.TRANSIT_511_API_KEY;
+    console.error('Fatal:', redact(util.inspect(err), apiKey || ''));
     process.exit(1);
   });
 }
