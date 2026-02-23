@@ -104,7 +104,10 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.map((e: GtfsInformedEntity) => e.stop_id).filter(Boolean),
+        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
+          if (e.stop_id) acc.push(e.stop_id);
+          return acc;
+        }, []),
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
