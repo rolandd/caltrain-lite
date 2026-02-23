@@ -378,7 +378,7 @@
   <div class="container">
     <header class="text-center mb-6">
       <h1 class="text-2xl font-bold text-white flex items-center justify-center gap-3">
-        Caltrain <img src="/caltrain.svg" alt="Logo" class="h-8 w-auto" />
+        Caltrain <img src="/caltrain.svg" alt="Logo" class="h-8 w-auto" width="32" height="32" />
       </h1>
     </header>
 
