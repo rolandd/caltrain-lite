@@ -190,15 +190,17 @@ export interface FareRules {
 export interface RealtimeStatus {
   /** Feed timestamp (epoch seconds). */
   t: number;
-  /** Per-trip real-time updates. */
-  e: RealtimeEntity[];
+  /**
+   * Per-trip real-time updates keyed by trip ID.
+   * Example: `byTrip["114"]`.
+   */
+  byTrip: Record<string, RealtimeTripStatus>;
   /** Active service alerts. */
   a: ServiceAlert[];
 }
 
-export interface RealtimeEntity {
-  /** Trip ID. */
-  i: string;
+/** Real-time status payload for a single trip. */
+export interface RealtimeTripStatus {
   /** Delay in seconds. */
   d?: number;
   /** Current or next stop ID. */

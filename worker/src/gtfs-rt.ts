@@ -3,11 +3,20 @@
 
 import Pbf from 'pbf';
 import { readFeedMessage } from './gtfs-realtime.js';
-import type { RealtimeEntity, VehiclePosition, ServiceAlert } from '@packages/types/schema';
+import type {
+  RealtimeStatus,
+  RealtimeTripStatus,
+  VehiclePosition,
+  ServiceAlert,
+} from '@packages/types/schema';
+
+interface ParsedTripEntity extends RealtimeTripStatus {
+  i: string;
+}
 
 export interface ParsedFeed {
   t: number;
-  e: RealtimeEntity[];
+  e: ParsedTripEntity[];
   p: Map<string, VehiclePosition>;
   a: ServiceAlert[];
 }
@@ -36,7 +45,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   const feed = readFeedMessage(pbf);
   const timestamp = Number(feed.header?.timestamp || 0);
 
-  const e: RealtimeEntity[] = [];
+  const e: ParsedTripEntity[] = [];
   const positions = new Map<string, VehiclePosition>();
   const alerts: ServiceAlert[] = [];
 
@@ -60,12 +69,12 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
           }
         }
 
-        const ent: RealtimeEntity = {
+        const ent: ParsedTripEntity = {
           i: tripId,
-          s: stopId,
           st: 2, // Default to In Transit
         };
         if (delay !== 0) ent.d = delay;
+        if (stopId) ent.s = stopId;
         e.push(ent);
       }
     }
@@ -115,4 +124,35 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   }
 
   return { t: timestamp, e, p: positions, a: alerts };
+}
+
+/**
+ * Build the unified realtime payload from parsed trip, vehicle, and alert feeds.
+ */
+export function buildRealtimeStatus(
+  tripUpdates: ParsedFeed,
+  vehiclePositions: ParsedFeed,
+  serviceAlerts: ParsedFeed,
+): RealtimeStatus {
+  const byTrip: Record<string, RealtimeTripStatus> = {};
+
+  for (const entity of tripUpdates.e) {
+    const trip: RealtimeTripStatus = {};
+    if (entity.d !== undefined) trip.d = entity.d;
+    if (entity.s) trip.s = entity.s;
+    if (entity.st !== undefined) trip.st = entity.st;
+
+    const position = vehiclePositions.p.get(entity.i);
+    if (position) {
+      trip.p = position;
+    }
+
+    byTrip[entity.i] = trip;
+  }
+
+  return {
+    t: Math.max(tripUpdates.t, vehiclePositions.t, serviceAlerts.t),
+    byTrip,
+    a: serviceAlerts.a,
+  };
 }

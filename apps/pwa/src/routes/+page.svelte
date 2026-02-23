@@ -262,11 +262,15 @@
     return name.slice(0, maxLen - 1) + '…';
   };
 
+  function getRealtimeTrip(trainNum: string) {
+    if (!realtime) return undefined;
+    return realtime.byTrip[trainNum];
+  }
+
   const getDelay = (trainNum: string): number | undefined => {
-    if (!realtime || !isToday) return undefined;
-    // Realtime entities use trip_id (i). For Caltrain this matches train number in static schedule
-    const entity = realtime.e.find((e) => e.i === trainNum);
-    if (!entity) return undefined;
+    if (!isToday) return undefined;
+    const entity = getRealtimeTrip(trainNum);
+    if (entity === undefined) return undefined;
     return entity.d ?? 0;
   };
 
@@ -278,8 +282,8 @@
 
   /** Helper to get location description for a trip */
   function getTooltipText(trainNum: string, direction: 0 | 1): string | undefined {
-    if (!realtime || !schedule) return undefined;
-    const entity = realtime.e.find((e) => e.i === trainNum);
+    if (!schedule) return undefined;
+    const entity = getRealtimeTrip(trainNum);
     if (entity?.p) {
       return getTrainLocationDescription(entity.p, direction, schedule);
     }
@@ -287,9 +291,7 @@
   }
 
   function hasLocation(trainNum: string): boolean {
-    if (!realtime) return false;
-    const entity = realtime.e.find((e) => e.i === trainNum);
-    return !!entity?.p;
+    return !!getRealtimeTrip(trainNum)?.p;
   }
 
   /**

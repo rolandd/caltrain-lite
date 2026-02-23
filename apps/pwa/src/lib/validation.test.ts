@@ -26,7 +26,7 @@ test('rejects invalid schedule data', () => {
 });
 
 test('rejects invalid realtime data', () => {
-  const invalidRealtime = { ...realtimeSnapshot, e: 123 };
+  const invalidRealtime = { ...realtimeSnapshot, byTrip: 123 };
   expect(() => typia.assert<RealtimeStatus>(invalidRealtime)).toThrow();
 });
 

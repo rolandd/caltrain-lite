@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-import { parseFeed } from './gtfs-rt.js';
+import { parseFeed, buildRealtimeStatus } from './gtfs-rt.js';
 
 export interface Env {
   TRANSIT_511_API_KEY: string;
@@ -38,30 +38,17 @@ export default {
       const vp = parseFeed(vpBuf);
       const sa = parseFeed(saBuf);
 
-      // 3. Merge Vehicle Positions into Trip Updates
-      const entities = tu.e;
-      for (const entity of entities) {
-        if (vp.p.has(entity.i)) {
-          entity.p = vp.p.get(entity.i);
-        }
-      }
-
-      // 4. Construct unified status
-      // Use the latest timestamp from the feeds
-      const t = Math.max(tu.t, vp.t, sa.t);
-
-      const status = {
-        t,
-        e: entities,
-        a: sa.a,
-      };
+      // 3. Construct unified status.
+      const status = buildRealtimeStatus(tu, vp, sa);
 
       // Store in KV
       await env.TRANSIT_DATA.put('realtime:status', JSON.stringify(status), {
         expirationTtl: 180, // 3 minutes
       });
 
-      console.log(`Updated RT: ${entities.length} trips, ${sa.a.length} alerts, ts=${t}`);
+      console.log(
+        `Updated RT: ${Object.keys(status.byTrip).length} trips, ${status.a.length} alerts, ts=${status.t}`,
+      );
     } catch (err) {
       console.error('Error fetching/parsing GTFS-RT:', err);
     }
