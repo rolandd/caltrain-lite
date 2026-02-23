@@ -2,7 +2,10 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import { updated } from '$app/stores';
+  import { updated, page } from '$app/stores';
+  import { dev } from '$app/environment';
+
+  let showBanner = $derived($updated || (dev && $page.url.searchParams.has('test-update')));
 
   $effect(() => {
     // Check for an update when the application comes back into the foreground
@@ -26,15 +29,32 @@
   };
 </script>
 
-{#if $updated}
+{#if showBanner}
   <div
-    class="fixed top-0 left-0 right-0 z-50 bg-transit-blue text-white px-4 py-3 flex items-center justify-between shadow-md"
+    class="fixed top-0 left-0 right-0 z-50 bg-transit-blue/10 backdrop-blur-lg border-b border-transit-blue/20 px-4 py-3 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.1)]"
     role="alert"
   >
-    <div class="font-medium">A new version is available!</div>
+    <div class="font-medium text-white flex items-center gap-2">
+      <!-- Info icon for visual interest -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        stroke="currentColor"
+        class="w-5 h-5 text-transit-blue"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+        />
+      </svg>
+      A new version is available!
+    </div>
     <button
       onclick={reload}
-      class="bg-white/20 hover:bg-white/30 border border-white/50 text-white px-3 py-1.5 rounded text-sm transition-colors cursor-pointer whitespace-nowrap ml-4"
+      class="bg-transparent hover:bg-[#ffffff0a] border border-transit-border text-transit-blue px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ml-4 flex items-center justify-center"
     >
       Update Now
     </button>
