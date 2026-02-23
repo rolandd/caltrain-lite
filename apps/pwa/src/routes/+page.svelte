@@ -15,6 +15,7 @@
   import { getFavorites, toggleFavorite } from '$lib/favorites';
   import { fetchRealtime } from '$lib/realtime';
   import { getTrainLocationDescription } from '$lib/location';
+  import { getTransitDateStr, getTransitDateAtNoon, getTransitTimeStr } from '$lib/time';
   import type { RealtimeStatus } from '@packages/types/schema';
 
   // Context from layout
@@ -27,24 +28,14 @@
   const LS_DEST = 'transit-destination';
   const LS_DATE = 'transit-date';
 
-  /** Return today's date string in the America/Los_Angeles timezone (YYYY-MM-DD). */
-  function getCaliforniaDateStr(): string {
-    return new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date());
-  }
-
   // State
   let origin = $state('');
   let destination = $state('');
-  let dateStr = $state(getCaliforniaDateStr());
+  let dateStr = $state(getTransitDateStr());
 
   const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
-    const date = new Date(dateStr + 'T12:00:00');
+    const date = getTransitDateAtNoon(dateStr);
     return new Intl.DateTimeFormat('en-US', {
       weekday: 'long',
       month: 'short',
@@ -53,7 +44,7 @@
     }).format(date);
   });
   const scheduleType = $derived(
-    schedule && dateStr ? getScheduleType(schedule, new Date(dateStr + 'T12:00:00')) : null,
+    schedule && dateStr ? getScheduleType(schedule, getTransitDateAtNoon(dateStr)) : null,
   );
   let results = $state<TripResult[]>([]);
   let searched = $state(false);
@@ -77,15 +68,8 @@
 
   const isToday = $derived.by(() => {
     if (!dateStr) return false;
-    const now = new Date();
-    // Use America/Los_Angeles timezone to stay consistent with Caltrain day
-    const californiaDate = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(now);
-    return dateStr === californiaDate;
+    // Use transit timezone to stay consistent with Caltrain day
+    return dateStr === getTransitDateStr();
   });
 
   // Favorites logic
@@ -111,7 +95,7 @@
   function clearState() {
     origin = '';
     destination = '';
-    dateStr = getCaliforniaDateStr();
+    dateStr = getTransitDateStr();
     results = [];
     searched = false;
     localStorage.removeItem(LS_ORIGIN);
@@ -172,7 +156,7 @@
       return;
     }
     // Create date as noon to avoid timezone issues with pure dates
-    const date = new Date(dateStr + 'T12:00:00');
+    const date = getTransitDateAtNoon(dateStr);
     results = queryTrips(schedule, origin, destination, date);
     searched = true;
   };
@@ -186,8 +170,7 @@
 
   // Date navigation helpers
   function shiftDate(days: number) {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const d = new Date(dateStr + 'T12:00:00');
+    const d = getTransitDateAtNoon(dateStr);
     d.setDate(d.getDate() + days);
     dateStr = d.toISOString().slice(0, 10);
     search();
@@ -195,7 +178,7 @@
   const prevDay = () => shiftDate(-1);
   const nextDay = () => shiftDate(1);
   function goNow() {
-    dateStr = getCaliforniaDateStr();
+    dateStr = getTransitDateStr();
     search();
     // Wait one frame for Svelte to render the results, then scroll
     tick().then(() => scrollToNow());
@@ -205,17 +188,12 @@
   // Scroll the trip table to the first non-departed train
   let tripScrollEl = $state<HTMLDivElement | undefined>();
 
-  /** Return true if the "HH:MM" departure string is before the current LA time. */
+  /** Return true if the "HH:MM" departure string is before the current transit time. */
   function hasDeparted(departureStr: string): boolean {
     const [h, m] = departureStr.split(':').map(Number);
     const depMins = h * 60 + m;
-    const laTime = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Los_Angeles',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(new Date());
-    const [nowH, nowM] = laTime.split(':').map(Number);
+    const transitTime = getTransitTimeStr();
+    const [nowH, nowM] = transitTime.split(':').map(Number);
     return depMins < nowH * 60 + nowM;
   }
 
@@ -763,7 +741,7 @@
         {:else}
           <div class="text-center p-8 opacity-60">
             <p>
-              No trips found for this route on {new Date(dateStr + 'T12:00:00').toLocaleDateString(
+              No trips found for this route on {getTransitDateAtNoon(dateStr).toLocaleDateString(
                 'en-US',
                 { weekday: 'long', month: 'long', day: 'numeric' },
               )}

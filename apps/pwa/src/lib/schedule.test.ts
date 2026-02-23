@@ -10,6 +10,7 @@ import {
   getScheduleType,
 } from './schedule';
 import type { StaticSchedule } from './schedule';
+import { getTransitDateAtNoon } from './time';
 
 /**
  * Mock schedule data matching the actual compact interface in schedule.ts.
@@ -129,23 +130,23 @@ describe('normalizeDate', () => {
 
 describe('isServiceActive', () => {
   it('weekday service is active on a Monday', () => {
-    expect(isServiceActive(mockSchedule, 'wkd', new Date('2024-01-08T12:00:00'))).toBe(true);
+    expect(isServiceActive(mockSchedule, 'wkd', getTransitDateAtNoon('2024-01-08'))).toBe(true);
   });
 
   it('weekday service is inactive on a Saturday', () => {
-    expect(isServiceActive(mockSchedule, 'wkd', new Date('2024-01-06T12:00:00'))).toBe(false);
+    expect(isServiceActive(mockSchedule, 'wkd', getTransitDateAtNoon('2024-01-06'))).toBe(false);
   });
 
   it('saturday service is active on a Saturday', () => {
-    expect(isServiceActive(mockSchedule, 'sat', new Date('2024-01-06T12:00:00'))).toBe(true);
+    expect(isServiceActive(mockSchedule, 'sat', getTransitDateAtNoon('2024-01-06'))).toBe(true);
   });
 
   it('weekday service is removed on exception date (MLK Day)', () => {
-    expect(isServiceActive(mockSchedule, 'wkd', new Date('2024-01-15T12:00:00'))).toBe(false);
+    expect(isServiceActive(mockSchedule, 'wkd', getTransitDateAtNoon('2024-01-15'))).toBe(false);
   });
 
   it('service outside date range is inactive', () => {
-    expect(isServiceActive(mockSchedule, 'wkd', new Date('2030-01-07T12:00:00'))).toBe(false);
+    expect(isServiceActive(mockSchedule, 'wkd', getTransitDateAtNoon('2030-01-07'))).toBe(false);
   });
 });
 
@@ -154,12 +155,12 @@ describe('isServiceActive', () => {
 describe('getScheduleType', () => {
   it('identifies standard weekday', () => {
     // 2024-01-08 is a Monday
-    expect(getScheduleType(mockSchedule, new Date('2024-01-08T12:00:00'))).toBe('Weekday');
+    expect(getScheduleType(mockSchedule, getTransitDateAtNoon('2024-01-08'))).toBe('Weekday');
   });
 
   it('identifies standard weekend', () => {
     // 2024-01-06 is a Saturday
-    expect(getScheduleType(mockSchedule, new Date('2024-01-06T12:00:00'))).toBe('Weekend');
+    expect(getScheduleType(mockSchedule, getTransitDateAtNoon('2024-01-06'))).toBe('Weekend');
   });
 
   it('identifies holiday as special (if a weekend schedule ran on a weekday)', () => {
@@ -168,11 +169,11 @@ describe('getScheduleType', () => {
     sched.r.e['sat'] = [{ date: 20240115, type: 1 }]; // Add Sat service on Monday
     // Note: mockSchedule already has wkd service removed on 2024-01-15 (MLK Day)
     // 2024-01-15 is Monday, but running Saturday service (days[0] === 0).
-    expect(getScheduleType(sched, new Date('2024-01-15T12:00:00'))).toBe('Special');
+    expect(getScheduleType(sched, getTransitDateAtNoon('2024-01-15'))).toBe('Special');
   });
 
   it('identifies day with no active services as null', () => {
-    expect(getScheduleType(mockSchedule, new Date('2024-01-15T12:00:00'))).toBeNull();
+    expect(getScheduleType(mockSchedule, getTransitDateAtNoon('2024-01-15'))).toBeNull();
   });
 });
 
@@ -180,36 +181,36 @@ describe('getScheduleType', () => {
 
 describe('queryTrips', () => {
   it('finds weekday trips between st1 and st3', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-08T12:00:00')); // Monday
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', getTransitDateAtNoon('2024-01-08')); // Monday
     expect(trips).toHaveLength(2);
     expect(trips[0].trainNumber).toBe('101');
     expect(trips[1].trainNumber).toBe('201');
   });
 
   it('finds saturday trips between st1 and st3', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-06T12:00:00')); // Saturday
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', getTransitDateAtNoon('2024-01-06')); // Saturday
     expect(trips).toHaveLength(1);
     expect(trips[0].trainNumber).toBe('301');
   });
 
   it('removes weekday trips on exception date', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-15T12:00:00')); // MLK Monday
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', getTransitDateAtNoon('2024-01-15')); // MLK Monday
     expect(trips).toHaveLength(0);
   });
 
   it('returns empty for unknown station pair', () => {
-    const trips = queryTrips(mockSchedule, 'st3', 'st1', new Date('2024-01-08T12:00:00')); // Reverse
+    const trips = queryTrips(mockSchedule, 'st3', 'st1', getTransitDateAtNoon('2024-01-08')); // Reverse
     expect(trips).toHaveLength(0);
   });
 
   it('results are sorted by departure time', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st2', new Date('2024-01-08T12:00:00'));
+    const trips = queryTrips(mockSchedule, 'st1', 'st2', getTransitDateAtNoon('2024-01-08'));
     expect(trips).toHaveLength(2);
     expect(trips[0].departureMinutes).toBeLessThan(trips[1].departureMinutes);
   });
 
   it('formats departure / arrival / duration', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-08T12:00:00'));
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', getTransitDateAtNoon('2024-01-08'));
     const t = trips[0]; // train 101
     expect(t.departure).toBe('10:00');
     expect(t.arrival).toBe('11:00');
@@ -217,19 +218,19 @@ describe('queryTrips', () => {
   });
 
   it('includes raw durationMinutes', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-08T12:00:00'));
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', getTransitDateAtNoon('2024-01-08'));
     const t = trips[0]; // train 101: dep 600, arr 660
     expect(t.durationMinutes).toBe(60);
   });
 
   it('counts intermediate stops for local trip (p1: st1→st2→st3)', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-08T12:00:00'));
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', getTransitDateAtNoon('2024-01-08'));
     // p1 pattern: [st1, st2, st3] → originIdx=0, destIdx=2 → 1 intermediate stop
     expect(trips[0].intermediateStops).toBe(1);
   });
 
   it('counts intermediate stops for express trip (p2: st1→st3, skips st2)', () => {
-    const trips = queryTrips(mockSchedule, 'st1', 'st3', new Date('2024-01-06T12:00:00')); // Saturday
+    const trips = queryTrips(mockSchedule, 'st1', 'st3', getTransitDateAtNoon('2024-01-06')); // Saturday
     // p2 pattern: [st1, st3] → originIdx=0, destIdx=1 → 0 intermediate stops
     expect(trips[0].intermediateStops).toBe(0);
   });
