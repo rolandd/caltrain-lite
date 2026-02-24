@@ -1,4 +1,5 @@
 /*
+  Cache-Control: public, max-age=0, must-revalidate
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(), fullscreen=(self)
   X-Content-Type-Options: nosniff
@@ -7,3 +8,23 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Resource-Policy: same-origin
+
+# Cache static assets for 1 day
+/apple-touch-icon.png
+  Cache-Control: public, max-age=86400
+/favicon.ico
+  Cache-Control: public, max-age=86400
+/icon-192.png
+  Cache-Control: public, max-age=86400
+/icon-512.png
+  Cache-Control: public, max-age=86400
+/icon.svg
+  Cache-Control: public, max-age=86400
+/manifest.webmanifest
+  Cache-Control: public, max-age=86400
+/robots.txt
+  Cache-Control: public, max-age=86400
+
+# Cache hashed/immutable assets for 1 year
+/_app/immutable/*
+  Cache-Control: public, max-age=31536000, immutable
