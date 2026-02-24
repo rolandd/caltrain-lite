@@ -295,8 +295,7 @@
     const entity = getRealtimeTrip(trainNum);
     if (!entity?.p) return undefined;
 
-    const cacheEpoch = `${schedule.m.v}:${realtime.t}`;
-    const cacheKey = `${cacheEpoch}:${trainNum}:${direction}`;
+    const cacheKey = `${schedule.m.v}:${trainNum}:${direction}:${entity.p.la}:${entity.p.lo}`;
     const cached = tooltipTextCache[cacheKey];
     if (cached !== undefined) return cached;
 
