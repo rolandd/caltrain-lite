@@ -33,6 +33,9 @@ interface GtfsTranslatedString {
 
 interface GtfsInformedEntity {
   stop_id?: string;
+  trip?: {
+    trip_id?: string;
+  };
 }
 
 /** Extract English text from a GTFS-RT TranslatedString. */
@@ -56,17 +59,37 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
       const tripId = tu.trip?.trip_id;
       if (tripId) {
         let delay = 0;
+        let time = 0;
         let stopId = '';
 
         if (tu.stop_time_update && tu.stop_time_update.length > 0) {
-          const update = tu.stop_time_update[0];
-          const event = update.departure || update.arrival;
-          if (event && typeof event.delay === 'number') {
-            delay = event.delay;
+          // Prefer the first referenced stop as the active stop context.
+          stopId = tu.stop_time_update.find((u) => u.stop_id)?.stop_id || '';
+
+          // Prefer the first non-zero stop-level delay; it is more specific than trip-level delay.
+          for (const update of tu.stop_time_update) {
+            const event = update.departure || update.arrival;
+            if (event) {
+              if (event.delay !== 0 && delay === 0) {
+                delay = event.delay;
+                if (update.stop_id) {
+                  stopId = update.stop_id;
+                }
+              }
+              if (event.time !== 0 && time === 0) {
+                time = event.time;
+                if (update.stop_id) {
+                  stopId = update.stop_id;
+                }
+              }
+              if (delay !== 0 && time !== 0) break;
+            }
           }
-          if (update.stop_id) {
-            stopId = update.stop_id;
-          }
+        }
+
+        // Fall back to trip-level delay when no non-zero stop-level delay is available.
+        if (delay === 0 && tu.delay !== 0) {
+          delay = tu.delay;
         }
 
         const ent: ParsedTripEntity = {
@@ -74,6 +97,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
           st: 2, // Default to In Transit
         };
         if (delay !== 0) ent.d = delay;
+        if (time !== 0) ent.t = time;
         if (stopId) ent.s = stopId;
         e.push(ent);
       }
@@ -117,6 +141,10 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
           if (e.stop_id) acc.push(e.stop_id);
           return acc;
         }, []),
+        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
+          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
+          return acc;
+        }, []),
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
@@ -139,6 +167,7 @@ export function buildRealtimeStatus(
   for (const entity of tripUpdates.e) {
     const trip: RealtimeTripStatus = {};
     if (entity.d !== undefined) trip.d = entity.d;
+    if (entity.t !== undefined) trip.t = entity.t;
     if (entity.s) trip.s = entity.s;
     if (entity.st !== undefined) trip.st = entity.st;
 

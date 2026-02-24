@@ -203,6 +203,8 @@ export interface RealtimeStatus {
 export interface RealtimeTripStatus {
   /** Delay in seconds. */
   d?: number;
+  /** Predicted time for the next stop (epoch seconds). */
+  t?: number;
   /** Current or next stop ID. */
   s?: string;
   /** 0 = Incoming, 1 = Stopped, 2 = In Transit. */
@@ -224,6 +226,8 @@ export interface ServiceAlert {
   c?: string;
   e?: string;
   s?: string[];
+  /** Linked trip IDs. */
+  tr?: string[];
   st?: number;
   en?: number;
 }

@@ -15,7 +15,12 @@
   import { getFavorites, toggleFavorite } from '$lib/favorites';
   import { fetchRealtime } from '$lib/realtime';
   import { getTrainLocationDescription } from '$lib/location';
-  import { getTransitDateStr, getTransitDateAtNoon, getTransitTimeStr } from '$lib/time';
+  import {
+    getTransitDateStr,
+    getTransitDateAtNoon,
+    getTransitTimeStr,
+    getTransitDayStartEpoch,
+  } from '$lib/time';
   import type { RealtimeStatus } from '@packages/types/schema';
 
   // Context from layout
@@ -311,7 +316,9 @@
     return text;
   }
 
-  function getTripRealtimeRenderData(trainNum: string, direction: 0 | 1): TripRealtimeRenderData {
+  function getTripRealtimeRenderData(trip: TripResult): TripRealtimeRenderData {
+    const trainNum = trip.trainNumber;
+    const direction = trip.direction;
     const entity = getRealtimeTrip(trainNum);
     const hasLocation = !!entity?.p;
     const tooltipText = hasLocation ? getTooltipText(trainNum, direction) : undefined;
@@ -323,12 +330,39 @@
       };
     }
 
-    const delay = entity.d ?? 0;
+    let delay = entity.d ?? 0;
+    // If the delay is zero, check if we have a predicted time and can calculate it.
+    if (delay === 0 && entity.t && entity.s && schedule) {
+      const dayStart = getTransitDayStartEpoch(dateStr);
+      const predictedMins = (entity.t - dayStart) / 60;
+
+      // Find the scheduled time for the stop entity.s in this trip.
+      const fullTrip = schedule.t.find((t) => t.i === trainNum);
+      if (fullTrip) {
+        const stopIdx = fullTrip.p ? schedule.p[fullTrip.p].indexOf(entity.s) : -1;
+        if (stopIdx !== -1) {
+          // Use arrival time for the stop. st is [arr0, dep0, arr1, dep1, ...]
+          const scheduledMins = fullTrip.st[stopIdx * 2];
+          delay = (predictedMins - scheduledMins) * 60;
+        }
+      }
+    }
+
+    // Check for trip-linked alerts (often carry delay info even if the d field is 0)
+    const alert = realtime?.a.find((a) => a.tr?.includes(trainNum));
+    let delayLabel = formatDelay(delay);
+    if (delayLabel === 'on time' && alert) {
+      // If the alert says "Delayed", try to show that it is indeed delayed even if we can't calculate mins.
+      if (alert.h.toLowerCase().includes('delayed')) {
+        delayLabel = 'delayed';
+      }
+    }
+
     const delayMins = Math.round(delay / 60);
 
     return {
       delay,
-      delayLabel: formatDelay(delay),
+      delayLabel,
       delayClass: getDelayClass(delayMins),
       hasLocation,
       tooltipText,
@@ -689,7 +723,7 @@
               <!-- Scrollable trip columns -->
               <div class="flex flex-row" role="list" aria-label="Trips">
                 {#each results as trip (trip.trainNumber)}
-                  {@const rt = getTripRealtimeRenderData(trip.trainNumber, trip.direction)}
+                  {@const rt = getTripRealtimeRenderData(trip)}
                   {@const style = getRouteStyle(trip.routeType)}
                   <div
                     class="flex-shrink-0 w-[84px] flex flex-col border-r border-transit-border-subtle last:border-r-0 {style.bg}"
