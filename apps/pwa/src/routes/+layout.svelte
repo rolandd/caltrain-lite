@@ -49,8 +49,25 @@
   <UpdateBanner />
 
   {#if schedule}
-    <div class="min-h-screen bg-transit-surface-canvas text-transit-text-primary">
-      {@render children()}
+    <div class="min-h-screen bg-transit-surface-canvas text-transit-text-primary flex flex-col">
+      <div class="flex-grow">
+        {@render children()}
+      </div>
+      <footer class="text-center py-6 text-xs text-transit-text-tertiary">
+        <a
+          href="https://github.com/rolandd/caltrain-lite"
+          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted"
+          target="_blank"
+          rel="noopener noreferrer">free software</a
+        >
+        made with ❤️ in mountain view, ca by
+        <a
+          href="https://github.com/rolandd"
+          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted"
+          target="_blank"
+          rel="noopener noreferrer">roland</a
+        >
+      </footer>
     </div>
   {:else if error}
     <div
