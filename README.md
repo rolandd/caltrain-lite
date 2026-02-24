@@ -265,43 +265,6 @@ Transit.git/
 └── README.md
 ```
 
-## Prioritized Task List for AI Agent
-
-### Phase 1: Infrastructure & Automation
-
-- **[Types]** Check in `packages/types/schema.d.ts` using the interfaces above.
-- **[IaC]** Create `infra/main.tf` (KV namespace) and `worker/wrangler.toml.example`.
-- **[GHA]** Create `.github/workflows/sync-schedule.yml`: fetch GTFS ZIP from 511.org, run `scripts/parse-gtfs.ts`, upload `StaticSchedule` + `ScheduleMeta` JSON to KV.
-- **[Worker]** Setup Cloudflare Worker with:
-  - Cron trigger: fetch GTFS-RT TripUpdates + ServiceAlerts from 511.org, decode protobuf, write `RealtimeStatus` to KV.
-  - `GET /api/schedule`: read KV `schedule:data`, return `StaticSchedule` JSON.
-  - `GET /api/realtime`: read KV `realtime:status`, return `RealtimeStatus` JSON.
-  - `GET /api/meta`: read KV `schedule:meta`, return `ScheduleMeta` JSON.
-
-### Phase 2: PWA Foundations
-
-- **[PWA]** Init SvelteKit 5 project with `@sveltejs/adapter-static` in `apps/pwa/`.
-- **[DB]** Define Dexie schema mapping directly to `StaticSchedule` fields.
-- **[Sync]** On app load: fetch `/api/meta`, compare `v` to local IndexedDB version, fetch full bundle only on mismatch.
-- **[Favorites]** Implement favorite station-pair storage (localStorage), CRUD operations, landing screen rendering.
-
-### Phase 3: Query & Logic
-
-- **[PWA]** Multi-Date Resolver: given a target date, resolve active service IDs via calendar rules + exceptions, then filter trips.
-- **[PWA]** Station-Pair Query: use the `x` index for O(1) origin→destination trip lookup.
-- **[PWA]** Fare Calculator: compute fare from `f` rules + station zone numbers.
-- **[PWA]** Real-Time Merger: apply `RealtimeStatus` delays to Today's view only. Show service alerts in banner.
-
-### Phase 4: Mobile UI
-
-- **[UI]** Dark mode default with light mode toggle. WCAG AA contrast ratios minimum.
-- **[UI]** Favorites-first landing screen: saved pairs as large tap targets, "New Trip" button.
-- **[UI]** Station picker: searchable list with favorites pinned at top.
-- **[UI]** Trip results: departure, arrival, duration, train number, route type badge, fare, real-time delay badge.
-- **[UI]** Status banner: service alerts, expired schedule warning (`current_date > m.e`), stale RT data.
-- **[UI]** Install prompt: deferred `beforeinstallprompt` (Chromium) + iOS share sheet tooltip.
-- **[A11y]** Semantic HTML, ARIA labels, keyboard navigation, screen reader testing. Target WCAG AAA for contrast.
-
 ## Technical Requirements
 
 - **Efficiency:** O(1) station-pair lookup via precomputed index; O(n) trip filtering using integer math (minutes from midnight).
