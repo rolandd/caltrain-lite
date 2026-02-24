@@ -21,8 +21,11 @@ export default {
       // 1. Fetch TripUpdates, VehiclePositions, ServiceAlerts in parallel
       const baseUrl = 'https://api.511.org/Transit';
       const agency = 'CT';
+      const signal = AbortSignal.timeout(10000); // 10s timeout for all fetches
       const fetchFeed = async (endpoint: string) => {
-        const resp = await fetch(`${baseUrl}/${endpoint}?api_key=${apiKey}&agency=${agency}`);
+        const resp = await fetch(`${baseUrl}/${endpoint}?api_key=${apiKey}&agency=${agency}`, {
+          signal,
+        });
         if (!resp.ok) throw new Error(`${endpoint}: ${resp.status}`);
         return resp.arrayBuffer();
       };
