@@ -74,8 +74,6 @@ async function checkForUpdate(
     await cacheSchedule(schedule);
     console.log('Schedule updated in background.');
     if (onUpdate) onUpdate(schedule);
-  } else {
-    // console.log('Schedule is up to date');
   }
 }
 
