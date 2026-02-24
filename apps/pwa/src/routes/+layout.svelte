@@ -5,6 +5,7 @@
   import { initSchedule } from '$lib/sync';
   import type { StaticSchedule } from '@packages/types/schema';
   import { setContext } from 'svelte';
+  import '@fontsource-variable/inter';
   import '../app.css';
 
   let { children } = $props();
@@ -43,33 +44,37 @@
   <link rel="icon" href="/icon.svg" />
 </svelte:head>
 
-<InstallPrompt />
-<UpdateBanner />
+<div class="font-sans">
+  <InstallPrompt />
+  <UpdateBanner />
 
-{#if schedule}
-  {@render children()}
-{:else if error}
-  <div
-    class="flex flex-col items-center justify-center h-screen text-transit-text bg-transit-bg gap-4"
-    role="alert"
-  >
-    <div class="text-[2rem]">⚠️</div>
-    <p class="text-transit-red font-semibold">{error}</p>
-    <button
-      class="bg-[#222] border border-[#333] text-white px-4 py-2 rounded-lg cursor-pointer text-lg"
-      onclick={() => window.location.reload()}>Retry</button
-    >
-  </div>
-{:else}
-  <div
-    class="flex flex-col items-center justify-center h-screen text-transit-text bg-transit-bg gap-4"
-    role="status"
-    aria-busy="true"
-    aria-label="Loading schedule"
-  >
+  {#if schedule}
+    <div class="min-h-screen bg-transit-surface-canvas text-transit-text-primary">
+      {@render children()}
+    </div>
+  {:else if error}
     <div
-      class="w-10 h-10 border-4 border-white/10 border-l-transit-blue rounded-full animate-spin"
-    ></div>
-    <p>Loading schedule...</p>
-  </div>
-{/if}
+      class="flex flex-col items-center justify-center h-screen text-transit-text-primary bg-transit-surface-canvas gap-4"
+      role="alert"
+    >
+      <div class="text-[2rem]">⚠️</div>
+      <p class="text-transit-danger font-semibold">{error}</p>
+      <button
+        class="bg-transit-surface-elevated border border-transit-border-subtle text-transit-text-primary px-4 py-2 rounded-lg cursor-pointer text-lg"
+        onclick={() => window.location.reload()}>Retry</button
+      >
+    </div>
+  {:else}
+    <div
+      class="flex flex-col items-center justify-center h-screen text-transit-text-primary bg-transit-surface-canvas gap-4"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading schedule"
+    >
+      <div
+        class="w-10 h-10 border-4 border-transit-text-primary/10 border-l-transit-brand rounded-full animate-spin"
+      ></div>
+      <p>Loading schedule...</p>
+    </div>
+  {/if}
+</div>

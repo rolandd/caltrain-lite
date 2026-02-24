@@ -6,12 +6,16 @@
   "scripts": {
     "generate": "cd ../../scripts && npx tsx generate-schedule.ts",
     "test": "vitest run",
+    "test:all": "vitest run && npm run check:theme",
     "predev": "npm run generate",
     "dev": "vite dev",
     "prebuild": "npm run generate",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "cd ../.. && npm run lint -- apps/pwa",
+    "lint:workspace": "cd ../.. && npm run lint -- apps/pwa",
+    "lint": "npm run lint:workspace && npm run check:tailwind-colors && npm run check:theme",
+    "check:tailwind-colors": "node scripts/check-tailwind-arbitrary-colors.mjs",
+    "check:theme": "node scripts/check-theme-contrast.mjs",
     "format": "cd ../.. && npm run format -- apps/pwa",
     "format:check": "cd ../.. && npm run format:check -- apps/pwa",
     "prepare": "svelte-kit sync || echo ''",
@@ -32,6 +36,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
     "@sveltejs/adapter-static": "^3.0.10",
     "dexie": "^4.3.0",
     "typia": "^11.0.3"

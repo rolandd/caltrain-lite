@@ -109,7 +109,7 @@
 
 {#if showPrompt}
   <div
-    class="fixed safe-area-bottom left-4 right-4 z-[100] flex flex-col items-center justify-center p-4 bg-[#1a1a22] border border-[#2a2a35] rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4"
+    class="fixed bottom-[env(safe-area-inset-bottom,_1rem)] left-4 right-4 z-[100] flex flex-col items-center justify-center p-4 bg-transit-surface-card border border-transit-border-subtle rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4"
     role="dialog"
     aria-labelledby="install-title"
   >
@@ -117,18 +117,20 @@
       <div class="flex items-center gap-3">
         <!-- Icon placeholder - in a real app this would be the app icon -->
         <div
-          class="w-10 h-10 rounded-lg bg-gradient-to-br from-transit-blue to-purple-600 flex items-center justify-center text-white font-bold text-lg"
+          class="w-10 h-10 rounded-lg bg-gradient-to-br from-transit-brand to-transit-brand-strong flex items-center justify-center text-transit-text-primary font-bold text-lg"
         >
           C
         </div>
         <div>
-          <h3 id="install-title" class="font-bold text-white text-lg leading-tight">Install App</h3>
-          <p class="text-[#888] text-sm">Offline access & fullscreen</p>
+          <h3 id="install-title" class="font-bold text-transit-text-primary text-lg leading-tight">
+            Install App
+          </h3>
+          <p class="text-transit-text-tertiary text-sm">Offline access & fullscreen</p>
         </div>
       </div>
       <button
         onclick={dismiss}
-        class="text-[#666] hover:text-white p-1 transition-colors"
+        class="text-transit-tooltip-node hover:text-transit-text-primary p-1 transition-colors"
         aria-label="Close"
       >
         <svg
@@ -151,12 +153,14 @@
     {#if platform === 'chromium'}
       <button
         onclick={install}
-        class="w-full bg-transit-blue hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors cursor-pointer"
+        class="w-full bg-transit-brand hover:bg-transit-brand-strong text-transit-text-primary font-semibold py-3 px-4 rounded-lg transition-colors cursor-pointer"
       >
         Install
       </button>
     {:else if platform === 'ios'}
-      <div class="bg-[#2a2a35] p-3 rounded-lg w-full text-sm text-[#ddd]">
+      <div
+        class="bg-transit-surface-elevated p-3 rounded-lg w-full text-sm text-transit-text-secondary"
+      >
         <p class="flex items-center gap-2 mb-2">
           1. Tap the <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -164,31 +168,27 @@
             height="20"
             viewBox="0 0 24 24"
             fill="none"
-            class="text-transit-blue stroke-current stroke-2"
+            class="text-transit-brand stroke-current stroke-2"
             ><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline
               points="16 6 12 2 8 6"
             /><line x1="12" y1="2" x2="12" y2="15" /></svg
           > Share button
         </p>
         <p class="flex items-center gap-2">
-          2. Select <span class="font-semibold text-white">Add to Home Screen</span>
+          2. Select <span class="font-semibold text-transit-text-primary">Add to Home Screen</span>
         </p>
       </div>
       <!-- Pointing arrow for iOS bottom bar -->
       <div
-        class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#1a1a22] border-b border-r border-[#2a2a35] rotate-45"
+        class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-transit-surface-card border-b border-r border-transit-border-subtle rotate-45"
       ></div>
     {:else if platform === 'firefox'}
-      <div class="bg-[#2a2a35] p-3 rounded-lg w-full text-sm text-[#ddd]">
+      <div
+        class="bg-transit-surface-elevated p-3 rounded-lg w-full text-sm text-transit-text-secondary"
+      >
         <p class="mb-1">1. Tap the menu button (⋮)</p>
-        <p>2. Select <span class="font-semibold text-white">Install</span></p>
+        <p>2. Select <span class="font-semibold text-transit-text-primary">Install</span></p>
       </div>
     {/if}
   </div>
 {/if}
-
-<style>
-  .safe-area-bottom {
-    bottom: env(safe-area-inset-bottom, 1rem);
-  }
-</style>

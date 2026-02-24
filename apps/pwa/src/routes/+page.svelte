@@ -212,24 +212,24 @@
     const rt = routeType.toLowerCase();
     if (rt.includes('bullet') || rt.includes('express')) {
       return {
-        bg: 'bg-[#2a0d0d]',
-        border: 'border-[#5a1a1a]',
-        badge: 'bg-[#ff6b6b33] text-[#ff8080]',
+        bg: 'bg-route-bullet-bg',
+        border: 'border-route-bullet-border',
+        badge: 'bg-route-bullet-badge-bg text-route-bullet-badge-text',
         label: 'Bullet',
       };
     }
     if (rt.includes('limited')) {
       return {
-        bg: 'bg-[#0d2230]',
-        border: 'border-[#1a4a60]',
-        badge: 'bg-[#99d7dc33] text-[#99d7dc]',
+        bg: 'bg-route-limited-bg',
+        border: 'border-route-limited-border',
+        badge: 'bg-route-limited-badge-bg text-route-limited-badge-text',
         label: 'Ltd',
       };
     }
     return {
-      bg: 'bg-transit-bg-card',
-      border: 'border-transit-border',
-      badge: 'bg-[#333] text-[#aaa]',
+      bg: 'bg-route-local-bg',
+      border: 'border-route-local-border',
+      badge: 'bg-route-local-badge-bg text-route-local-badge-text',
       label: 'Local',
     };
   };
@@ -264,9 +264,9 @@
   };
 
   function getDelayClass(delayMins: number): string {
-    if (delayMins >= 10) return 'text-[#eb5757]';
-    if (delayMins >= 5) return 'text-[#f2994a]';
-    return 'text-[#f2c94c]';
+    if (delayMins >= 10) return 'text-transit-danger';
+    if (delayMins >= 5) return 'text-transit-warning-medium';
+    return 'text-transit-warning';
   }
 
   /** Helper to get location description for a trip */
@@ -377,7 +377,9 @@
 <main class="p-4 max-w-[600px] mx-auto pb-12">
   <div class="container">
     <header class="text-center mb-6">
-      <h1 class="text-2xl font-bold text-white flex items-center justify-center gap-3">
+      <h1
+        class="text-2xl font-bold text-transit-text-primary flex items-center justify-center gap-3"
+      >
         Caltrain <img src="/icon.svg" alt="Logo" class="h-8 w-auto" width="32" height="32" />
       </h1>
     </header>
@@ -385,24 +387,24 @@
     <!-- Favorites List -->
     {#if !searched && favorites.length > 0}
       <section class="mb-6" aria-label="Favorite Trips">
-        <h2 class="text-sm text-[#a3a3a3] mb-3 uppercase tracking-wider">Favorites</h2>
+        <h2 class="text-sm text-transit-text-muted mb-3 uppercase tracking-wider">Favorites</h2>
         <div class="grid grid-cols-1 gap-3">
           {#each favorites as pair (pair)}
             {@const [o, d] = pair.split('-')}
             <div
-              class="bg-transit-bg-card border border-transit-border rounded-xl flex items-center justify-between p-1 pr-3 transition-colors hover:border-[#ffffff33]"
+              class="bg-transit-surface-card border border-transit-border-subtle rounded-xl flex items-center justify-between p-1 pr-3 transition-colors hover:border-transit-border-strong"
             >
               <button
-                class="flex-1 text-left flex items-center gap-2 p-3 cursor-pointer bg-transparent border-none text-white text-base font-inherit"
+                class="flex-1 text-left flex items-center gap-2 p-3 cursor-pointer bg-transparent border-none text-transit-text-primary text-base font-inherit"
                 onclick={() => selectFavorite(pair)}
               >
                 <span class="font-semibold">{getStationName(o)}</span>
-                <span class="text-[#a3a3a3] text-sm">→</span>
+                <span class="text-transit-text-muted text-sm">→</span>
                 <span class="font-semibold">{getStationName(d)}</span>
               </button>
 
               <button
-                class="text-[#ffd700] text-xl cursor-pointer bg-transparent border-none p-2 rounded-full hover:bg-[#ffffff10] transition-colors flex items-center justify-center leading-none"
+                class="text-transit-favorite text-xl cursor-pointer bg-transparent border-none p-2 rounded-full hover:bg-transit-surface-hover-soft transition-colors flex items-center justify-center leading-none"
                 onclick={(e) => {
                   e.stopPropagation();
                   toggleFavorite(o, d);
@@ -418,15 +420,18 @@
       </section>
     {/if}
 
-    <section class="bg-transit-bg-card border border-transit-border rounded-2xl p-4 mb-6">
+    <section
+      class="bg-transit-surface-card border border-transit-border-subtle rounded-2xl p-4 mb-6"
+    >
       <div class="flex items-center gap-2 mb-4 max-[480px]:flex-col max-[480px]:items-stretch">
         <div class="flex-1 flex items-center gap-3">
-          <label class="text-xs font-semibold text-[#a3a3a3] uppercase w-8 text-right" for="origin"
-            >From</label
+          <label
+            class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right"
+            for="origin">From</label
           >
           <select
             id="origin"
-            class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full flex-1 min-w-0"
+            class="bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base p-3 w-full flex-1 min-w-0"
             bind:value={origin}
             onchange={search}
           >
@@ -438,7 +443,7 @@
         </div>
 
         <button
-          class="w-11 h-11 bg-[#22222e] border border-transit-border rounded-[10px] text-transit-blue text-xl cursor-pointer flex-shrink-0 self-center hidden max-[480px]:flex items-center justify-center"
+          class="w-11 h-11 bg-transit-surface-elevated border border-transit-border-subtle rounded-[10px] text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center hidden max-[480px]:flex items-center justify-center"
           onclick={swap}
           aria-label="Swap stations"
           disabled={!origin && !destination}
@@ -448,7 +453,7 @@
 
         <!-- Desktop swap button (between inputs) -->
         <button
-          class="w-8 h-8 bg-transparent border-none text-transit-blue text-xl cursor-pointer flex-shrink-0 self-center max-[480px]:hidden hover:text-white transition-colors"
+          class="w-8 h-8 bg-transparent border-none text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center max-[480px]:hidden hover:text-transit-text-primary transition-colors"
           onclick={swap}
           aria-label="Swap stations"
           disabled={!origin && !destination}
@@ -458,12 +463,12 @@
 
         <div class="flex-1 flex items-center gap-3">
           <label
-            class="text-xs font-semibold text-[#a3a3a3] uppercase w-8 text-right max-[480px]:text-left"
+            class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right max-[480px]:text-left"
             for="destination">To</label
           >
           <select
             id="destination"
-            class="bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base p-3 w-full flex-1 min-w-0"
+            class="bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base p-3 w-full flex-1 min-w-0"
             bind:value={destination}
             onchange={search}
           >
@@ -477,13 +482,14 @@
 
       <div class="flex items-end gap-2 max-[480px]:flex-col max-[480px]:items-stretch">
         <div class="flex-1 flex items-center gap-3">
-          <label class="text-xs font-semibold text-[#a3a3a3] uppercase w-8 text-right" for="date"
-            >Date</label
+          <label
+            class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right"
+            for="date">Date</label
           >
           <!-- Date navigation: prev / input / next -->
           <div class="flex items-center gap-1 flex-1 min-w-0">
             <button
-              class="w-11 h-11 bg-transit-bg-input hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors"
+              class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors"
               onclick={prevDay}
               aria-label="Previous day"
             >
@@ -504,14 +510,14 @@
             </button>
             <input
               id="date"
-              class="h-11 bg-transit-bg-input border border-transit-border rounded-[10px] text-transit-text text-base px-2 w-full min-w-0 text-center uppercase"
+              class="h-11 bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base px-2 w-full min-w-0 text-center uppercase"
               type="date"
               bind:value={dateStr}
               onchange={handleDateChange}
               onblur={handleDateChange}
             />
             <button
-              class="w-11 h-11 bg-transit-bg-input hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-transit-text text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors"
+              class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors"
               onclick={nextDay}
               aria-label="Next day"
             >
@@ -536,7 +542,7 @@
         <!-- Actions: Now / Clear / Favorite -->
         <div class="flex items-center gap-2 max-[480px]:w-full">
           <button
-            class="h-11 px-3 bg-transparent hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-transit-blue text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors"
+            class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-brand text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors"
             onclick={goNow}
             aria-label="Jump to now"
           >
@@ -559,7 +565,7 @@
 
           {#if origin || destination}
             <button
-              class="h-11 px-3 bg-transparent hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-[#eb5757] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors"
+              class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-danger text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors"
               onclick={clearState}
               aria-label="Clear selections"
             >
@@ -568,7 +574,7 @@
           {/if}
 
           <button
-            class="h-11 px-3 bg-transparent hover:bg-[#ffffff0a] border border-transit-border rounded-[10px] text-[#ffd700] text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-favorite text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onclick={handleToggleFavorite}
             disabled={!origin || !destination}
             aria-label={isCurrentFavorite ? 'Remove favorite' : 'Add favorite'}
@@ -585,16 +591,18 @@
       <section aria-live="polite">
         {#if results.length > 0}
           <!-- Status bar -->
-          <div class="flex items-center justify-between mb-3 text-[0.8125rem] text-[#a3a3a3]">
+          <div
+            class="flex items-center justify-between mb-3 text-[0.8125rem] text-transit-text-muted"
+          >
             <span>{results.length} trips</span>
-            <span class="font-medium text-transit-text">
+            <span class="font-medium text-transit-text-primary">
               {formattedDate}
               {#if scheduleType}
-                <span class="text-[#a3a3a3] font-normal">· {scheduleType}</span>
+                <span class="text-transit-text-muted font-normal">· {scheduleType}</span>
               {/if}
             </span>
             {#if realtime && isToday}
-              <span class="text-transit-blue font-semibold animate-pulse">● Live</span>
+              <span class="text-transit-brand font-semibold animate-pulse">● Live</span>
             {:else}
               <span></span>
             {/if}
@@ -604,47 +612,55 @@
             Route table: fixed left panel + horizontally scrollable trip columns.
             The outer wrapper clips overflow; the inner flex row holds both panels.
           -->
-          <div class="relative rounded-xl overflow-hidden border border-transit-border">
+          <div class="relative rounded-xl overflow-hidden border border-transit-border-subtle">
             <div class="flex overflow-x-auto" bind:this={tripScrollEl}>
               <!-- Fixed left panel: origin → fare → destination -->
               <div
-                class="sticky left-0 z-10 flex-shrink-0 w-[108px] bg-transit-bg-card border-r border-transit-border flex flex-col"
+                class="sticky left-0 z-10 flex-shrink-0 w-[108px] bg-transit-surface-card border-r border-transit-border-subtle flex flex-col"
                 aria-label="Route"
               >
                 <!-- Header spacer (matches trip column header height) -->
-                <div class="h-[52px] border-b border-transit-border"></div>
+                <div class="h-[52px] border-b border-transit-border-subtle"></div>
 
                 <!-- Station info body -->
                 <div class="flex flex-col flex-1 items-center justify-between px-2 py-3 gap-1">
                   <!-- Origin -->
                   <div class="text-center">
-                    <div class="text-[0.65rem] text-[#a3a3a3] uppercase tracking-wider mb-0.5">
+                    <div
+                      class="text-[0.65rem] text-transit-text-muted uppercase tracking-wider mb-0.5"
+                    >
                       From
                     </div>
-                    <div class="text-[0.8rem] font-semibold text-transit-text leading-tight">
+                    <div
+                      class="text-[0.8rem] font-semibold text-transit-text-primary leading-tight"
+                    >
                       {truncateStation(getStationName(origin))}
                     </div>
                   </div>
 
                   <!-- Fare connector -->
                   <div class="flex flex-col items-center gap-0.5 my-1">
-                    <div class="w-px h-3 bg-transit-border"></div>
+                    <div class="w-px h-3 bg-transit-border-default"></div>
                     {#if currentFare !== null}
                       <div
-                        class="text-[0.7rem] font-bold text-transit-blue px-1.5 py-0.5 bg-[#4e9bff15] rounded-full border border-[#4e9bff33]"
+                        class="text-[0.7rem] font-bold text-transit-brand px-1.5 py-0.5 bg-transit-brand-soft-bg/35 rounded-full border border-transit-border-brand"
                       >
                         ${(currentFare / 100).toFixed(2)}
                       </div>
                     {/if}
-                    <div class="w-px h-3 bg-transit-border"></div>
+                    <div class="w-px h-3 bg-transit-border-default"></div>
                   </div>
 
                   <!-- Destination -->
                   <div class="text-center">
-                    <div class="text-[0.65rem] text-[#a3a3a3] uppercase tracking-wider mb-0.5">
+                    <div
+                      class="text-[0.65rem] text-transit-text-muted uppercase tracking-wider mb-0.5"
+                    >
                       To
                     </div>
-                    <div class="text-[0.8rem] font-semibold text-transit-text leading-tight">
+                    <div
+                      class="text-[0.8rem] font-semibold text-transit-text-primary leading-tight"
+                    >
                       {truncateStation(getStationName(destination))}
                     </div>
                   </div>
@@ -657,14 +673,15 @@
                   {@const rt = getTripRealtimeRenderData(trip.trainNumber, trip.direction)}
                   {@const style = getRouteStyle(trip.routeType)}
                   <div
-                    class="flex-shrink-0 w-[84px] flex flex-col border-r border-transit-border last:border-r-0 {style.bg}"
+                    class="flex-shrink-0 w-[84px] flex flex-col border-r border-transit-border-subtle last:border-r-0 {style.bg}"
                     role="listitem"
                   >
                     <!-- Column header: train number + route badge -->
                     <div
                       class="h-[52px] flex flex-col items-center justify-center gap-1 px-1 border-b {style.border}"
                     >
-                      <span class="text-[0.7rem] font-mono text-[#a3a3a3]">#{trip.trainNumber}</span
+                      <span class="text-[0.7rem] font-mono text-transit-text-muted"
+                        >#{trip.trainNumber}</span
                       >
                       <span
                         class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full uppercase {style.badge}"
@@ -675,7 +692,7 @@
 
                     <!-- Trip body: departure / middle info / arrival -->
                     <div
-                      class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-[#ffffff08] transition-colors rounded"
+                      class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-transit-surface-hover-soft transition-colors rounded"
                       role="button"
                       tabindex="0"
                       onclick={(e) => toggleTooltip(e, trip, rt.tooltipText)}
@@ -685,7 +702,7 @@
                       <!-- Departure + optional delay -->
                       <div class="flex flex-col items-center gap-0.5 pointer-events-none">
                         <div class="flex flex-col items-center">
-                          <span class="text-[1rem] font-bold text-white tabular-nums"
+                          <span class="text-[1rem] font-bold text-transit-text-primary tabular-nums"
                             >{trip.departure}</span
                           >
                           {#if rt.delay !== undefined}
@@ -698,7 +715,7 @@
                                   xmlns="http://www.w3.org/2000/svg"
                                   viewBox="0 0 20 20"
                                   fill="currentColor"
-                                  class="w-3 h-3 text-[#f2c94c]"
+                                  class="w-3 h-3 text-transit-warning"
                                 >
                                   <path
                                     fill-rule="evenodd"
@@ -716,8 +733,10 @@
                       <div
                         class="flex flex-col items-center gap-0.5 text-center pointer-events-none"
                       >
-                        <span class="text-[0.7rem] text-[#a3a3a3]">{trip.durationMinutes}m</span>
-                        <span class="text-[0.65rem] text-[#a3a3a3]">
+                        <span class="text-[0.7rem] text-transit-text-muted"
+                          >{trip.durationMinutes}m</span
+                        >
+                        <span class="text-[0.65rem] text-transit-text-muted">
                           {trip.intermediateStops === 0
                             ? 'non-stop'
                             : trip.intermediateStops === 1
@@ -728,7 +747,8 @@
 
                       <!-- Arrival -->
                       <div class="flex flex-col items-center pointer-events-none">
-                        <span class="text-[0.875rem] font-semibold text-[#aaa] tabular-nums"
+                        <span
+                          class="text-[0.875rem] font-semibold text-transit-text-muted tabular-nums"
                           >{trip.arrival}</span
                         >
                       </div>
@@ -753,14 +773,14 @@
     <!-- Service Alerts -->
     {#if realtime && realtime.a.length > 0}
       <div
-        class="mt-8 bg-transit-alert-bg text-white rounded-lg p-3 text-sm leading-[1.4] text-left border border-[#ff6b6b33]"
+        class="mt-8 bg-transit-alert-bg text-transit-text-primary rounded-lg p-3 text-sm leading-[1.4] text-left border border-transit-border-danger"
         role="alert"
       >
-        <h3 class="text-[#ff8080] font-bold text-xs uppercase mb-2">Service Alerts</h3>
+        <h3 class="text-transit-alert-heading font-bold text-xs uppercase mb-2">Service Alerts</h3>
         {#each realtime.a as alert (alert.h)}
           <div class="alert-item mb-2 last:mb-0">
-            <strong class="text-white block mb-0.5">{alert.h}</strong>
-            <span class="text-[#ddd]">{alert.d}</span>
+            <strong class="text-transit-text-primary block mb-0.5">{alert.h}</strong>
+            <span class="text-transit-text-secondary">{alert.d}</span>
           </div>
         {/each}
       </div>
@@ -780,7 +800,7 @@
 
       <!-- Tooltip Bubble -->
       <div
-        class="fixed z-[50] w-[200px] flex flex-col bg-[#222] text-white text-[0.75rem] rounded-xl shadow-2xl border border-[#444] transform -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-auto"
+        class="fixed z-[50] w-[200px] flex flex-col bg-transit-tooltip-bg text-transit-text-primary text-[0.75rem] rounded-xl shadow-2xl border border-transit-border-strong transform -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-auto"
         style="top: {activeTooltip.y}px; left: {activeTooltip.x}px;"
         role="dialog"
         aria-label="Trip Stops"
@@ -788,7 +808,7 @@
         <!-- Optional Realtime Location Header -->
         {#if activeTooltip.text}
           <div
-            class="bg-[#1a3a5a] text-[#8ab4f8] px-3 py-2 border-b border-[#333] font-medium leading-tight shadow-sm text-center"
+            class="bg-transit-brand-soft-bg text-transit-brand-soft-text px-3 py-2 border-b border-transit-border-subtle font-medium leading-tight shadow-sm text-center"
           >
             {activeTooltip.text}
           </div>
@@ -800,24 +820,26 @@
             <div class="flex items-stretch min-h-[1.75rem]">
               <div class="w-8 flex flex-col items-center flex-shrink-0">
                 <div
-                  class="w-0.5 {i === 0 ? 'bg-transparent h-1/2 mt-auto' : 'bg-[#444] h-full'}"
+                  class="w-0.5 {i === 0
+                    ? 'bg-transparent h-1/2 mt-auto'
+                    : 'bg-transit-tooltip-line h-full'}"
                 ></div>
                 <div
                   class="w-2 h-2 rounded-full {i === 0 || i === activeTooltip.stops.length - 1
-                    ? 'bg-transit-blue border border-[#222]'
-                    : 'bg-[#666]'} absolute top-1/2 -translate-y-1/2"
+                    ? 'bg-transit-brand border border-transit-tooltip-bg'
+                    : 'bg-transit-tooltip-node'} absolute top-1/2 -translate-y-1/2"
                 ></div>
                 <div
                   class="w-0.5 {i === activeTooltip.stops.length - 1
                     ? 'bg-transparent h-1/2 mb-auto'
-                    : 'bg-[#444] h-full'}"
+                    : 'bg-transit-tooltip-line h-full'}"
                 ></div>
               </div>
               <div
                 class="flex-1 flex items-center py-1 pr-3 text-[0.8rem] {i === 0 ||
                 i === activeTooltip.stops.length - 1
-                  ? 'text-white font-medium'
-                  : 'text-[#aaa]'}"
+                  ? 'text-transit-text-primary font-medium'
+                  : 'text-transit-text-muted'}"
               >
                 {getStationName(stop)}
               </div>

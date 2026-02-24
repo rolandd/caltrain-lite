@@ -31,10 +31,10 @@
 
 {#if showBanner}
   <div
-    class="fixed top-0 left-0 right-0 z-50 bg-transit-blue/10 backdrop-blur-lg border-b border-transit-blue/20 px-4 py-3 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.1)]"
+    class="fixed top-0 left-0 right-0 z-50 bg-transit-brand/10 backdrop-blur-lg border-b border-transit-brand/20 px-4 py-3 flex items-center justify-between shadow-lg"
     role="alert"
   >
-    <div class="font-medium text-white flex items-center gap-2">
+    <div class="font-medium text-transit-text-primary flex items-center gap-2">
       <!-- Info icon for visual interest -->
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -42,7 +42,7 @@
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="w-5 h-5 text-transit-blue"
+        class="w-5 h-5 text-transit-brand"
       >
         <path
           stroke-linecap="round"
@@ -54,7 +54,7 @@
     </div>
     <button
       onclick={reload}
-      class="bg-transparent hover:bg-[#ffffff0a] border border-transit-border text-transit-blue px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ml-4 flex items-center justify-center"
+      class="bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle text-transit-brand px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ml-4 flex items-center justify-center"
     >
       Update Now
     </button>

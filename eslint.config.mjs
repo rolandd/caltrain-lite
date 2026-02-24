@@ -38,7 +38,7 @@ export default [
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['eslint.config.mjs'],
+          allowDefaultProject: ['eslint.config.mjs', 'apps/pwa/scripts/*.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: ['.svelte'],
