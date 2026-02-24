@@ -20,28 +20,44 @@ export async function initSchedule(
   onUpdate?: (schedule: StaticSchedule) => void,
 ): Promise<StaticSchedule> {
   // 1. Try to load from DB
+  let cached;
   try {
-    const cached = await getCachedSchedule();
-    if (cached) {
-      // Validate the cached data hasn't structurally drifted or become corrupted
-      assert<StaticSchedule>(cached.data);
-
-      // Return immediately, but trigger background update
-      checkForUpdate(cached.version, cached.schemaVersion, onUpdate).catch((err) =>
-        console.warn('Background update check failed:', err),
-      );
-      return cached.data;
-    }
+    cached = await getCachedSchedule();
   } catch (err) {
-    console.error('Failed to read or validate schedule from DB:', err);
-    // If validation failed, clear the corrupt cache to ensure a clean slate
-    try {
-      await db.schedules.clear();
-      console.log('Cleared corrupt schedule cache');
-    } catch (clearErr) {
-      console.error('Failed to clear corrupt schedule cache:', clearErr);
-    }
-    // Fallthrough to network fetch
+    console.error('Failed to read schedule from DB:', err);
+    // Continue to network fetch
+  }
+
+  if (cached) {
+    const currentCached = cached;
+    // Return immediately to avoid blocking first paint,
+    // but validate and check for updates in the background.
+
+    // A. Kick off background update check
+    checkForUpdate(currentCached.version, currentCached.schemaVersion, onUpdate).catch((err) =>
+      console.warn('Background update check failed:', err),
+    );
+
+    // B. Background validation to avoid blocking first paint (typia.assert can be expensive)
+    setTimeout(async () => {
+      try {
+        assert<StaticSchedule>(currentCached.data);
+      } catch (err) {
+        console.error('Cached schedule data validation failed:', err);
+        try {
+          // If validation failed, clear the corrupt cache and fetch fresh
+          await db.schedules.clear();
+          console.log('Cleared corrupt schedule cache');
+          const fresh = await fetchSchedule();
+          await cacheSchedule(fresh);
+          if (onUpdate) onUpdate(fresh);
+        } catch (recoverErr) {
+          console.error('Failed to recover from corrupt cache:', recoverErr);
+        }
+      }
+    }, 0);
+
+    return currentCached.data;
   }
 
   // 2. No cache? Fetch full bundle immediately
