@@ -72,6 +72,26 @@
     return dateStr === getTransitDateStr();
   });
 
+  const scheduleEndDate = $derived.by(() => {
+    if (!schedule) return '';
+    const dateInt = schedule.m.e;
+    const y = Math.floor(dateInt / 10000);
+    const m = Math.floor((dateInt % 10000) / 100);
+    const d = dateInt % 100;
+    const date = new Date(y, m - 1, d, 12, 0, 0);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date);
+  });
+
+  const isPastEndOfSchedule = $derived.by(() => {
+    if (!schedule || !dateStr) return false;
+    const dateInt = parseInt(dateStr.replace(/-/g, ''), 10);
+    return dateInt > schedule.m.e;
+  });
+
   // Favorites logic
   function loadFavorites() {
     favorites = getFavorites();
@@ -761,10 +781,14 @@
         {:else}
           <div class="text-center p-8 opacity-60">
             <p>
-              No trips found for this route on {getTransitDateAtNoon(dateStr).toLocaleDateString(
-                'en-US',
-                { weekday: 'long', month: 'long', day: 'numeric' },
-              )}
+              {#if isPastEndOfSchedule}
+                Schedule only available through {scheduleEndDate}
+              {:else}
+                No trips found for this route on {getTransitDateAtNoon(dateStr).toLocaleDateString(
+                  'en-US',
+                  { weekday: 'long', month: 'long', day: 'numeric' },
+                )}
+              {/if}
             </p>
           </div>
         {/if}
