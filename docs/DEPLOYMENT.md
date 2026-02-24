@@ -27,7 +27,13 @@ This guide details how to deploy the Transit PWA and Worker stack to Cloudflare,
 
 ## Step 1: API Token Setup
 
-You need to create a Cloudflare API Token with specific permissions to allow Terraform to manage your infrastructure.
+You need to obtain a 511.org API token.
+
+1. Go to **[511.org token request form](https://511.org/open-data/token)**
+   and complete the process.
+
+You also need to create a Cloudflare API Token with specific
+permissions to allow Terraform to manage your infrastructure.
 
 1.  Go to **[Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens)** > **My Profile** > **API Tokens**.
 2.  Click **Create Token**.
