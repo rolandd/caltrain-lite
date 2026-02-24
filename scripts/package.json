@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "parse": "tsx parse-gtfs.ts",
+    "validate": "tsx validate-schedule.ts",
     "realtime:snapshot": "tsx generate-realtime-snapshot.ts",
     "test": "vitest run",
     "lint": "cd .. && npm run lint -- scripts",

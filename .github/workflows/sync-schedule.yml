@@ -26,6 +26,9 @@ jobs:
           TRANSIT_511_API_KEY: ${{ secrets.TRANSIT_511_API_KEY }}
         run: node scripts/parse-gtfs.ts > static-schedule.json
 
+      - name: Validate Schedule
+        run: npm run validate --prefix scripts ../static-schedule.json
+
       - name: Extract Metadata
         run: jq .m static-schedule.json > meta.json
 
