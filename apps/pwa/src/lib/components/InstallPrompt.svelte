@@ -59,7 +59,15 @@
     };
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
 
-    // 6. Listen for favorite toggles
+    // 6. Listen for app installation (manual or via prompt)
+    const onAppInstalled = () => {
+      isStandalone = true;
+      deferredPrompt = null;
+      updateVisibility();
+    };
+    window.addEventListener('appinstalled', onAppInstalled);
+
+    // 7. Listen for favorite toggles
     const onFavoriteToggled = ((e: CustomEvent) => {
       hasFavorites = e.detail.hasFavorites;
       updateVisibility();
@@ -71,6 +79,7 @@
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
       window.removeEventListener('transit:favorite-toggled', onFavoriteToggled);
     };
   });
