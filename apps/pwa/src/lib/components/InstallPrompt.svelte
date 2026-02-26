@@ -37,7 +37,7 @@
 
   onMount(() => {
     // 1. Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone) {
       isStandalone = true;
       return;
     }
