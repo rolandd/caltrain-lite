@@ -4,6 +4,13 @@
 import type { RealtimeStatus } from '@packages/types/schema';
 import { assert } from 'typia';
 
+export interface RealtimeStatusWithMetadata extends RealtimeStatus {
+  /** Initial age of the feed in milliseconds at the moment it was fetched. */
+  initialAge: number;
+  /** Local client-side timestamp (ms) when this was received. */
+  fetchedAt: number;
+}
+
 /**
  * Fetch real-time status from the Worker API.
  *
@@ -13,14 +20,23 @@ import { assert } from 'typia';
  * We do not manually persist this data to localStorage to avoid showing
  * stale data on app restart.
  */
-export async function fetchRealtime(): Promise<RealtimeStatus | null> {
+export async function fetchRealtime(): Promise<RealtimeStatusWithMetadata | null> {
   try {
     const res = await fetch('/api/realtime');
     if (!res.ok) {
       if (res.status === 404) return null; // No data yet (e.g. night)
       throw new Error(`RT API error: ${res.status}`);
     }
-    return assert<RealtimeStatus>(await res.json());
+
+    const serverDateHeader = res.headers.get('Date');
+    const serverTime = serverDateHeader ? new Date(serverDateHeader).getTime() : Date.now();
+    const data = assert<RealtimeStatus>(await res.json());
+
+    // Calculate how old the feed was when the server sent it.
+    // data.t is in epoch seconds, serverTime is in epoch ms.
+    const initialAge = Math.max(0, serverTime - data.t * 1000);
+
+    return { ...data, initialAge, fetchedAt: Date.now() };
   } catch (err) {
     console.warn('Failed to fetch realtime data:', err);
     return null;

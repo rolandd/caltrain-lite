@@ -13,7 +13,7 @@
     type TripResult,
   } from '$lib/schedule';
   import { getFavorites, toggleFavorite } from '$lib/favorites';
-  import { fetchRealtime } from '$lib/realtime';
+  import { fetchRealtime, type RealtimeStatusWithMetadata } from '$lib/realtime';
   import { getTrainLocationDescription } from '$lib/location';
   import {
     getTransitDateStr,
@@ -21,7 +21,6 @@
     getTransitTimeStr,
     getTransitDayStartEpoch,
   } from '$lib/time';
-  import type { RealtimeStatus } from '@packages/types/schema';
 
   // Context from layout
   const scheduleCtx = getContext<{ value: StaticSchedule }>('schedule');
@@ -54,7 +53,8 @@
   let results = $state<TripResult[]>([]);
   let searched = $state(false);
   let favorites = $state<string[]>([]);
-  let realtime = $state<RealtimeStatus | null>(null);
+  let realtime = $state<RealtimeStatusWithMetadata | null>(null);
+  let lastSuccessfulFetch = $state<number | null>(null);
   let pollInterval: ReturnType<typeof setInterval> | undefined;
 
   // Tooltip state for mobile/enhanced interaction
@@ -135,7 +135,22 @@
   // Realtime logic
   async function updateRealtime() {
     const data = await fetchRealtime();
-    if (data) realtime = data;
+    if (data) {
+      realtime = data;
+      lastSuccessfulFetch = Date.now();
+    }
+
+    if (realtime) {
+      const now = Date.now();
+      const fetchAgeMs = lastSuccessfulFetch ? now - lastSuccessfulFetch : 0;
+      const feedAgeMs = realtime.initialAge + (now - realtime.fetchedAt);
+
+      // Drop data if it hasn't been successfully refreshed for 10 minutes OR
+      // if the feed source itself is more than 10 minutes old.
+      if (fetchAgeMs > 600000 || feedAgeMs > 600000) {
+        realtime = null;
+      }
+    }
   }
 
   onMount(() => {
@@ -549,15 +564,15 @@
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2.5"
                 stroke="currentColor"
+                stroke-width="2.5"
                 class="w-5 h-5"
+                viewBox="0 0 24 24"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                  d="m15.75 19.5-7.5-7.5 7.5-7.5"
                 />
               </svg>
             </button>
@@ -577,15 +592,15 @@
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2.5"
                 stroke="currentColor"
+                stroke-width="2.5"
                 class="w-5 h-5"
+                viewBox="0 0 24 24"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
                 />
               </svg>
             </button>
@@ -602,15 +617,15 @@
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="2.5"
               stroke="currentColor"
+              stroke-width="2.5"
               class="w-4 h-4 mb-[1px]"
+              viewBox="0 0 24 24"
             >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
               />
             </svg>
             Now
@@ -655,7 +670,16 @@
               {/if}
             </span>
             {#if realtime && isToday}
-              <span class="text-transit-brand font-semibold animate-pulse">● Live</span>
+              {@const now = Date.now()}
+              {@const fetchAgeMs = lastSuccessfulFetch ? now - lastSuccessfulFetch : 0}
+              {@const feedAgeMs = realtime.initialAge + (now - realtime.fetchedAt)}
+              {@const maxAgeMs = Math.max(fetchAgeMs, feedAgeMs)}
+
+              {#if maxAgeMs < 180000}
+                <span class="text-transit-brand font-semibold animate-pulse">● Live</span>
+              {:else if maxAgeMs < 600000}
+                <span class="text-transit-warning font-semibold">● Old</span>
+              {/if}
             {:else}
               <span></span>
             {/if}
@@ -766,13 +790,13 @@
                               {#if rt.hasLocation}
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
-                                  viewBox="0 0 20 20"
                                   fill="currentColor"
                                   class="w-3 h-3 text-transit-warning"
+                                  viewBox="0 0 20 20"
                                 >
                                   <path
                                     fill-rule="evenodd"
-                                    d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11-.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z"
+                                    d="M9.69 18.933a11.54 11.54 0 0 0 7.31-9.933A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 0 0 2.273 1.765 11.842 11.842 0 0 0 1.056.584l.006.003ZM10 11.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z"
                                     clip-rule="evenodd"
                                   />
                                 </svg>
