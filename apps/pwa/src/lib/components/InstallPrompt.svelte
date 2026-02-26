@@ -17,11 +17,18 @@
   function checkPlatform() {
     if (typeof navigator === 'undefined') return 'other';
     const ua = navigator.userAgent.toLowerCase();
+
+    // Standard iOS check
     const isIOS = /iphone|ipad|ipod/.test(ua);
+    // iPadOS 13+ on iPad Pro/Air reports as "Macintosh" but has touch support.
+    // We check for 'Mac' and more than one touch point.
+    const isIPadOS =
+      navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 && !/iphone/.test(ua);
+
     const isFirefox = /firefox/.test(ua);
     const isAndroid = /android/.test(ua);
 
-    if (isIOS) return 'ios'; // iOS (Safari, Chrome, etc. all use Share -> Add to HS)
+    if (isIOS || isIPadOS) return 'ios'; // Both use the Share -> Add to Home Screen flow
     if (isFirefox && isAndroid) return 'firefox';
     // 'beforeinstallprompt' is the feature check, but we also check UA for completeness
     if ('BeforeInstallPromptEvent' in window || /chrome|crios/.test(ua)) return 'chromium';
@@ -49,13 +56,10 @@
 
     // 5. Listen for Chromium prompt
     const onBeforeInstallPrompt = (e: Event) => {
+      // Always suppress the native banner to take control of the install UI.
+      e.preventDefault();
       deferredPrompt = e as BeforeInstallPromptEvent;
-      // Only suppress the native banner if we're actually ready to show ours.
-      // Calling preventDefault() is what triggers the Chrome console log.
-      if (hasFavorites) {
-        e.preventDefault();
-        updateVisibility();
-      }
+      updateVisibility();
     };
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
 

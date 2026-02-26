@@ -44,7 +44,7 @@ sw.addEventListener('fetch', (event) => {
     if (event.request.mode === 'navigate') {
       try {
         return await fetch(event.request);
-      } catch (err) {
+      } catch {
         return (await cache.match('/')) || Response.error();
       }
     }
