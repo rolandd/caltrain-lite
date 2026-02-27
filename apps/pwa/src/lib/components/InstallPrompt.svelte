@@ -7,6 +7,10 @@
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
   }
 
+  interface NavigatorStandalone extends Navigator {
+    standalone?: boolean;
+  }
+
   let deferredPrompt: BeforeInstallPromptEvent | null = $state(null);
   let showPrompt = $state(false);
   let platform = $state<'chromium' | 'ios' | 'firefox' | 'other'>('other');
@@ -37,7 +41,10 @@
 
   onMount(() => {
     // 1. Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone) {
+    if (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as NavigatorStandalone).standalone
+    ) {
       isStandalone = true;
       return;
     }

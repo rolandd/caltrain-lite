@@ -72,18 +72,18 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
 
         if (tu.stop_time_update && tu.stop_time_update.length > 0) {
           const updates = tu.stop_time_update;
-          let foundDefaultStop = false;
+
+          // Prefer the first referenced stop as the active stop context.
+          for (let j = 0; j < updates.length; j++) {
+            if (updates[j].stop_id) {
+              stopId = updates[j].stop_id;
+              break;
+            }
+          }
 
           // Prefer the first non-zero stop-level delay; it is more specific than trip-level delay.
           for (let j = 0; j < updates.length; j++) {
             const update = updates[j];
-
-            // Prefer the first referenced stop as the active stop context (if not yet found).
-            if (!foundDefaultStop && update.stop_id) {
-              stopId = update.stop_id;
-              foundDefaultStop = true;
-            }
-
             const event = update.departure || update.arrival;
             if (event) {
               if (event.delay !== 0 && delay === 0) {

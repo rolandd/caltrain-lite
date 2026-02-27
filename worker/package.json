@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "tsx test/test-worker.ts",
+    "bench:gtfs-rt": "tsx bench/gtfs-rt.ts",
     "lint": "cd .. && npm run lint -- worker",
     "format": "cd .. && npm run format -- worker",
     "format:check": "cd .. && npm run format:check -- worker"
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260218.0",
     "@types/node": "^25.3.0",
+    "tinybench": "^2.9.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
