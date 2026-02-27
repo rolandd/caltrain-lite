@@ -499,7 +499,7 @@
           >
           <select
             id="origin"
-            class="bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base p-3 w-full flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+            class="bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base p-3 w-full flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
             bind:value={origin}
             onchange={search}
           >
@@ -511,7 +511,7 @@
         </div>
 
         <button
-          class="w-11 h-11 bg-transit-surface-elevated border border-transit-border-subtle rounded-[10px] text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center hidden max-[480px]:flex items-center justify-center focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+          class="w-11 h-11 bg-transit-surface-elevated border border-transit-border-subtle rounded-[10px] text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center hidden max-[480px]:flex items-center justify-center focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
           onclick={swap}
           aria-label="Swap stations"
           title="Swap stations"
@@ -522,7 +522,7 @@
 
         <!-- Desktop swap button (between inputs) -->
         <button
-          class="w-8 h-8 bg-transparent border-none text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center max-[480px]:hidden hover:text-transit-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none rounded-[4px]"
+          class="w-8 h-8 bg-transparent border-none text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center max-[480px]:hidden hover:text-transit-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-[4px]"
           onclick={swap}
           aria-label="Swap stations"
           title="Swap stations"
@@ -538,7 +538,7 @@
           >
           <select
             id="destination"
-            class="bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base p-3 w-full flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+            class="bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base p-3 w-full flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
             bind:value={destination}
             onchange={search}
           >
@@ -559,7 +559,7 @@
           <!-- Date navigation: prev / input / next -->
           <div class="flex items-center gap-1 flex-1 min-w-0">
             <button
-              class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+              class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
               onclick={prevDay}
               aria-label="Previous day"
               title="Previous day"
@@ -581,14 +581,14 @@
             </button>
             <input
               id="date"
-              class="h-11 bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base px-2 w-full min-w-0 text-center uppercase focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+              class="h-11 bg-transit-surface-input border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base px-2 w-full min-w-0 text-center uppercase focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
               type="date"
               bind:value={dateStr}
               onchange={handleDateChange}
               onblur={handleDateChange}
             />
             <button
-              class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+              class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
               onclick={nextDay}
               aria-label="Next day"
               title="Next day"
@@ -614,7 +614,7 @@
         <!-- Actions: Now / Clear / Favorite -->
         <div class="flex items-center gap-2 max-[480px]:w-full">
           <button
-            class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-brand text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+            class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-brand text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
             onclick={goNow}
             aria-label="Jump to now"
             title="Jump to now"
@@ -638,7 +638,7 @@
 
           {#if origin || destination}
             <button
-              class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-danger text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+              class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-danger text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
               onclick={clearState}
               aria-label="Clear selections"
               title="Clear selections"
@@ -648,7 +648,7 @@
           {/if}
 
           <button
-            class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-favorite text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
+            class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-favorite text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
             onclick={handleToggleFavorite}
             disabled={!origin || !destination}
             aria-label={isCurrentFavorite ? 'Remove favorite' : 'Add favorite'}
