@@ -51,6 +51,7 @@ export default {
       // Store in KV
       await env.TRANSIT_DATA.put('realtime:status', JSON.stringify(status), {
         expirationTtl: 180, // 3 minutes
+        metadata: { t: status.t },
       });
 
       console.log(
@@ -142,19 +143,45 @@ export default {
     }
 
     if (url.pathname === '/api/realtime') {
-      const data = await env.TRANSIT_DATA.get('realtime:status');
-      if (!data) {
+      const { value, metadata } = await env.TRANSIT_DATA.getWithMetadata<{ t: number }>(
+        'realtime:status',
+        { type: 'stream' },
+      );
+      if (!value) {
         return new Response('{"error": "No data"}', {
           status: 404,
           headers: { ...headers, 'Content-Type': 'application/json' },
         });
       }
-      return new Response(data, {
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=30',
-        },
+
+      let etag: string | null = null;
+      if (metadata?.t) {
+        etag = `W/"${metadata.t}"`;
+      }
+
+      if (etag && request.headers.get('If-None-Match') === etag) {
+        await value.cancel();
+        return new Response(null, {
+          status: 304,
+          headers: {
+            ...headers,
+            'Cache-Control': 'public, max-age=30',
+            ETag: etag,
+          },
+        });
+      }
+
+      const responseHeaders: Record<string, string> = {
+        ...headers,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=30',
+      };
+      if (etag) {
+        responseHeaders.ETag = etag;
+      }
+
+      return new Response(value, {
+        headers: responseHeaders,
       });
     }
 
