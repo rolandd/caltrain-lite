@@ -56,11 +56,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   const positions = new Map<string, VehiclePosition>();
   const alerts: ServiceAlert[] = [];
 
-  const entities = feed.entity;
-  if (!entities) return { t: timestamp, e, p: positions, a: alerts };
-
-  for (let i = 0; i < entities.length; i++) {
-    const entity = entities[i];
+  for (const entity of feed.entity ?? []) {
     // 1. Trip Update
     if (entity.trip_update) {
       const tu = entity.trip_update;
@@ -71,19 +67,11 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
         let stopId = '';
 
         if (tu.stop_time_update && tu.stop_time_update.length > 0) {
-          const updates = tu.stop_time_update;
-
           // Prefer the first referenced stop as the active stop context.
-          for (let j = 0; j < updates.length; j++) {
-            if (updates[j].stop_id) {
-              stopId = updates[j].stop_id;
-              break;
-            }
-          }
+          stopId = tu.stop_time_update.find((u) => u.stop_id)?.stop_id || '';
 
           // Prefer the first non-zero stop-level delay; it is more specific than trip-level delay.
-          for (let j = 0; j < updates.length; j++) {
-            const update = updates[j];
+          for (const update of tu.stop_time_update) {
             const event = update.departure || update.arrival;
             if (event) {
               if (event.delay !== 0 && delay === 0) {
@@ -129,16 +117,18 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
       if (tripId && v.position) {
         const la = Math.round(v.position.latitude * 100000) / 100000;
         const lo = Math.round(v.position.longitude * 100000) / 100000;
-        if (Number.isFinite(la) && Number.isFinite(lo)) {
-          const pos: VehiclePosition = {
-            la,
-            lo,
-          };
-          if (v.position.bearing) pos.b = v.position.bearing;
-          if (v.position.speed) pos.sp = v.position.speed;
-
-          positions.set(tripId, pos);
+        if (!Number.isFinite(la) || !Number.isFinite(lo)) {
+          continue;
         }
+
+        const pos: VehiclePosition = {
+          la,
+          lo,
+        };
+        if (v.position.bearing) pos.b = v.position.bearing;
+        if (v.position.speed) pos.sp = v.position.speed;
+
+        positions.set(tripId, pos);
       }
     }
 
