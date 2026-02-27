@@ -16,5 +16,5 @@
       "@packages/*": ["../packages/*"]
     }
   },
-  "include": ["src/**/*", "test/**/*"]
+  "include": ["src/**/*", "test/**/*", "bench/**/*"]
 }
