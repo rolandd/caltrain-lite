@@ -40,7 +40,11 @@ interface GtfsInformedEntity {
 
 /** Extract English text from a GTFS-RT TranslatedString. */
 function extractTranslation(txt: GtfsTranslatedString | undefined): string {
-  return txt?.translation?.find((t) => t.language === 'en')?.text || '';
+  if (!txt?.translation) return '';
+  for (const t of txt.translation) {
+    if (t.language === 'en') return t.text;
+  }
+  return '';
 }
 
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
@@ -52,7 +56,11 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   const positions = new Map<string, VehiclePosition>();
   const alerts: ServiceAlert[] = [];
 
-  for (const entity of feed.entity ?? []) {
+  const entities = feed.entity;
+  if (!entities) return { t: timestamp, e, p: positions, a: alerts };
+
+  for (let i = 0; i < entities.length; i++) {
+    const entity = entities[i];
     // 1. Trip Update
     if (entity.trip_update) {
       const tu = entity.trip_update;
@@ -63,11 +71,19 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
         let stopId = '';
 
         if (tu.stop_time_update && tu.stop_time_update.length > 0) {
-          // Prefer the first referenced stop as the active stop context.
-          stopId = tu.stop_time_update.find((u) => u.stop_id)?.stop_id || '';
+          const updates = tu.stop_time_update;
+          let foundDefaultStop = false;
 
           // Prefer the first non-zero stop-level delay; it is more specific than trip-level delay.
-          for (const update of tu.stop_time_update) {
+          for (let j = 0; j < updates.length; j++) {
+            const update = updates[j];
+
+            // Prefer the first referenced stop as the active stop context (if not yet found).
+            if (!foundDefaultStop && update.stop_id) {
+              stopId = update.stop_id;
+              foundDefaultStop = true;
+            }
+
             const event = update.departure || update.arrival;
             if (event) {
               if (event.delay !== 0 && delay === 0) {
@@ -113,18 +129,16 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
       if (tripId && v.position) {
         const la = Math.round(v.position.latitude * 100000) / 100000;
         const lo = Math.round(v.position.longitude * 100000) / 100000;
-        if (!Number.isFinite(la) || !Number.isFinite(lo)) {
-          continue;
+        if (Number.isFinite(la) && Number.isFinite(lo)) {
+          const pos: VehiclePosition = {
+            la,
+            lo,
+          };
+          if (v.position.bearing) pos.b = v.position.bearing;
+          if (v.position.speed) pos.sp = v.position.speed;
+
+          positions.set(tripId, pos);
         }
-
-        const pos: VehiclePosition = {
-          la,
-          lo,
-        };
-        if (v.position.bearing) pos.b = v.position.bearing;
-        if (v.position.speed) pos.sp = v.position.speed;
-
-        positions.set(tripId, pos);
       }
     }
 
@@ -132,19 +146,25 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
+      let stops: string[] | undefined;
+      let trips: string[] | undefined;
+
+      if (a.informed_entity) {
+        stops = [];
+        trips = [];
+        for (const ie of a.informed_entity) {
+          if (ie.stop_id) stops.push(ie.stop_id);
+          if (ie.trip?.trip_id) trips.push(ie.trip.trip_id);
+        }
+      }
+
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
+        s: stops,
+        tr: trips,
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
