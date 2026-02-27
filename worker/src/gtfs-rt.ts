@@ -40,11 +40,7 @@ interface GtfsInformedEntity {
 
 /** Extract English text from a GTFS-RT TranslatedString. */
 function extractTranslation(txt: GtfsTranslatedString | undefined): string {
-  if (!txt?.translation) return '';
-  for (const t of txt.translation) {
-    if (t.language === 'en') return t.text;
-  }
-  return '';
+  return txt?.translation?.find((t) => t.language === 'en')?.text || '';
 }
 
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
@@ -136,25 +132,19 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
-      let stops: string[] | undefined;
-      let trips: string[] | undefined;
-
-      if (a.informed_entity) {
-        stops = [];
-        trips = [];
-        for (const ie of a.informed_entity) {
-          if (ie.stop_id) stops.push(ie.stop_id);
-          if (ie.trip?.trip_id) trips.push(ie.trip.trip_id);
-        }
-      }
-
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: stops,
-        tr: trips,
+        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
+          if (e.stop_id) acc.push(e.stop_id);
+          return acc;
+        }, []),
+        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
+          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
+          return acc;
+        }, []),
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
