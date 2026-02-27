@@ -38,6 +38,41 @@ interface GtfsInformedEntity {
   };
 }
 
+/** Minimal types for protobuf-parsed GTFS-RT message structures. */
+interface GtfsFeedEntity {
+  trip_update?: {
+    trip?: { trip_id?: string };
+    delay?: number;
+    stop_time_update?: Array<{
+      stop_id?: string;
+      arrival?: { delay?: number; time?: number };
+      departure?: { delay?: number; time?: number };
+    }>;
+  };
+  vehicle?: {
+    trip?: { trip_id?: string };
+    position?: {
+      latitude: number;
+      longitude: number;
+      bearing?: number;
+      speed?: number;
+    };
+  };
+  alert?: {
+    header_text?: GtfsTranslatedString;
+    description_text?: GtfsTranslatedString;
+    cause?: number;
+    effect?: number;
+    informed_entity?: GtfsInformedEntity[];
+    active_period?: Array<{ start?: number | bigint; end?: number | bigint }>;
+  };
+}
+
+interface GtfsFeedMessage {
+  header?: { timestamp?: number | bigint };
+  entity?: GtfsFeedEntity[];
+}
+
 /** Extract English text from a GTFS-RT TranslatedString. */
 function extractTranslation(txt: GtfsTranslatedString | undefined): string {
   return txt?.translation?.find((t) => t.language === 'en')?.text || '';
@@ -45,7 +80,7 @@ function extractTranslation(txt: GtfsTranslatedString | undefined): string {
 
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   const pbf = new Pbf(new Uint8Array(buffer));
-  const feed = readFeedMessage(pbf);
+  const feed = readFeedMessage(pbf) as GtfsFeedMessage;
   const timestamp = Number(feed.header?.timestamp || 0);
 
   const e: ParsedTripEntity[] = [];
@@ -71,13 +106,13 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
             const event = update.departure || update.arrival;
             if (event) {
               if (event.delay !== 0 && delay === 0) {
-                delay = event.delay;
+                delay = event.delay || 0;
                 if (update.stop_id) {
                   stopId = update.stop_id;
                 }
               }
               if (event.time !== 0 && time === 0) {
-                time = event.time;
+                time = event.time || 0;
                 if (update.stop_id) {
                   stopId = update.stop_id;
                 }
@@ -89,7 +124,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
 
         // Fall back to trip-level delay when no non-zero stop-level delay is available.
         if (delay === 0 && tu.delay !== 0) {
-          delay = tu.delay;
+          delay = tu.delay || 0;
         }
 
         const ent: ParsedTripEntity = {

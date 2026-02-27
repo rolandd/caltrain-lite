@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "tsx test/test-worker.ts",
+    "check": "tsc --noEmit",
     "bench:gtfs-rt": "tsx bench/gtfs-rt.ts",
     "lint": "cd .. && npm run lint -- worker",
     "format": "cd .. && npm run format -- worker",

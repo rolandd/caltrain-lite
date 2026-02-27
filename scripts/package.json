@@ -8,6 +8,7 @@
     "validate": "tsx validate-schedule.ts",
     "realtime:snapshot": "tsx generate-realtime-snapshot.ts",
     "test": "vitest run",
+    "check": "tsc --noEmit",
     "lint": "cd .. && npm run lint -- scripts",
     "format": "cd .. && npm run format -- scripts",
     "format:check": "cd .. && npm run format:check -- scripts"

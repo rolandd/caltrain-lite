@@ -8,14 +8,14 @@ import { parseFeed } from '../src/gtfs-rt.js';
 import { writeFeedMessage } from '../src/gtfs-realtime.js';
 
 function toArrayBuffer(buf: Buffer): ArrayBuffer {
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
 }
 
 function encodeFeed(message: unknown): ArrayBuffer {
   const pbf = new Pbf();
   writeFeedMessage(message, pbf);
   const bytes = pbf.finish();
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
 // Fixture smoke check

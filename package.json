@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npm test --prefix scripts && npm test --prefix worker && npm test --prefix apps/pwa",
+    "check": "npm run check --prefix scripts && npm run check --prefix worker && npm run check --prefix apps/pwa",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

@@ -12,11 +12,11 @@
     "noEmit": true,
     "sourceMap": true,
     "types": ["node"],
-    "rootDir": ".",
     "paths": {
-      "@transit/types": ["../packages/types/schema.d.ts"]
+      "@transit/types": ["../packages/types/schema.d.ts"],
+      "@packages/*": ["../packages/*"]
     }
   },
-  "include": ["*.ts", "../packages/types/**/*.ts"],
+  "include": ["*.ts", "../packages/types/**/*.ts", "../worker/src/gtfs-rt.ts"],
   "exclude": ["node_modules", "dist"]
 }

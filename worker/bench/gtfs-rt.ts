@@ -8,7 +8,7 @@ import { Bench } from 'tinybench';
 import { buildRealtimeStatus, parseFeed } from '../src/gtfs-rt.js';
 
 function toArrayBuffer(buf: Buffer): ArrayBuffer {
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
 }
 
 function readFixture(name: string): ArrayBuffer {
