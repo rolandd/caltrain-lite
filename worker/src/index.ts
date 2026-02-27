@@ -23,7 +23,11 @@ export default {
       const agency = 'CT';
       const signal = AbortSignal.timeout(10000); // 10s timeout for all fetches
       const fetchFeed = async (endpoint: string) => {
-        const resp = await fetch(`${baseUrl}/${endpoint}?api_key=${apiKey}&agency=${agency}`, {
+        const url = new URL(`${baseUrl}/${endpoint}`);
+        url.searchParams.set('api_key', apiKey);
+        url.searchParams.set('agency', agency);
+
+        const resp = await fetch(url.toString(), {
           signal,
         });
         if (!resp.ok) throw new Error(`${endpoint}: ${resp.status}`);
@@ -53,7 +57,10 @@ export default {
         `Updated RT: ${Object.keys(status.byTrip).length} trips, ${status.a.length} alerts, ts=${status.t}`,
       );
     } catch (err) {
-      console.error('Error fetching/parsing GTFS-RT:', err);
+      // Redact API key from error logs
+      const errStr = err instanceof Error ? err.stack || err.message : String(err);
+      const redacted = apiKey ? errStr.replaceAll(apiKey, 'REDACTED') : errStr;
+      console.error('Error fetching/parsing GTFS-RT:', redacted);
     }
   },
 
