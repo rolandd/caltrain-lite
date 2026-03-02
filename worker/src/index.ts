@@ -77,14 +77,6 @@ export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Max-Age': '86400',
-      Vary: 'Origin',
-    };
-
     const securityHeaders = {
       'Content-Security-Policy':
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'",
@@ -99,14 +91,7 @@ export default {
       'Cross-Origin-Resource-Policy': 'same-origin',
     };
 
-    const headers = { ...corsHeaders, ...securityHeaders };
-
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers,
-      });
-    }
+    const headers = { ...securityHeaders };
 
     if (url.pathname === '/api/schedule') {
       const data = await env.TRANSIT_DATA.get('schedule:data', { type: 'stream' });
