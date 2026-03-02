@@ -82,6 +82,16 @@ function formatDuration(minutes: number): string {
 }
 
 /**
+ * Convert a JS Date day-of-week index to a calendar day index.
+ * JS getDay() returns 0=Sun..6=Sat.
+ * Calendar days array requires Mon=0..Sun=6.
+ */
+function getCalendarDayIndex(date: Date): number {
+  const jsDay = date.getDay();
+  return jsDay === 0 ? 6 : jsDay - 1;
+}
+
+/**
  * Check whether a service ID is active on a given date.
  *
  * @param date - A Date object representing the day to check.
@@ -93,10 +103,7 @@ export function isServiceActive(schedule: StaticSchedule, serviceId: string, dat
   const d = date.getDate();
   const dateInt = y * 10000 + mo * 100 + d;
 
-  // Day of week: JS getDay() → 0=Sun..6=Sat
-  // Calendar days array: [mon, tue, wed, thu, fri, sat, sun]
-  const jsDay = date.getDay();
-  const calDayIndex = jsDay === 0 ? 6 : jsDay - 1; // Convert to Mon=0..Sun=6
+  const calDayIndex = getCalendarDayIndex(date);
 
   const cal = schedule.r.c[serviceId];
   let active = false;
@@ -149,8 +156,7 @@ export function getScheduleType(
   let isWeekend = false;
   let isSpecial = false;
 
-  const jsDay = date.getDay();
-  const calDayIndex = jsDay === 0 ? 6 : jsDay - 1; // Mon=0..Sun=6
+  const calDayIndex = getCalendarDayIndex(date);
 
   for (const sId of activeServices) {
     const cal = schedule.r.c[sId];
