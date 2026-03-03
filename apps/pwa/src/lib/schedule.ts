@@ -87,8 +87,7 @@ function formatDuration(minutes: number): string {
  * Calendar days array requires Mon=0..Sun=6.
  */
 function getCalendarDayIndex(date: Date): number {
-  const jsDay = date.getDay();
-  return jsDay === 0 ? 6 : jsDay - 1;
+  return (date.getDay() + 6) % 7;
 }
 
 /**
