@@ -6,7 +6,7 @@ This guide details how to deploy the Transit PWA and Worker stack to Cloudflare,
 
 1.  **Backend (Worker)**: Handles `/api/*` (Realtime GTFS, Schedule Meta).
     - Deployed via: `wrangler` (CLI).
-    - Infrastructure: Cloudflare Worker + KV.
+    - Infrastructure: Cloudflare Worker + KV + D1.
 2.  **Frontend (PWA)**: SvelteKit Static Adapter found at `apps/pwa`.
     - Deployed via: Cloudflare Pages (Git Integration).
     - Infrastructure: Cloudflare Pages.
@@ -41,6 +41,7 @@ permissions to allow Terraform to manage your infrastructure.
     - **Account Resources** (Include: `All accounts` or your specific account):
       - `Workers Scripts`: **Edit**
       - `Workers KV Storage`: **Edit**
+      - `D1`: **Edit**
       - `Pages`: **Edit**
     - **Zone Resources** (Include: `Specific zone` > `your-domain.com`):
       - `Workers Routes`: **Edit**
@@ -70,8 +71,9 @@ terraform apply
 > **Result**: This automatically:
 >
 > - Creates the `transit-kv` namespace.
+> - Creates the `transit-d1` database.
 > - Creates the `transit-pwa` Pages project (with Node 24).
-> - Generates `worker/wrangler.toml` with the correct KV ID and Routes.
+> - Generates `worker/wrangler.toml` with the correct KV ID, D1 ID, and Routes.
 
 ---
 
@@ -86,10 +88,18 @@ We deploy the Worker first.
     npx wrangler deploy
     ```
 
-    - **What this does**: Creates the Worker project, uploads code, binds KV, and **sets up the Route** (`transit.example.com/api/*`) in Cloudflare.
+    - **What this does**: Creates the Worker project, uploads code, binds KV/D1, and **sets up the Route** (`transit.example.com/api/*`) in Cloudflare.
     - _Note_: This deploys the worker to your `workers.dev` subdomain initially (e.g., `transit-worker.your-name.workers.dev`).
 
-2.  **Set Secrets** (Production):
+2.  **Initialize Database**:
+
+    ```bash
+    npx wrangler d1 migrations apply transit-d1 --remote
+    ```
+
+    - **What this does**: Creates the `train_locations` table in your remote D1 database.
+
+3.  **Set Secrets** (Production):
 
     ```bash
     npx wrangler secret put TRANSIT_511_API_KEY
