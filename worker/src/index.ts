@@ -6,10 +6,11 @@ import { parseFeed, buildRealtimeStatus } from './gtfs-rt.js';
 export interface Env {
   TRANSIT_511_API_KEY: string;
   TRANSIT_DATA: KVNamespace;
+  TRANSIT_DB: D1Database;
 }
 
 export default {
-  // CRON TRIGGER: Fetch from 511.org -> Parse -> KV
+  // CRON TRIGGER: Fetch from 511.org -> Parse -> KV & D1
   async scheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
     const apiKey = env.TRANSIT_511_API_KEY;
     if (!apiKey) {
@@ -47,16 +48,32 @@ export default {
 
       // 3. Construct unified status.
       const status = buildRealtimeStatus(tu, vp, sa);
+      const numTrips = Object.keys(status.byTrip).length;
 
       // Store in KV
-      await env.TRANSIT_DATA.put('realtime:status', JSON.stringify(status), {
-        expirationTtl: 180, // 3 minutes
-        metadata: { t: status.t },
-      });
+      const promises: Promise<unknown>[] = [
+        env.TRANSIT_DATA.put('realtime:status', JSON.stringify(status), {
+          expirationTtl: 180, // 3 minutes
+          metadata: { t: status.t },
+        }),
+      ];
 
-      console.log(
-        `Updated RT: ${Object.keys(status.byTrip).length} trips, ${status.a.length} alerts, ts=${status.t}`,
-      );
+      // Store in D1 (train locations by trip)
+      // Only record if we have actual train data (e.g. not off-hours)
+      const trainDataTimestamp = Math.max(tu.t, vp.t);
+      if (numTrips > 0 && trainDataTimestamp > 0) {
+        promises.push(
+          env.TRANSIT_DB.prepare(
+            'INSERT INTO train_locations (timestamp, data) VALUES (?, ?)',
+          )
+            .bind(trainDataTimestamp, JSON.stringify(status.byTrip))
+            .run(),
+        );
+      }
+
+      await Promise.all(promises);
+
+      console.log(`Updated RT: ${numTrips} trips, ${status.a.length} alerts, ts=${status.t}`);
     } catch (err) {
       // Redact API key from error logs
       const errStr = err instanceof Error ? err.stack || err.message : String(err);

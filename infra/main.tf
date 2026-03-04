@@ -19,9 +19,15 @@ resource "cloudflare_workers_kv_namespace" "transit_kv" {
   title      = "transit-kv"
 }
 
+resource "cloudflare_d1_database" "transit_d1" {
+  account_id = var.cloudflare_account_id
+  name       = "transit-d1"
+}
+
 resource "local_file" "wrangler_toml" {
   content = templatefile("${path.module}/../worker/wrangler.toml.tftpl", {
     kv_id = cloudflare_workers_kv_namespace.transit_kv.id
+    d1_id = cloudflare_d1_database.transit_d1.id
     zone_id = var.cloudflare_zone_id
     domain = var.domain
   })

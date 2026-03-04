@@ -214,6 +214,15 @@ export function buildRealtimeStatus(
     byTrip[entity.i] = trip;
   }
 
+  // Include vehicle positions that have no matching trip update so that
+  // trains reporting a position but lacking a trip update are not silently
+  // dropped.
+  for (const [tripId, position] of vehiclePositions.p) {
+    if (!byTrip[tripId]) {
+      byTrip[tripId] = { p: position };
+    }
+  }
+
   return {
     t: Math.max(tripUpdates.t, vehiclePositions.t, serviceAlerts.t),
     byTrip,

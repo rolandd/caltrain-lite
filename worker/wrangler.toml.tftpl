@@ -8,6 +8,12 @@ kv_namespaces = [
   { binding = "TRANSIT_DATA", id = "${kv_id}" }
 ]
 
+# D1 Database for Historical Realtime Data
+[[d1_databases]]
+binding = "TRANSIT_DB"
+database_name = "transit-d1"
+database_id = "${d1_id}"
+
 routes = [
 	{ pattern = "${domain}/api/*", zone_id = "${zone_id}" }
 ]

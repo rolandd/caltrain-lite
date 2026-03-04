@@ -44,7 +44,8 @@ consistent communication between the GHA, Worker, and PWA.
 │  Cloudflare Worker  (/api/realtime, /api/meta)       │
 │                                                      │
 │  Cron trigger (every 120s):                          │
-│    511.org GTFS-RT (protobuf) ──► decode ──► KV      │
+│    511.org GTFS-RT (protobuf) ──► decode ──┬──► KV   │
+│                                            └──► D1   │
 │                                                      │
 │  GET /api/schedule → read KV → StaticSchedule JSON   │
 │  GET /api/realtime → read KV → RealtimeStatus JSON   │
@@ -81,15 +82,30 @@ secrets, Cloudflare Worker secrets, and locally in the gitignored
 
 ## Storage Architecture
 
-All server-side storage uses **Cloudflare KV**. The parsed schedule
-bundle is <100KB and the real-time status covers only today's trains,
-making KV's 25MB value limit and low-latency reads an ideal fit.
+Server-side storage uses **Cloudflare KV** for fast lookups and
+**Cloudflare D1** for historical data. The parsed schedule bundle is
+<100KB and the real-time status covers only today's trains, making
+KV's 25MB value limit and low-latency reads an ideal fit.
+
+### KV Storage (Fast Lookup)
 
 | KV Key            | Contents                                  | Size   | Written By    |
 | ----------------- | ----------------------------------------- | ------ | ------------- |
 | `schedule:data`   | StaticSchedule JSON (full bundle)         | <100KB | GitHub Action |
 | `schedule:meta`   | ScheduleMeta JSON (version + timestamps)  | ~100B  | GitHub Action |
 | `realtime:status` | RealtimeStatus JSON (today's trains only) | ~5KB   | Worker cron   |
+
+### SQL Storage (D1 - Historical Realtime)
+
+Used for recording train locations over time for later analysis.
+
+| Table             | Contents                                                          | Frequency   | Written By  |
+| ----------------- | ----------------------------------------------------------------- | ----------- | ----------- |
+| `train_locations` | `(id PK, timestamp INT, data TEXT, created_at DATETIME)` (byTrip) | Every 2 min | Worker cron |
+
+Note: `train_locations` has indexes on `timestamp` and `created_at` for efficient querying and retention pruning.
+
+### Client Storage
 
 | Client Store      | Contents                            | Purpose                       |
 | ----------------- | ----------------------------------- | ----------------------------- |
