@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2024-04-01"
 compatibility_flags = ["nodejs_compat"]
 
+routes = [
+        { pattern = "${domain}/api/*", zone_id = "${zone_id}" }
+]
+
 # KV Namespace for Schedule & Realtime Data
 kv_namespaces = [
   { binding = "TRANSIT_DATA", id = "${kv_id}" }
@@ -13,10 +17,6 @@ kv_namespaces = [
 binding = "TRANSIT_DB"
 database_name = "transit-d1"
 database_id = "${d1_id}"
-
-routes = [
-	{ pattern = "${domain}/api/*", zone_id = "${zone_id}" }
-]
 
 [triggers]
 crons = ["*/2 * * * *"] # Run every 2 minutes
