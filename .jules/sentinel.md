@@ -1,0 +1,4 @@
+## 2025-02-18 - Overly Permissive CORS Headers in Worker API
+**Vulnerability:** The API routes (`/api/*`) in the Cloudflare worker (`worker/src/index.ts`) were configured with `Access-Control-Allow-Origin: *`, which is an overly permissive CORS policy. This violated the architecture decision mapped in `docs/SECURITY.md` where API endpoints are explicitly designed as same-origin only.
+**Learning:** There was a discrepancy between the security design document (`docs/SECURITY.md`) and the actual implementation in `worker/src/index.ts`. The documentation claimed "No CORS headers — API is same-origin only", yet the headers were explicitly included in the codebase.
+**Prevention:** Enforce rigorous matching between security architecture documents and code. Future PRs and reviews should verify that CORS configurations match documented constraints. We should add automated tests or static analysis rules to flag unexpected CORS headers.
