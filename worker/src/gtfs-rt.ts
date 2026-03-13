@@ -167,19 +167,26 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
+      // Single-pass loop to minimize callback overhead and intermediate array allocations
+      let s: string[] | undefined;
+      let tr: string[] | undefined;
+
+      if (a.informed_entity) {
+        s = [];
+        tr = [];
+        for (const e of a.informed_entity) {
+          if (e.stop_id) s.push(e.stop_id);
+          if (e.trip?.trip_id) tr.push(e.trip.trip_id);
+        }
+      }
+
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
+        s,
+        tr,
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
