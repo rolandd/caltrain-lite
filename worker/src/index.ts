@@ -63,9 +63,7 @@ export default {
       const trainDataTimestamp = Math.max(tu.t, vp.t);
       if (numTrips > 0 && trainDataTimestamp > 0) {
         promises.push(
-          env.TRANSIT_DB.prepare(
-            'INSERT INTO train_locations (timestamp, data) VALUES (?, ?)',
-          )
+          env.TRANSIT_DB.prepare('INSERT INTO train_locations (timestamp, data) VALUES (?, ?)')
             .bind(trainDataTimestamp, JSON.stringify(status.byTrip))
             .run(),
         );
