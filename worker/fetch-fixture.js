@@ -21,12 +21,10 @@ try {
 } catch (err) {
   const errStr = err instanceof Error ? err.stack || err.message : String(err);
   let redacted = errStr;
-  if (apiKey) {
-    redacted = redacted.replaceAll(apiKey, 'REDACTED');
-    const encodedKey = encodeURIComponent(apiKey);
-    if (encodedKey !== apiKey) {
-      redacted = redacted.replaceAll(encodedKey, 'REDACTED');
-    }
+  redacted = redacted.replaceAll(apiKey, 'REDACTED');
+  const encodedKey = encodeURIComponent(apiKey);
+  if (encodedKey !== apiKey) {
+    redacted = redacted.replaceAll(encodedKey, 'REDACTED');
   }
   console.error(`Error fetching TripUpdates:`, redacted);
   process.exit(1);
