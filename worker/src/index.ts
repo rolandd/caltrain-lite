@@ -2,6 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { parseFeed, buildRealtimeStatus } from './gtfs-rt.js';
+import { redact } from '../../packages/utils/redact.js';
 
 export interface Env {
   TRANSIT_511_API_KEY: string;
@@ -63,9 +64,7 @@ export default {
       const trainDataTimestamp = Math.max(tu.t, vp.t);
       if (numTrips > 0 && trainDataTimestamp > 0) {
         promises.push(
-          env.TRANSIT_DB.prepare(
-            'INSERT INTO train_locations (timestamp, data) VALUES (?, ?)',
-          )
+          env.TRANSIT_DB.prepare('INSERT INTO train_locations (timestamp, data) VALUES (?, ?)')
             .bind(trainDataTimestamp, JSON.stringify(status.byTrip))
             .run(),
         );
@@ -77,15 +76,7 @@ export default {
     } catch (err) {
       // Redact API key from error logs
       const errStr = err instanceof Error ? err.stack || err.message : String(err);
-      let redacted = errStr;
-      if (apiKey) {
-        redacted = redacted.replaceAll(apiKey, 'REDACTED');
-        const encodedKey = encodeURIComponent(apiKey);
-        if (encodedKey !== apiKey) {
-          redacted = redacted.replaceAll(encodedKey, 'REDACTED');
-        }
-      }
-      console.error('Error fetching/parsing GTFS-RT:', redacted);
+      console.error('Error fetching/parsing GTFS-RT:', redact(errStr, apiKey));
     }
   },
 

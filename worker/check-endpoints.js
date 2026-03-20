@@ -2,20 +2,21 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { redact } from '../packages/utils/redact.ts';
 
-const apiKeyRaw = readFileSync('../../API_KEY', 'utf-8');
-const match = apiKeyRaw.match(/TRANSIT_511_API_KEY="([^"]+)"/);
-if (!match) throw new Error('Could not parse API_KEY file');
-const apiKey = match[1];
+const apiKey = process.env.TRANSIT_511_API_KEY;
+if (!apiKey) throw new Error('Missing TRANSIT_511_API_KEY environment variable');
 
 const endpoints = ['ServiceAlerts', 'VehiclePositions'];
 
 async function check() {
   for (const ep of endpoints) {
-    const url = `https://api.511.org/Transit/${ep}?api_key=${apiKey}&agency=CT`;
+    const url = new URL(`https://api.511.org/Transit/${ep}`);
+    url.searchParams.set('api_key', apiKey);
+    url.searchParams.set('agency', 'CT');
     console.log(`Fetching ${ep}...`);
     try {
-      const resp = await fetch(url);
+      const resp = await fetch(url.toString());
       if (!resp.ok) {
         console.error(`Failed ${ep}: ${resp.status}`);
         continue;
@@ -23,8 +24,9 @@ async function check() {
       const buffer = await resp.arrayBuffer();
       console.log(`Success ${ep}: ${buffer.byteLength} bytes`);
       writeFileSync(`fixtures/${ep.toLowerCase()}.pb`, Buffer.from(buffer));
-    } catch (e) {
-      console.error(`Error ${ep}:`, e);
+    } catch (err) {
+      const errStr = err instanceof Error ? err.stack || err.message : String(err);
+      console.error(`Error ${ep}:`, redact(errStr, apiKey));
     }
   }
 }
