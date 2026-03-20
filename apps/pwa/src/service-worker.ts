@@ -8,6 +8,9 @@ import { build, files, version } from '$service-worker';
 const CACHE = `cache-${version}`;
 const ASSETS = [...build, ...files];
 
+// O(1) lookup set for fast fetch event checking
+const ASSETS_SET = new Set(ASSETS);
+
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 sw.addEventListener('install', (event) => {
@@ -35,7 +38,7 @@ sw.addEventListener('fetch', (event) => {
     const cache = await caches.open(CACHE);
 
     // Serve static assets from cache if available
-    if (ASSETS.includes(url.pathname)) {
+    if (ASSETS_SET.has(url.pathname)) {
       const cachedResponse = await cache.match(event.request);
       if (cachedResponse) return cachedResponse;
     }
