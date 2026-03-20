@@ -6,14 +6,14 @@
 import { build, files, version } from '$service-worker';
 
 const CACHE = `cache-${version}`;
-const ASSETS = [...build, ...files];
+const ASSETS = new Set([...build, ...files]);
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 sw.addEventListener('install', (event) => {
   async function addFilesToCache() {
     const cache = await caches.open(CACHE);
-    await cache.addAll(ASSETS);
+    await cache.addAll([...ASSETS]);
   }
   event.waitUntil(addFilesToCache());
 });
@@ -35,7 +35,7 @@ sw.addEventListener('fetch', (event) => {
     const cache = await caches.open(CACHE);
 
     // Serve static assets from cache if available
-    if (ASSETS.includes(url.pathname)) {
+    if (ASSETS.has(url.pathname)) {
       const cachedResponse = await cache.match(event.request);
       if (cachedResponse) return cachedResponse;
     }
