@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import util from 'node:util';
 import JSZip from 'jszip';
 import { parse } from 'csv-parse/sync';
+import { redact } from '../packages/utils/redact.js';
 import type {
   StaticSchedule,
   Trip,
@@ -129,12 +130,6 @@ function priceToCents(price: string): number {
 /** Strip redundant "Caltrain Station" from stop names, collapsing whitespace. */
 function cleanStationName(name: string): string {
   return name.replace(/\s*Caltrain Station\s*/g, ' ').trim();
-}
-
-/** Redact secret from string. */
-export function redact(str: string, secret: string): string {
-  if (!secret) return str;
-  return str.replaceAll(secret, '[REDACTED]');
 }
 
 /**
