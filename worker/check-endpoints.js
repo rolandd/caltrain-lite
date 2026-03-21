@@ -2,6 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { redact } from '../packages/utils/redact.ts';
 
 const apiKey = process.env.TRANSIT_511_API_KEY;
 if (!apiKey) throw new Error('Missing TRANSIT_511_API_KEY environment variable');
@@ -25,13 +26,7 @@ async function check() {
       writeFileSync(`fixtures/${ep.toLowerCase()}.pb`, Buffer.from(buffer));
     } catch (err) {
       const errStr = err instanceof Error ? err.stack || err.message : String(err);
-      let redacted = errStr;
-      redacted = redacted.replaceAll(apiKey, 'REDACTED');
-      const encodedKey = encodeURIComponent(apiKey);
-      if (encodedKey !== apiKey) {
-        redacted = redacted.replaceAll(encodedKey, 'REDACTED');
-      }
-      console.error(`Error ${ep}:`, redacted);
+      console.error(`Error ${ep}:`, redact(errStr, apiKey));
     }
   }
 }

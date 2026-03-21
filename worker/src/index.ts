@@ -2,6 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { parseFeed, buildRealtimeStatus } from './gtfs-rt.js';
+import { redact } from '../../packages/utils/redact.js';
 
 export interface Env {
   TRANSIT_511_API_KEY: string;
@@ -75,15 +76,7 @@ export default {
     } catch (err) {
       // Redact API key from error logs
       const errStr = err instanceof Error ? err.stack || err.message : String(err);
-      let redacted = errStr;
-      if (apiKey) {
-        redacted = redacted.replaceAll(apiKey, 'REDACTED');
-        const encodedKey = encodeURIComponent(apiKey);
-        if (encodedKey !== apiKey) {
-          redacted = redacted.replaceAll(encodedKey, 'REDACTED');
-        }
-      }
-      console.error('Error fetching/parsing GTFS-RT:', redacted);
+      console.error('Error fetching/parsing GTFS-RT:', redact(errStr, apiKey));
     }
   },
 
