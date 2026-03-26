@@ -9,6 +9,8 @@ jobs:
   update-schedule:
     runs-on: ubuntu-latest
     name: Fetch and Update GTFS Schedule
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,7 +26,7 @@ jobs:
       - name: Fetch and Parse GTFS
         env:
           TRANSIT_511_API_KEY: ${{ secrets.TRANSIT_511_API_KEY }}
-        run: node scripts/parse-gtfs.ts > static-schedule.json
+        run: npx tsx scripts/parse-gtfs.ts > static-schedule.json
 
       - name: Validate Schedule
         run: npm run validate --prefix scripts ../static-schedule.json
