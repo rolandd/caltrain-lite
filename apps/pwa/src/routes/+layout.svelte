@@ -56,14 +56,14 @@
       <footer class="text-center py-6 text-xs text-transit-text-tertiary">
         <a
           href="https://github.com/rolandd/caltrain-lite"
-          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted"
+          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
           target="_blank"
           rel="noopener noreferrer">free software</a
         >
         made with ❤️ in mountain view, ca by
         <a
           href="https://github.com/rolandd"
-          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted"
+          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
           target="_blank"
           rel="noopener noreferrer">roland</a
         >
@@ -77,7 +77,7 @@
       <div class="text-[2rem]">⚠️</div>
       <p class="text-transit-danger font-semibold">{error}</p>
       <button
-        class="bg-transit-surface-elevated border border-transit-border-subtle text-transit-text-primary px-4 py-2 rounded-lg cursor-pointer text-lg"
+        class="bg-transit-surface-elevated border border-transit-border-subtle text-transit-text-primary px-4 py-2 rounded-lg cursor-pointer text-lg focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
         onclick={() => window.location.reload()}>Retry</button
       >
     </div>
