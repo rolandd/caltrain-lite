@@ -2,7 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { readFileSync } from 'node:fs';
-import type { StaticSchedule } from '../packages/types/schema.d.ts';
+import type { StaticSchedule } from '../packages/types/schema';
 
 /**
  * Basic validation for the generated static-schedule.json.

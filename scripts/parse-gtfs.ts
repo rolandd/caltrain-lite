@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import util from 'node:util';
 import JSZip from 'jszip';
 import { parse } from 'csv-parse/sync';
-import { redact } from '../packages/utils/redact.ts';
+import { redact } from '../packages/utils/redact';
 import type {
   StaticSchedule,
   Trip,

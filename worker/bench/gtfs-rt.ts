@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Bench } from 'tinybench';
-import { buildRealtimeStatus, parseFeed } from '../src/gtfs-rt.js';
+import { buildRealtimeStatus, parseFeed } from '../src/gtfs-rt';
 
 function toArrayBuffer(buf: Buffer): ArrayBuffer {
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;

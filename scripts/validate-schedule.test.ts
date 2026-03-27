@@ -2,8 +2,8 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { describe, it, expect } from 'vitest';
-import { validateSchedule } from './validate-schedule.ts';
-import type { StaticSchedule } from '../packages/types/schema.d.ts';
+import { validateSchedule } from './validate-schedule';
+import type { StaticSchedule } from '../packages/types/schema';
 
 const VALID_MINIMAL: StaticSchedule = {
   m: { v: 'hash', e: 20261231, sv: 1 },

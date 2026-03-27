@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import JSZip from 'jszip';
-import { parseGtfsZip } from './parse-gtfs.ts';
+import { parseGtfsZip } from './parse-gtfs';
 
 // ---------------------------------------------------------------------------
 // Helper: build a minimal GTFS ZIP from CSV strings

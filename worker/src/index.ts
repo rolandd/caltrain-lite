@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-import { parseFeed, buildRealtimeStatus } from './gtfs-rt.js';
-import { redact } from '../../packages/utils/redact.js';
+import { parseFeed, buildRealtimeStatus } from './gtfs-rt';
+import { redact } from '../../packages/utils/redact';
 
 export interface Env {
   TRANSIT_511_API_KEY: string;

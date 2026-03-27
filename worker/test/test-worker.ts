@@ -4,8 +4,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import Pbf from 'pbf';
-import { parseFeed } from '../src/gtfs-rt.js';
-import { writeFeedMessage } from '../src/gtfs-realtime.js';
+import { parseFeed } from '../src/gtfs-rt';
+import { writeFeedMessage } from '../src/gtfs-realtime';
 
 function toArrayBuffer(buf: Buffer): ArrayBuffer {
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;

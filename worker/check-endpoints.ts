@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { redact } from '../packages/utils/redact.ts';
+import { writeFileSync } from 'node:fs';
+import { redact } from '../packages/utils/redact';
 
 const apiKey = process.env.TRANSIT_511_API_KEY;
 if (!apiKey) throw new Error('Missing TRANSIT_511_API_KEY environment variable');
 
-const endpoints = ['ServiceAlerts', 'VehiclePositions'];
+const endpoints = ['ServiceAlerts', 'VehiclePositions'] as const;
 
-async function check() {
+async function check(key: string): Promise<void> {
   for (const ep of endpoints) {
     const url = new URL(`https://api.511.org/Transit/${ep}`);
-    url.searchParams.set('api_key', apiKey);
+    url.searchParams.set('api_key', key);
     url.searchParams.set('agency', 'CT');
     console.log(`Fetching ${ep}...`);
     try {
@@ -26,9 +26,13 @@ async function check() {
       writeFileSync(`fixtures/${ep.toLowerCase()}.pb`, Buffer.from(buffer));
     } catch (err) {
       const errStr = err instanceof Error ? err.stack || err.message : String(err);
-      console.error(`Error ${ep}:`, redact(errStr, apiKey));
+      console.error(`Error ${ep}:`, redact(errStr, key));
     }
   }
 }
 
-check();
+check(apiKey).catch((err) => {
+  const errStr = err instanceof Error ? err.stack || err.message : String(err);
+  console.error('Fatal error:', redact(errStr, apiKey));
+  process.exit(1);
+});

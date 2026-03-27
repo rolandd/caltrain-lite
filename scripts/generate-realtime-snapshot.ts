@@ -12,7 +12,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseFeed, buildRealtimeStatus } from '../worker/src/gtfs-rt.ts';
+import { parseFeed, buildRealtimeStatus } from '../worker/src/gtfs-rt';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = resolve(__dirname, '../worker/fixtures');

@@ -7,6 +7,8 @@
     "test": "tsx test/test-worker.ts",
     "check": "tsc --noEmit",
     "bench:gtfs-rt": "tsx bench/gtfs-rt.ts",
+    "fetch:fixtures": "tsx fetch-fixture.ts",
+    "check:endpoints": "tsx check-endpoints.ts",
     "lint": "cd .. && npm run lint -- worker",
     "format": "cd .. && npm run format -- worker",
     "format:check": "cd .. && npm run format:check -- worker"
