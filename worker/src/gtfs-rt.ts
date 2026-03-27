@@ -2,7 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import Pbf from 'pbf';
-import { readFeedMessage } from './gtfs-realtime.js';
+import { readFeedMessage } from './gtfs-realtime';
 import type {
   RealtimeStatus,
   RealtimeTripStatus,

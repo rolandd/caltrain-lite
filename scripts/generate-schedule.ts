@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseGtfsZip } from './parse-gtfs.ts';
+import { parseGtfsZip } from './parse-gtfs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = resolve(__dirname, 'fixtures/caltrain-gtfs.zip');
