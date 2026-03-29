@@ -167,19 +167,32 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
+      let s: string[] | undefined;
+      let tr: string[] | undefined;
+
+      // ⚡ Bolt: Replaced two .reduce() loops with a single for loop
+      // to minimize callback overhead and intermediate array allocations.
+      if (a.informed_entity && a.informed_entity.length > 0) {
+        for (let i = 0; i < a.informed_entity.length; i++) {
+          const e = a.informed_entity[i];
+          if (e.stop_id) {
+            if (!s) s = [];
+            s.push(e.stop_id);
+          }
+          if (e.trip?.trip_id) {
+            if (!tr) tr = [];
+            tr.push(e.trip.trip_id);
+          }
+        }
+      }
+
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
+        s,
+        tr,
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
