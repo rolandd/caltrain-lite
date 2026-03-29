@@ -51,7 +51,10 @@ export function getStationList(schedule: StaticSchedule): StationInfo[] {
  */
 export function normalizeDate(dateStr: string): string {
   if (!dateStr) return new Date().toISOString().slice(0, 10);
-  const [y, m, d] = dateStr.split('-').map((n) => parseInt(n, 10));
+  const [yStr, mStr, dStr] = dateStr.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10);
+  const d = parseInt(dStr, 10);
   // Month is 0-indexed in JS Date constructor
   const date = new Date(y, m - 1, d, 12, 0, 0);
   if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
