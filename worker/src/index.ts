@@ -101,6 +101,13 @@ export default {
 
     const headers = securityHeaders;
 
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('{"error": "Method Not Allowed"}', {
+        status: 405,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (url.pathname === '/api/schedule') {
       const data = await env.TRANSIT_DATA.get('schedule:data', { type: 'stream' });
       if (!data) {
