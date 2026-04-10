@@ -150,8 +150,9 @@
       </div>
       <button
         onclick={dismiss}
-        class="text-transit-tooltip-node hover:text-transit-text-primary p-1 transition-colors"
+        class="text-transit-tooltip-node hover:text-transit-text-primary p-1 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-sm"
         aria-label="Close"
+        title="Close"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -169,7 +170,7 @@
     {#if platform === 'chromium'}
       <button
         onclick={install}
-        class="w-full bg-transit-brand hover:bg-transit-brand-strong text-transit-text-primary font-semibold py-3 px-4 rounded-lg transition-colors cursor-pointer"
+        class="w-full bg-transit-brand hover:bg-transit-brand-strong text-transit-text-primary font-semibold py-3 px-4 rounded-lg transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
       >
         Install
       </button>

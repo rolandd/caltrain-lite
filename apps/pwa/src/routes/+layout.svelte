@@ -77,7 +77,7 @@
       <div class="text-[2rem]">⚠️</div>
       <p class="text-transit-danger font-semibold">{error}</p>
       <button
-        class="bg-transit-surface-elevated border border-transit-border-subtle text-transit-text-primary px-4 py-2 rounded-lg cursor-pointer text-lg"
+        class="bg-transit-surface-elevated border border-transit-border-subtle text-transit-text-primary px-4 py-2 rounded-lg cursor-pointer text-lg focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
         onclick={() => window.location.reload()}>Retry</button
       >
     </div>
