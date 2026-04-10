@@ -463,7 +463,7 @@
               class="bg-transit-surface-card border border-transit-border-subtle rounded-xl flex items-center justify-between p-1 pr-3 transition-colors hover:border-transit-border-strong"
             >
               <button
-                class="flex-1 text-left flex items-center gap-2 p-3 cursor-pointer bg-transparent border-none text-transit-text-primary text-base font-inherit"
+                class="flex-1 text-left flex items-center gap-2 p-3 cursor-pointer bg-transparent border-none text-transit-text-primary text-base font-inherit focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-lg"
                 onclick={() => selectFavorite(pair)}
               >
                 <span class="font-semibold">{getStationName(o)}</span>
@@ -472,13 +472,14 @@
               </button>
 
               <button
-                class="text-transit-favorite text-xl cursor-pointer bg-transparent border-none p-2 rounded-full hover:bg-transit-surface-hover-soft transition-colors flex items-center justify-center leading-none"
+                class="text-transit-favorite text-xl cursor-pointer bg-transparent border-none p-2 rounded-full hover:bg-transit-surface-hover-soft transition-colors flex items-center justify-center leading-none focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
                 onclick={(e) => {
                   e.stopPropagation();
                   toggleFavorite(o, d);
                   loadFavorites();
                 }}
                 aria-label="Remove favorite"
+                title="Remove favorite"
               >
                 ★
               </button>
@@ -884,6 +885,8 @@
         class="fixed inset-0 cursor-default bg-transparent border-none w-full h-full z-40"
         onclick={closeTooltip}
         aria-label="Close tooltip"
+        title="Close tooltip"
+        tabindex="-1"
       ></button>
 
       <!-- Tooltip Bubble -->
