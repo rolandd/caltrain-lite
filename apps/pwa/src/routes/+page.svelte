@@ -884,6 +884,7 @@
         class="fixed inset-0 cursor-default bg-transparent border-none w-full h-full z-40"
         onclick={closeTooltip}
         aria-label="Close tooltip"
+        tabindex="-1"
       ></button>
 
       <!-- Tooltip Bubble -->
