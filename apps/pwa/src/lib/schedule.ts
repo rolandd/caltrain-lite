@@ -30,6 +30,11 @@ export interface TripResult {
   stopIds: string[]; // sequence of all stop station IDs from origin to destination inclusive
 }
 
+// Module-level cache to avoid rebuilding the map on every queryTrips call
+// Memory explicitly says:
+// The `StaticSchedule` schema stores trips in an array (`t: Trip[]`). To enable O(1) lookup and avoid redundant iterations, `queryTrips` in `apps/pwa/src/lib/schedule.ts` utilizes a module-level `WeakMap` to cache the trip lookup Map for each schedule instance.
+const tripCache = new WeakMap<StaticSchedule, Map<string, Trip>>();
+
 /**
  * Get a sorted list of stations for the picker UI.
  * Uses the pre-ordered list from the schedule (North-to-South).
@@ -213,10 +218,14 @@ export function queryTrips(
   const candidateIds = schedule.x[pairKey];
   if (!candidateIds) return [];
 
-  // Build a quick trip lookup by train number
-  const tripById = new Map<string, Trip>();
-  for (const trip of schedule.t) {
-    tripById.set(trip.i, trip);
+  // Build or retrieve a quick trip lookup by train number using a cache to avoid O(T) work
+  let tripById = tripCache.get(schedule);
+  if (!tripById) {
+    tripById = new Map<string, Trip>();
+    for (const trip of schedule.t) {
+      tripById.set(trip.i, trip);
+    }
+    tripCache.set(schedule, tripById);
   }
 
   const results: TripResult[] = [];
