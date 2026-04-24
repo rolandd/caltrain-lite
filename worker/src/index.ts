@@ -97,9 +97,14 @@ export default {
   // HTTP: Serve from KV
 
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-
     const headers = securityHeaders;
+
+    // Security: Only allow GET, HEAD, and OPTIONS requests for read-only APIs
+    if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'OPTIONS') {
+      return new Response('Method Not Allowed', { status: 405, headers });
+    }
+
+    const url = new URL(request.url);
 
     if (url.pathname === '/api/schedule') {
       const data = await env.TRANSIT_DATA.get('schedule:data', { type: 'stream' });
