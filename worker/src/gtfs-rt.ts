@@ -75,7 +75,12 @@ interface GtfsFeedMessage {
 
 /** Extract English text from a GTFS-RT TranslatedString. */
 function extractTranslation(txt: GtfsTranslatedString | undefined): string {
-  return txt?.translation?.find((t) => t.language === 'en')?.text || '';
+  if (!txt || !txt.translation) return '';
+  for (let i = 0; i < txt.translation.length; i++) {
+    const t = txt.translation[i];
+    if (t.language === 'en') return t.text;
+  }
+  return '';
 }
 
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
@@ -87,7 +92,8 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
   const positions = new Map<string, VehiclePosition>();
   const alerts: ServiceAlert[] = [];
 
-  for (const entity of feed.entity ?? []) {
+  for (let i = 0, entities = feed.entity ?? [], len = entities.length; i < len; i++) {
+    const entity = entities[i];
     // 1. Trip Update
     if (entity.trip_update) {
       const tu = entity.trip_update;
@@ -99,23 +105,24 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
 
         if (tu.stop_time_update && tu.stop_time_update.length > 0) {
           // Prefer the first referenced stop as the active stop context.
-          stopId = tu.stop_time_update.find((u) => u.stop_id)?.stop_id || '';
+          let foundFirstStop = false;
 
           // Prefer the first non-zero stop-level delay; it is more specific than trip-level delay.
-          for (const update of tu.stop_time_update) {
+          for (let j = 0; j < tu.stop_time_update.length; j++) {
+            const update = tu.stop_time_update[j];
+            if (!foundFirstStop && update.stop_id) {
+              stopId = update.stop_id;
+              foundFirstStop = true;
+            }
             const event = update.departure || update.arrival;
             if (event) {
               if (event.delay !== 0 && delay === 0) {
                 delay = event.delay || 0;
-                if (update.stop_id) {
-                  stopId = update.stop_id;
-                }
+                if (update.stop_id) stopId = update.stop_id;
               }
               if (event.time !== 0 && time === 0) {
                 time = event.time || 0;
-                if (update.stop_id) {
-                  stopId = update.stop_id;
-                }
+                if (update.stop_id) stopId = update.stop_id;
               }
               if (delay !== 0 && time !== 0) break;
             }
@@ -167,19 +174,23 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
+      let stops: string[] | undefined;
+      let trips: string[] | undefined;
+      if (a.informed_entity) {
+        for (let j = 0; j < a.informed_entity.length; j++) {
+          const ie = a.informed_entity[j];
+          if (ie.stop_id) (stops = stops || []).push(ie.stop_id);
+          if (ie.trip?.trip_id) (trips = trips || []).push(ie.trip.trip_id);
+        }
+      }
+
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
+        s: stops,
+        tr: trips,
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
@@ -199,7 +210,8 @@ export function buildRealtimeStatus(
 ): RealtimeStatus {
   const byTrip: Record<string, RealtimeTripStatus> = {};
 
-  for (const entity of tripUpdates.e) {
+  for (let i = 0; i < tripUpdates.e.length; i++) {
+    const entity = tripUpdates.e[i];
     const trip: RealtimeTripStatus = {};
     if (entity.d !== undefined) trip.d = entity.d;
     if (entity.t !== undefined) trip.t = entity.t;
