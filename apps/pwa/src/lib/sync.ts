@@ -47,7 +47,6 @@ export async function initSchedule(
         try {
           // If validation failed, clear the corrupt cache and fetch fresh
           await db.schedules.clear();
-          console.log('Cleared corrupt schedule cache');
           const fresh = await fetchSchedule();
           await cacheSchedule(fresh);
           if (onUpdate) onUpdate(fresh);
@@ -61,7 +60,6 @@ export async function initSchedule(
   }
 
   // 2. No cache? Fetch full bundle immediately
-  console.log('No local schedule, fetching full bundle...');
   const schedule = await fetchSchedule();
   await cacheSchedule(schedule);
   return schedule;
@@ -85,10 +83,8 @@ async function checkForUpdate(
   await cacheMeta(meta);
 
   if (meta.v !== currentVersion || meta.sv !== currentSchemaVersion) {
-    console.log(`New schedule available (v=${meta.v.slice(0, 8)}, sv=${meta.sv}), downloading...`);
     const schedule = await fetchSchedule();
     await cacheSchedule(schedule);
-    console.log('Schedule updated in background.');
     if (onUpdate) onUpdate(schedule);
   }
 }
