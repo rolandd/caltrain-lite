@@ -25,7 +25,6 @@
 
   $effect(() => {
     initSchedule((newSchedule) => {
-      console.log('Schedule updated in background, refreshing UI...');
       schedule = newSchedule;
     })
       .then((data) => {
