@@ -3,10 +3,10 @@
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
 
-import { build, files, version } from '$service-worker';
+import { build, files, prerendered, version } from '$service-worker';
 
 const CACHE = `cache-${version}`;
-const ASSETS = new Set([...build, ...files]);
+const ASSETS = new Set([...build, ...files, ...prerendered]);
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
