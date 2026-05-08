@@ -57,7 +57,7 @@ sw.addEventListener('fetch', (event) => {
       try {
         const response = await fetch(event.request);
         if (response.ok) return response;
-      } catch (err) {
+      } catch {
         // We are offline or network failed
       }
 
