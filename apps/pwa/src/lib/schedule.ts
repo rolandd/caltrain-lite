@@ -188,15 +188,41 @@ export function getScheduleType(
   return 'Special';
 }
 
+// ⚡ Bolt: Cache stop index maps per schedule and pattern for O(1) lookups instead of O(N) indexOf
+const scheduleStopIndexCache = new WeakMap<StaticSchedule, Map<string, Map<string, number>>>();
+
 /**
  * Find the stop index of a station within a pattern.
  * Returns -1 if the station is not in the pattern.
  */
 function findStopIndex(schedule: StaticSchedule, patternId: string, stationId: string): number {
-  const stops = schedule.p[patternId];
-  if (!stops) return -1;
-  return stops.indexOf(stationId);
+  let cacheForSchedule = scheduleStopIndexCache.get(schedule);
+  if (!cacheForSchedule) {
+    cacheForSchedule = new Map();
+    scheduleStopIndexCache.set(schedule, cacheForSchedule);
+  }
+
+  let patternCache = cacheForSchedule.get(patternId);
+  if (!patternCache) {
+    patternCache = new Map();
+    const stops = schedule.p[patternId];
+    if (stops) {
+      for (let i = 0; i < stops.length; i++) {
+        // Ensure the first occurrence of a station ID in a pattern is consistently used.
+        if (!patternCache.has(stops[i])) {
+          patternCache.set(stops[i], i);
+        }
+      }
+    }
+    cacheForSchedule.set(patternId, patternCache);
+  }
+
+  const idx = patternCache.get(stationId);
+  return idx === undefined ? -1 : idx;
 }
+
+// ⚡ Bolt: Cache trip lookup map to avoid O(N) iteration on every queryTrips call
+const tripLookupCache = new WeakMap<StaticSchedule, Map<string, Trip>>();
 
 /**
  * Query trips between two stations on a given date.
@@ -213,10 +239,14 @@ export function queryTrips(
   const candidateIds = schedule.x[pairKey];
   if (!candidateIds) return [];
 
-  // Build a quick trip lookup by train number
-  const tripById = new Map<string, Trip>();
-  for (const trip of schedule.t) {
-    tripById.set(trip.i, trip);
+  // ⚡ Bolt: Build or retrieve a quick trip lookup by train number from WeakMap cache
+  let tripById = tripLookupCache.get(schedule);
+  if (!tripById) {
+    tripById = new Map<string, Trip>();
+    for (const trip of schedule.t) {
+      tripById.set(trip.i, trip);
+    }
+    tripLookupCache.set(schedule, tripById);
   }
 
   const results: TripResult[] = [];
