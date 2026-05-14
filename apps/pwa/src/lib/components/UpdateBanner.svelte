@@ -54,7 +54,7 @@
     </div>
     <button
       onclick={reload}
-      class="bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle text-transit-brand px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ml-4 flex items-center justify-center"
+      class="bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle text-transit-brand px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ml-4 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
     >
       Update Now
     </button>
