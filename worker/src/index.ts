@@ -108,10 +108,11 @@ export default {
     }
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      return new Response('Method Not Allowed', {
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
         status: 405,
         headers: {
           ...securityHeaders,
+          'Content-Type': 'application/json; charset=utf-8',
           Allow: 'GET, HEAD, OPTIONS',
         },
       });
