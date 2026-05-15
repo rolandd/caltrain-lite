@@ -167,19 +167,29 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
+      let stops: string[] | undefined;
+      let trips: string[] | undefined;
+
+      if (a.informed_entity) {
+        for (const e of a.informed_entity) {
+          if (e.stop_id) {
+            stops = stops || [];
+            stops.push(e.stop_id);
+          }
+          if (e.trip?.trip_id) {
+            trips = trips || [];
+            trips.push(e.trip.trip_id);
+          }
+        }
+      }
+
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
+        s: stops,
+        tr: trips,
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
