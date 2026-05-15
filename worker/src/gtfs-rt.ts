@@ -172,17 +172,27 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
+        s: undefined,
+        tr: undefined,
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });
+
+      // ⚡ Bolt: Single-pass manual loop with lazy initialization to avoid reduce() and GC overhead
+      if (a.informed_entity) {
+        const lastAlert = alerts[alerts.length - 1];
+        for (let i = 0; i < a.informed_entity.length; i++) {
+          const e = a.informed_entity[i];
+          if (e.stop_id) {
+            lastAlert.s = lastAlert.s || [];
+            lastAlert.s.push(e.stop_id);
+          }
+          if (e.trip?.trip_id) {
+            lastAlert.tr = lastAlert.tr || [];
+            lastAlert.tr.push(e.trip.trip_id);
+          }
+        }
+      }
     }
   }
 
