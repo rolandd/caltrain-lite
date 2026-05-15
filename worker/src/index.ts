@@ -97,6 +97,13 @@ export default {
   // HTTP: Serve from KV
 
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+    if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'OPTIONS') {
+      return new Response('Method Not Allowed', {
+        status: 405,
+        headers: securityHeaders,
+      });
+    }
+
     const url = new URL(request.url);
 
     const headers = securityHeaders;
