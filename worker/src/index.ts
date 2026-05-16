@@ -112,7 +112,7 @@ export default {
         status: 405,
         headers: {
           ...securityHeaders,
-          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Type': 'application/json',
           Allow: 'GET, HEAD, OPTIONS',
         },
       });
