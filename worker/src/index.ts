@@ -10,6 +10,8 @@ export interface Env {
   TRANSIT_DB: D1Database;
 }
 
+const ALLOWED_METHODS = 'GET, HEAD, OPTIONS';
+
 const securityHeaders = {
   'Content-Security-Policy':
     "default-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'",
@@ -102,7 +104,7 @@ export default {
         status: 204,
         headers: {
           ...securityHeaders,
-          Allow: 'GET, HEAD, OPTIONS',
+          Allow: ALLOWED_METHODS,
         },
       });
     }
@@ -113,7 +115,7 @@ export default {
         headers: {
           ...securityHeaders,
           'Content-Type': 'application/json',
-          Allow: 'GET, HEAD, OPTIONS',
+          Allow: ALLOWED_METHODS,
         },
       });
     }
