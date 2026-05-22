@@ -101,6 +101,18 @@ export default {
 
     const headers = securityHeaders;
 
+    // Security: explicitly restrict HTTP methods for read-only API routes
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method.toUpperCase())) {
+      return new Response('{"error": "Method Not Allowed"}', {
+        status: 405,
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          Allow: 'GET, HEAD, OPTIONS',
+        },
+      });
+    }
+
     if (url.pathname === '/api/schedule') {
       const data = await env.TRANSIT_DATA.get('schedule:data', { type: 'stream' });
       if (!data) {
