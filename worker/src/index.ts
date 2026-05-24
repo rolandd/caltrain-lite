@@ -10,6 +10,8 @@ export interface Env {
   TRANSIT_DB: D1Database;
 }
 
+const ALLOWED_METHODS = 'GET, HEAD, OPTIONS';
+
 const securityHeaders = {
   'Content-Security-Policy':
     "default-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'",
@@ -97,6 +99,27 @@ export default {
   // HTTP: Serve from KV
 
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          ...securityHeaders,
+          Allow: ALLOWED_METHODS,
+        },
+      });
+    }
+
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+        status: 405,
+        headers: {
+          ...securityHeaders,
+          'Content-Type': 'application/json',
+          Allow: ALLOWED_METHODS,
+        },
+      });
+    }
+
     const url = new URL(request.url);
 
     const headers = securityHeaders;
