@@ -10,6 +10,13 @@ import type {
   ServiceAlert,
 } from '@packages/types/schema';
 
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isDangerousKey(key: string | undefined): boolean {
+  if (!key) return false;
+  return DANGEROUS_KEYS.has(key);
+}
+
 interface ParsedTripEntity extends RealtimeTripStatus {
   i: string;
 }
@@ -92,7 +99,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.trip_update) {
       const tu = entity.trip_update;
       const tripId = tu.trip?.trip_id;
-      if (tripId) {
+      if (tripId && !isDangerousKey(tripId)) {
         let delay = 0;
         let time = 0;
         let stopId = '';
@@ -145,7 +152,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.vehicle) {
       const v = entity.vehicle;
       const tripId = v.trip?.trip_id;
-      if (tripId && v.position) {
+      if (tripId && !isDangerousKey(tripId) && v.position) {
         const la = Math.round(v.position.latitude * 100000) / 100000;
         const lo = Math.round(v.position.longitude * 100000) / 100000;
         if (!Number.isFinite(la) || !Number.isFinite(lo)) {
@@ -201,11 +208,6 @@ export function buildRealtimeStatus(
   const byTrip: Record<string, RealtimeTripStatus> = Object.create(null);
 
   for (const entity of tripUpdates.e) {
-    // Explicitly reject known dangerous prototype pollution keys
-    if (entity.i === '__proto__' || entity.i === 'constructor' || entity.i === 'prototype') {
-      continue;
-    }
-
     const trip: RealtimeTripStatus = {};
     if (entity.d !== undefined) trip.d = entity.d;
     if (entity.t !== undefined) trip.t = entity.t;
@@ -224,11 +226,6 @@ export function buildRealtimeStatus(
   // trains reporting a position but lacking a trip update are not silently
   // dropped.
   for (const [tripId, position] of vehiclePositions.p) {
-    // Explicitly reject known dangerous prototype pollution keys
-    if (tripId === '__proto__' || tripId === 'constructor' || tripId === 'prototype') {
-      continue;
-    }
-
     if (!byTrip[tripId]) {
       byTrip[tripId] = { p: position };
     }
