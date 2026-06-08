@@ -184,7 +184,9 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
           return acc;
         }, []),
         tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
+          if (e.trip?.trip_id && !isDangerousKey(e.trip.trip_id)) {
+            acc.push(e.trip.trip_id);
+          }
           return acc;
         }, []),
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
