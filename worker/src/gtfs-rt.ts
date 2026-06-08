@@ -10,11 +10,9 @@ import type {
   ServiceAlert,
 } from '@packages/types/schema';
 
-const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
 function isDangerousKey(key: string | undefined): boolean {
   if (!key) return false;
-  return DANGEROUS_KEYS.has(key);
+  return key === 'prototype' || key in Object.prototype;
 }
 
 interface ParsedTripEntity extends RealtimeTripStatus {
