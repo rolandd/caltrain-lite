@@ -9,3 +9,9 @@
 **Vulnerability:** The API fetch handler in Cloudflare workers did not restrict HTTP methods, so it handled everything (POST, PUT, DELETE, etc.) just like a GET request. This is a bad practice for read-only APIs and could allow logic bypasses.
 **Learning:** Cloudflare Workers do not automatically filter HTTP methods. Read-only APIs must explicitly restrict accepted HTTP methods inside their fetch handlers to GET, HEAD, and OPTIONS (to ensure CORS preflight checks don't break), returning 405 Method Allowed with security headers for unsupported methods to prevent CSRF or logic bypasses.
 **Prevention:** Always check `request.method` in Cloudflare Worker `fetch` handlers and reject unsupported methods (e.g. POST to read-only APIs) with `405 Method Not Allowed`.
+
+## 2024-06-19 - Prototype Pollution via Object Literals as Maps
+
+**Vulnerability:** The `byTrip` object was initialized using a standard object literal `{}` and used as a dictionary with external, unvalidated string keys (GTFS-RT trip IDs).
+**Learning:** Using plain JavaScript objects as dictionaries for external string keys can lead to prototype pollution vulnerabilities if a malicious key matches a prototype property (like `__proto__`).
+**Prevention:** To prevent prototype pollution when using objects as maps for external keys, always initialize them with `Object.create(null)` to create a prototype-less object, or use a `Map`.
