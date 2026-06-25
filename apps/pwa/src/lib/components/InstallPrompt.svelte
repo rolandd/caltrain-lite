@@ -152,6 +152,7 @@
         onclick={dismiss}
         class="text-transit-tooltip-node hover:text-transit-text-primary p-1 transition-colors"
         aria-label="Close"
+        title="Close"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

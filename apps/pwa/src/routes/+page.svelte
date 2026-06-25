@@ -479,6 +479,7 @@
                   loadFavorites();
                 }}
                 aria-label="Remove favorite"
+                title="Remove favorite"
               >
                 ★
               </button>
