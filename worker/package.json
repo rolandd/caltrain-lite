@@ -21,7 +21,7 @@
     "pbf": "^4.0.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260218.0",
+    "@cloudflare/workers-types": "^5.20260714.1",
     "@types/node": "^25.3.0",
     "tinybench": "^2.9.0",
     "tsx": "^4.21.0",

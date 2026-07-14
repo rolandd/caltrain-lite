@@ -21,7 +21,7 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260218.0",
+    "@cloudflare/workers-types": "^5.20260714.1",
     "@eslint/js": "^9.14.0",
     "@kennethwkz/unplugin-typia": "^2.6.7",
     "csv-parse": "^5.6.0",
