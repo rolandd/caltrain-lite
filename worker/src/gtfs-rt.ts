@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-import Pbf from 'pbf';
+import { PbfReader } from 'pbf';
 import { readFeedMessage } from './gtfs-realtime';
 import type {
   RealtimeStatus,
@@ -79,7 +79,7 @@ function extractTranslation(txt: GtfsTranslatedString | undefined): string {
 }
 
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
-  const pbf = new Pbf(new Uint8Array(buffer));
+  const pbf = new PbfReader(new Uint8Array(buffer));
   const feed = readFeedMessage(pbf) as GtfsFeedMessage;
   const timestamp = Number(feed.header?.timestamp || 0);
 
