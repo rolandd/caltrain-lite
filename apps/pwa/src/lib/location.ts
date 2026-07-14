@@ -67,16 +67,9 @@ export function getTrainLocationDescription(
     const s = schedule.s[stationId];
     if (!s) continue;
 
-    let diff = 0;
-    if (direction === 0) {
-      // Northbound: station must be north of train (lat > pLat)
-      // Positive diff means station is north of train
-      diff = s.lat - pLat;
-    } else {
-      // Southbound: station must be south of train (lat < pLat)
-      // Positive diff means station is south of train
-      diff = pLat - s.lat;
-    }
+    // Positive diff means station is in the direction of travel
+    // (Northbound: lat > pLat, Southbound: lat < pLat)
+    const diff = direction === 0 ? s.lat - pLat : pLat - s.lat;
 
     // We want the smallest positive lat difference
     if (diff > 0 && diff < minDiff) {
