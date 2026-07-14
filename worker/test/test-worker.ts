@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import Pbf from 'pbf';
+import { PbfWriter } from 'pbf';
 import { parseFeed } from '../src/gtfs-rt';
 import { writeFeedMessage } from '../src/gtfs-realtime';
 
@@ -12,7 +12,7 @@ function toArrayBuffer(buf: Buffer): ArrayBuffer {
 }
 
 function encodeFeed(message: unknown): ArrayBuffer {
-  const pbf = new Pbf();
+  const pbf = new PbfWriter();
   writeFeedMessage(message, pbf);
   const bytes = pbf.finish();
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;

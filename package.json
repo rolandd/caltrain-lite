@@ -24,7 +24,7 @@
     "@cloudflare/workers-types": "^5.20260714.1",
     "@eslint/js": "^10.0.1",
     "@kennethwkz/unplugin-typia": "^2.6.7",
-    "csv-parse": "^5.6.0",
+    "csv-parse": "^7.0.1",
     "eslint": "^10.7.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.15.0",
@@ -35,6 +35,7 @@
     "svelte-check": "^4.4.0",
     "tsx": "^4.19.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.0"
+    "typescript-eslint": "^8.56.0",
+    "typia": "^11.0.3"
   }
 }
