@@ -11,6 +11,10 @@
 import type { Trip, StaticSchedule } from '../../../../packages/types/schema';
 
 export type { StaticSchedule };
+
+const tripLookupCache = new WeakMap<StaticSchedule, Map<string, Trip>>();
+const stopIndexCache = new WeakMap<StaticSchedule, Map<string, Map<string, number>>>();
+
 export interface StationInfo {
   id: string;
   name: string;
@@ -196,9 +200,28 @@ export function getScheduleType(
  * Returns -1 if the station is not in the pattern.
  */
 function findStopIndex(schedule: StaticSchedule, patternId: string, stationId: string): number {
-  const stops = schedule.p[patternId];
-  if (!stops) return -1;
-  return stops.indexOf(stationId);
+  let scheduleStopsCache = stopIndexCache.get(schedule);
+  if (!scheduleStopsCache) {
+    scheduleStopsCache = new Map();
+    stopIndexCache.set(schedule, scheduleStopsCache);
+  }
+
+  let patternMap = scheduleStopsCache.get(patternId);
+  if (!patternMap) {
+    patternMap = new Map();
+    const stops = schedule.p[patternId];
+    if (stops) {
+      for (let i = 0; i < stops.length; i++) {
+        if (!patternMap.has(stops[i])) {
+          patternMap.set(stops[i], i);
+        }
+      }
+    }
+    scheduleStopsCache.set(patternId, patternMap);
+  }
+
+  const idx = patternMap.get(stationId);
+  return idx !== undefined ? idx : -1;
 }
 
 /**
@@ -217,9 +240,13 @@ export function queryTrips(
   if (!candidateIds) return [];
 
   // Build a quick trip lookup by train number
-  const tripById = new Map<string, Trip>();
-  for (const trip of schedule.t) {
-    tripById.set(trip.i, trip);
+  let tripById = tripLookupCache.get(schedule);
+  if (!tripById) {
+    tripById = new Map<string, Trip>();
+    for (const trip of schedule.t) {
+      tripById.set(trip.i, trip);
+    }
+    tripLookupCache.set(schedule, tripById);
   }
 
   const results: TripResult[] = [];
