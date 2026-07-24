@@ -1,0 +1,98 @@
+name: Sync On-Time Performance
+
+on:
+  schedule:
+    - cron: '0 11 * * *' # 3am PST (UTC 11:00)
+  workflow_dispatch:
+
+jobs:
+  process-performance:
+    runs-on: ubuntu-latest
+    name: Process Historical Telemetry & Update Performance Profile
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Ensure Zstandard (zstd) is installed
+        run: command -v zstd >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y zstd)
+
+      - name: Calculate Dynamic D1 Export Cutoff
+        id: d1_cutoff
+        run: |
+          SINCE_TIMESTAMP=$(npx tsx -e '
+            import { getLatestArchivedTimestamp } from "./scripts/process-performance.ts";
+            console.log(getLatestArchivedTimestamp("data/history"));
+          ')
+          echo "since_timestamp=${SINCE_TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "Exporting D1 records since epoch timestamp ${SINCE_TIMESTAMP}"
+
+      - name: Export Unarchived D1 Telemetry
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.x'
+          command: d1 execute transit-d1 --remote --command="SELECT id, timestamp, data FROM train_locations WHERE timestamp >= ${{ steps.d1_cutoff.outputs.since_timestamp }} ORDER BY timestamp ASC;" --json > d1-snapshots.json
+
+      - name: Process Monotonic Performance Profile (Git History + Fresh D1)
+        run: |
+          npx tsx -e '
+            import { readFileSync, writeFileSync } from "fs";
+            import { processTrainPerformance, loadArchivedSnapshots, mergeSnapshots } from "./scripts/process-performance.ts";
+            const raw = JSON.parse(readFileSync("d1-snapshots.json", "utf8"));
+            const recentSnapshots = raw[0]?.results || [];
+            writeFileSync("d1-clean.json", JSON.stringify(recentSnapshots));
+
+            const archivedSnapshots = loadArchivedSnapshots("data/history", 90);
+            const combined = mergeSnapshots(archivedSnapshots, recentSnapshots);
+            const profile = processTrainPerformance(combined, 90);
+            writeFileSync("performance-data.json", JSON.stringify(profile));
+          '
+
+      - name: Upload Performance Profile to KV
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.x'
+          command: kv key put performance:data --path=./performance-data.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
+
+      - name: Self-Healing Daily Archival to Git (Zstandard .json.zst)
+        run: |
+          npx tsx -e '
+            import { readFileSync } from "fs";
+            import { archiveCompletedDays } from "./scripts/process-performance.ts";
+            const snapshots = JSON.parse(readFileSync("d1-clean.json", "utf8"));
+            const count = archiveCompletedDays(snapshots, "data/history");
+            console.log(`Archived ${count} daily snapshot files.`);
+          '
+
+      - name: Commit Daily Archival Data
+        id: commit_step
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore(data): archive raw telemetry history (zstd) [skip ci]'
+          file_pattern: 'data/history/*/*.json.zst'
+
+      - name: Prune D1 Database Records Older Than 90 Days
+        if: steps.commit_step.conclusion == 'success'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.x'
+          command: d1 execute transit-d1 --remote --command="DELETE FROM train_locations WHERE timestamp < strftime('%s', 'now', '-90 days');"

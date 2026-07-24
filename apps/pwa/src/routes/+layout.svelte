@@ -2,8 +2,8 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import { initSchedule } from '$lib/sync';
-  import type { StaticSchedule } from '@packages/types/schema';
+  import { initSchedule, initPerformance } from '$lib/sync';
+  import type { StaticSchedule, TrainPerformanceProfile } from '@packages/types/schema';
   import { setContext } from 'svelte';
   import '@fontsource-variable/inter';
   import '../app.css';
@@ -11,12 +11,19 @@
   let { children } = $props();
 
   let schedule = $state<StaticSchedule | null>(null);
+  let performance = $state<TrainPerformanceProfile | null>(null);
   let error = $state<string | null>(null);
 
-  // Expose schedule to children via context
+  // Expose schedule and performance profile to children via context
   setContext('schedule', {
     get value() {
       return schedule;
+    },
+  });
+
+  setContext('performance', {
+    get value() {
+      return performance;
     },
   });
 
@@ -33,9 +40,13 @@
       .catch((err) => {
         console.error('Init failed:', err);
         error = 'Failed to load schedule. Using offline mode?';
-        // In a real app, we might want to try harder or show a specific offline error
-        // But initSchedule already tries DB first.
       });
+
+    initPerformance((newPerf) => {
+      performance = newPerf;
+    }).then((perf) => {
+      performance = perf;
+    });
   });
 </script>
 

@@ -89,28 +89,29 @@ KV's 25MB value limit and low-latency reads an ideal fit.
 
 ### KV Storage (Fast Lookup)
 
-| KV Key            | Contents                                  | Size   | Written By    |
-| ----------------- | ----------------------------------------- | ------ | ------------- |
-| `schedule:data`   | StaticSchedule JSON (full bundle)         | <100KB | GitHub Action |
-| `schedule:meta`   | ScheduleMeta JSON (version + timestamps)  | ~100B  | GitHub Action |
-| `realtime:status` | RealtimeStatus JSON (today's trains only) | ~5KB   | Worker cron   |
+| KV Key             | Contents                                  | Size   | Written By    |
+| ------------------ | ----------------------------------------- | ------ | ------------- |
+| `schedule:data`    | StaticSchedule JSON (full bundle)         | <100KB | GitHub Action |
+| `schedule:meta`    | ScheduleMeta JSON (version + timestamps)  | ~100B  | GitHub Action |
+| `realtime:status`  | RealtimeStatus JSON (today's trains only) | ~5KB   | Worker cron   |
+| `performance:data` | TrainPerformanceProfile (90-day baseline) | <50KB  | GitHub Action |
 
 ### SQL Storage (D1 - Historical Realtime)
 
-Used for recording train locations over time for later analysis.
+Used for recording train locations over time for on-time performance processing and analysis. Detailed in [HISTORICAL_DATA.md](file:///home/roland/Src/Transit.git/docs/HISTORICAL_DATA.md).
 
 | Table             | Contents                                                          | Frequency   | Written By  |
 | ----------------- | ----------------------------------------------------------------- | ----------- | ----------- |
 | `train_locations` | `(id PK, timestamp INT, data TEXT, created_at DATETIME)` (byTrip) | Every 2 min | Worker cron |
 
-Note: `train_locations` has indexes on `timestamp` and `created_at` for efficient querying and retention pruning.
+Note: `train_locations` has indexes on `timestamp` and `created_at` for efficient querying and 90-day retention pruning.
 
 ### Client Storage
 
-| Client Store      | Contents                            | Purpose                       |
-| ----------------- | ----------------------------------- | ----------------------------- |
-| IndexedDB (Dexie) | Cached StaticSchedule               | Offline-first schedule access |
-| localStorage      | Favorite station pairs, preferences | Persist across sessions       |
+| Client Store      | Contents                            | Purpose                      |
+| ----------------- | ----------------------------------- | ---------------------------- |
+| IndexedDB (Dexie) | Cached StaticSchedule & Performance | Offline-first schedule & ETA |
+| localStorage      | Favorite station pairs, preferences | Persist across sessions      |
 
 ## Shared Data Schemas (The Contract)
 
