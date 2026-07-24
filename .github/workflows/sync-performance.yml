@@ -82,14 +82,33 @@ jobs:
           npx tsx -e '
             import { readFileSync, writeFileSync } from "fs";
             import { processTrainPerformance, loadArchivedSnapshots, mergeSnapshots } from "./scripts/process-performance.ts";
-            const raw = JSON.parse(readFileSync("d1-snapshots.json", "utf8"));
-            const recentSnapshots = raw[0]?.results || [];
-            writeFileSync("d1-clean.json", JSON.stringify(recentSnapshots));
 
-            const archivedSnapshots = loadArchivedSnapshots("data/history", 90);
-            const combined = mergeSnapshots(archivedSnapshots, recentSnapshots);
-            const profile = processTrainPerformance(combined, 90);
-            writeFileSync("performance-data.json", JSON.stringify(profile));
+            async function main() {
+              let schedule;
+              try {
+                console.log("Fetching live schedule from https://transit.rolandd.dev/api/schedule...");
+                const res = await fetch("https://transit.rolandd.dev/api/schedule");
+                if (res.ok) schedule = await res.json();
+              } catch (err) {
+                console.warn("Failed to fetch production schedule, using local fixture fallback:", err);
+              }
+
+              if (!schedule) {
+                const { parseGtfsZip } = await import("./scripts/parse-gtfs.ts");
+                schedule = await parseGtfsZip(readFileSync("scripts/fixtures/caltrain-gtfs.zip"));
+              }
+
+              const raw = JSON.parse(readFileSync("d1-snapshots.json", "utf8"));
+              const recentSnapshots = raw[0]?.results || [];
+              writeFileSync("d1-clean.json", JSON.stringify(recentSnapshots));
+
+              const archivedSnapshots = loadArchivedSnapshots("data/history", 90);
+              const combined = mergeSnapshots(archivedSnapshots, recentSnapshots);
+              const profile = processTrainPerformance(combined, 90, schedule);
+              writeFileSync("performance-data.json", JSON.stringify(profile));
+            }
+
+            main();
           '
 
       - name: Upload Performance Profile to KV
