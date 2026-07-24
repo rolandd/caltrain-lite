@@ -12,27 +12,25 @@ import {
 describe('process-performance', () => {
   describe('pavaIsotonicRegression', () => {
     it('returns empty array for empty input', () => {
-      expect(pavaIsotonicRegression([], [])).toEqual([]);
+      expect(pavaIsotonicRegression([])).toEqual([]);
     });
 
     it('returns single element as-is', () => {
-      expect(pavaIsotonicRegression([10], [30])).toEqual([10]);
+      expect(pavaIsotonicRegression([10])).toEqual([10]);
     });
 
     it('preserves strictly increasing sequences', () => {
       const delays = [0, 60, 120, 180];
-      const minDwells = [30, 30, 30, 30];
-      const result = pavaIsotonicRegression(delays, minDwells);
+      const result = pavaIsotonicRegression(delays);
       expect(result).toEqual([0, 60, 120, 180]);
     });
 
     it('enforces monotonic non-decreasing output when inputs decrease', () => {
       const delays = [120, 60, 180];
-      const minDwells = [30, 30, 30];
-      const result = pavaIsotonicRegression(delays, minDwells);
+      const result = pavaIsotonicRegression(delays);
 
-      expect(result[1]! - result[0]!).toBeGreaterThanOrEqual(30);
-      expect(result[2]! - result[1]!).toBeGreaterThanOrEqual(30);
+      expect(result[1]!).toBeGreaterThanOrEqual(result[0]!);
+      expect(result[2]!).toBeGreaterThanOrEqual(result[1]!);
     });
   });
 
@@ -134,9 +132,9 @@ describe('process-performance', () => {
       const stopPerf = profile.trips['668']?.stops['70261'];
 
       expect(stopPerf).toBeDefined();
-      expect(stopPerf?.p50Delay).toBeGreaterThan(0);
-      expect(stopPerf?.p90Delay).toBeGreaterThan(0);
-      expect(stopPerf?.p90Delay).toBeGreaterThanOrEqual(stopPerf?.p50Delay!);
+      expect(stopPerf!.p50Delay).toBeGreaterThan(0);
+      expect(stopPerf!.p90Delay).toBeGreaterThan(0);
+      expect(stopPerf!.p90Delay).toBeGreaterThanOrEqual(stopPerf!.p50Delay);
     });
 
     it('handles missing point-in-time snapshots and gaps cleanly', () => {

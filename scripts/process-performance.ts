@@ -22,7 +22,9 @@ export interface RawTrainSnapshot {
 /**
  * Combine and deduplicate snapshot lists by timestamp.
  */
-export function mergeSnapshots(...snapshotLists: RawTrainSnapshot[][]): RawTrainSnapshot[] {
+export function mergeSnapshots(
+  ...snapshotLists: RawTrainSnapshot[][]
+): RawTrainSnapshot[] {
   const map = new Map<number, RawTrainSnapshot>();
   for (const list of snapshotLists) {
     for (const item of list) {
@@ -82,7 +84,10 @@ function decompressFile(filePath: string): string {
 /**
  * Load archived daily raw snapshots from data/history directory for the rolling window.
  */
-export function loadArchivedSnapshots(historyDir: string, windowDays = 90): RawTrainSnapshot[] {
+export function loadArchivedSnapshots(
+  historyDir: string,
+  windowDays = 90,
+): RawTrainSnapshot[] {
   if (!existsSync(historyDir)) return [];
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -123,7 +128,10 @@ export function loadArchivedSnapshots(historyDir: string, windowDays = 90): RawT
 /**
  * Archive completed past dates to data/history in Zstandard format (.json.zst).
  */
-export function archiveCompletedDays(snapshots: RawTrainSnapshot[], historyDir: string): number {
+export function archiveCompletedDays(
+  snapshots: RawTrainSnapshot[],
+  historyDir: string,
+): number {
   const pstDateStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Los_Angeles',
     year: 'numeric',
@@ -167,9 +175,7 @@ export function archiveCompletedDays(snapshots: RawTrainSnapshot[], historyDir: 
       const content = rows.map((r) => JSON.stringify(r)).join('\n');
       execFileSync('zstd', ['-19', '-f', '-o', target], { input: content });
       updatedCount++;
-      console.log(
-        `Archived ${rows.length} rows for ${dateStr} -> ${target} (was ${existingLineCount} rows)`,
-      );
+      console.log(`Archived ${rows.length} rows for ${dateStr} -> ${target} (was ${existingLineCount} rows)`);
     }
   }
 
@@ -178,12 +184,11 @@ export function archiveCompletedDays(snapshots: RawTrainSnapshot[], historyDir: 
 
 /**
  * Pool Adjacent Violators Algorithm (PAVA) for Isotonic Regression.
- * Enforces non-decreasing values (y[i+1] >= y[i] + minDwell).
+ * Enforces non-decreasing arrival delays across consecutive stops (y[i+1] >= y[i]).
  *
- * @param values Input sequence of numeric values (e.g. median arrival delays across stops)
- * @param minDwells Minimum dwell / gap required between consecutive stops (in seconds)
+ * @param values Input sequence of arrival delay values in seconds
  */
-export function pavaIsotonicRegression(values: number[], minDwells: number[]): number[] {
+export function pavaIsotonicRegression(values: number[]): number[] {
   if (values.length === 0) return [];
   if (values.length === 1) return [...values];
 
@@ -194,14 +199,7 @@ export function pavaIsotonicRegression(values: number[], minDwells: number[]): n
     end: number;
   }
 
-  const adjusted = new Array<number>(values.length);
-  let cumDwell = 0;
-  for (let i = 0; i < values.length; i++) {
-    cumDwell += i > 0 ? (minDwells[i - 1] ?? 0) : 0;
-    adjusted[i] = values[i]! - cumDwell;
-  }
-
-  const blocks: Block[] = adjusted.map((val, idx) => ({
+  const blocks: Block[] = values.map((val, idx) => ({
     sum: val,
     weight: 1,
     start: idx,
@@ -229,13 +227,9 @@ export function pavaIsotonicRegression(values: number[], minDwells: number[]): n
 
   const result = new Array<number>(values.length);
   for (const block of blocks) {
-    const blockVal = block.sum / block.weight;
+    const blockVal = Math.round(block.sum / block.weight);
     for (let idx = block.start; idx <= block.end; idx++) {
-      let cumDwell = 0;
-      for (let k = 1; k <= idx; k++) {
-        cumDwell += minDwells[k - 1] ?? 0;
-      }
-      result[idx] = Math.round(blockVal + cumDwell);
+      result[idx] = blockVal;
     }
   }
 
@@ -371,8 +365,8 @@ export function processTrainPerformance(
       return dwells.length > 0 ? percentile(dwells, 50) : 30;
     });
 
-    const monotonicP50 = pavaIsotonicRegression(rawP50Delays, minDwells);
-    const monotonicP90 = pavaIsotonicRegression(rawP90Delays, minDwells);
+    const monotonicP50 = pavaIsotonicRegression(rawP50Delays);
+    const monotonicP90 = pavaIsotonicRegression(rawP90Delays);
 
     const stops: Record<string, StopPerformance> = {};
     for (let i = 0; i < stopIds.length; i++) {
