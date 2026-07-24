@@ -280,11 +280,10 @@ export function processTrainPerformance(
   snapshots: RawTrainSnapshot[],
   windowDays = 90,
 ): TrainPerformanceProfile {
-  const tripStopDelays: Record<string, Record<string, number[]>> = {};
+  // Map: trainNum -> stopId -> runKey -> maxDelaySec
+  const runStopDelays: Record<string, Record<string, Record<string, number>>> = {};
   const tripStopDwells: Record<string, Record<string, number[]>> = {};
   const tripLegTravelSec: Record<string, Record<string, number[]>> = {};
-
-  let totalTripRuns = 0;
 
   const prevTrainState: Record<
     string,
@@ -299,19 +298,28 @@ export function processTrainPerformance(
       continue;
     }
 
+    const dateStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(snapshot.timestamp * 1000));
+
     for (const [trainNum, status] of Object.entries(byTrip)) {
-      if (!tripStopDelays[trainNum]) tripStopDelays[trainNum] = {};
+      if (!runStopDelays[trainNum]) runStopDelays[trainNum] = {};
       if (!tripStopDwells[trainNum]) tripStopDwells[trainNum] = {};
       if (!tripLegTravelSec[trainNum]) tripLegTravelSec[trainNum] = {};
 
       const stopId = status.s;
       const delaySec = status.d ?? 0;
+      const runKey = `${dateStr}:${trainNum}`;
 
       if (stopId) {
-        if (!tripStopDelays[trainNum]![stopId]) {
-          tripStopDelays[trainNum]![stopId] = [];
+        if (!runStopDelays[trainNum]![stopId]) {
+          runStopDelays[trainNum]![stopId] = {};
         }
-        tripStopDelays[trainNum]![stopId]!.push(delaySec);
+        const existing = runStopDelays[trainNum]![stopId]![runKey] ?? 0;
+        runStopDelays[trainNum]![stopId]![runKey] = Math.max(existing, delaySec);
       }
 
       const prev = prevTrainState[trainNum];
@@ -345,27 +353,33 @@ export function processTrainPerformance(
   }
 
   const profileTrips: Record<string, TripPerformance> = {};
+  let totalTripRuns = 0;
 
-  for (const [trainNum, stopDelaysMap] of Object.entries(tripStopDelays)) {
-    const stopIds = Object.keys(stopDelaysMap);
+  for (const [trainNum, stopRunsMap] of Object.entries(runStopDelays)) {
+    const stopIds = Object.keys(stopRunsMap);
     if (stopIds.length === 0) continue;
 
     totalTripRuns++;
 
-    const rawDelays = stopIds.map((s) => percentile(stopDelaysMap[s]!, 50));
+    const perStopDelays = stopIds.map((s) => Object.values(stopRunsMap[s]!));
+
+    const rawP50Delays = perStopDelays.map((delays) => percentile(delays, 50));
+    const rawP90Delays = perStopDelays.map((delays) => percentile(delays, 90));
+
     const minDwells = stopIds.map((s) => {
       const dwells = tripStopDwells[trainNum]?.[s] ?? [];
       return dwells.length > 0 ? percentile(dwells, 50) : 30;
     });
 
-    const monotonicDelays = pavaIsotonicRegression(rawDelays, minDwells);
+    const monotonicP50 = pavaIsotonicRegression(rawP50Delays, minDwells);
+    const monotonicP90 = pavaIsotonicRegression(rawP90Delays, minDwells);
 
     const stops: Record<string, StopPerformance> = {};
     for (let i = 0; i < stopIds.length; i++) {
       const s = stopIds[i]!;
       stops[s] = {
-        p50Delay: monotonicDelays[i]!,
-        p90Delay: percentile(stopDelaysMap[s]!, 90),
+        p50Delay: monotonicP50[i]!,
+        p90Delay: Math.max(monotonicP90[i]!, monotonicP50[i]!),
         dwellSec: minDwells[i]!,
       };
     }
