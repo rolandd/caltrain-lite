@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-import { getCachedSchedule, cacheSchedule, cacheMeta, db } from './db';
-import type { StaticSchedule, ScheduleMeta } from '@packages/types/schema';
+import {
+  getCachedSchedule,
+  cacheSchedule,
+  cacheMeta,
+  getCachedPerformance,
+  cachePerformance,
+  db,
+} from './db';
+import type { StaticSchedule, ScheduleMeta, TrainPerformanceProfile } from '@packages/types/schema';
 import { assert } from 'typia';
 
 /**
@@ -30,22 +37,19 @@ export async function initSchedule(
 
   if (cached) {
     const currentCached = cached;
-    // Return immediately to avoid blocking first paint,
-    // but validate and check for updates in the background.
 
     // A. Kick off background update check
     checkForUpdate(currentCached.version, currentCached.schemaVersion, onUpdate).catch((err) =>
       console.warn('Background update check failed:', err),
     );
 
-    // B. Background validation to avoid blocking first paint (typia.assert can be expensive)
+    // B. Background validation to avoid blocking first paint
     setTimeout(async () => {
       try {
         assert<StaticSchedule>(currentCached.data);
       } catch (err) {
         console.error('Cached schedule data validation failed:', err);
         try {
-          // If validation failed, clear the corrupt cache and fetch fresh
           await db.schedules.clear();
           const fresh = await fetchSchedule();
           await cacheSchedule(fresh);
@@ -66,8 +70,35 @@ export async function initSchedule(
 }
 
 /**
+ * Initialize on-time performance profile data.
+ */
+export async function initPerformance(
+  onUpdate?: (performance: TrainPerformanceProfile) => void,
+): Promise<TrainPerformanceProfile | null> {
+  try {
+    const cached = await getCachedPerformance();
+    if (cached) {
+      fetchPerformance()
+        .then((fresh) => {
+          if (fresh.meta.generatedAt !== cached.meta.generatedAt) {
+            cachePerformance(fresh);
+            if (onUpdate) onUpdate(fresh);
+          }
+        })
+        .catch(() => {});
+      return cached;
+    }
+    const fresh = await fetchPerformance();
+    await cachePerformance(fresh);
+    return fresh;
+  } catch (err) {
+    console.warn('Failed to load performance data:', err);
+    return null;
+  }
+}
+
+/**
  * Background update check.
- * Use /api/meta to avoid downloading the full bundle if not needed.
  */
 async function checkForUpdate(
   currentVersion: string,
@@ -79,7 +110,6 @@ async function checkForUpdate(
 
   const meta: ScheduleMeta = assert<ScheduleMeta>(await res.json());
 
-  // Update metadata cache for UI/debug
   await cacheMeta(meta);
 
   if (meta.v !== currentVersion || meta.sv !== currentSchemaVersion) {
@@ -93,4 +123,10 @@ async function fetchSchedule(): Promise<StaticSchedule> {
   const res = await fetch('/api/schedule');
   if (!res.ok) throw new Error(`Schedule fetch failed: ${res.status}`);
   return assert<StaticSchedule>(await res.json());
+}
+
+async function fetchPerformance(): Promise<TrainPerformanceProfile> {
+  const res = await fetch('/api/performance');
+  if (!res.ok) throw new Error(`Performance fetch failed: ${res.status}`);
+  return assert<TrainPerformanceProfile>(await res.json());
 }

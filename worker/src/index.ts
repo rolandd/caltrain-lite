@@ -201,6 +201,23 @@ export default {
       });
     }
 
+    if (url.pathname === '/api/performance') {
+      const data = await env.TRANSIT_DATA.get('performance:data', { type: 'stream' });
+      if (!data) {
+        return new Response(JSON.stringify({ error: 'No performance data' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(data, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=3600, s-maxage=86400', // 1 hour browser, 24 hours edge
+        },
+      });
+    }
+
     return new Response('Not found', { status: 404, headers });
   },
 };

@@ -22,9 +22,13 @@
     getTransitDayStartEpoch,
   } from '$lib/time';
 
+  import type { TrainPerformanceProfile } from '@packages/types/schema';
+
   // Context from layout
   const scheduleCtx = getContext<{ value: StaticSchedule }>('schedule');
   const schedule = $derived(scheduleCtx.value);
+  const performanceCtx = getContext<{ value: TrainPerformanceProfile | null }>('performance');
+  const performance = $derived(performanceCtx?.value ?? null);
   const stations = $derived(schedule ? getStationList(schedule) : []);
 
   // --- localStorage keys for persisted UI state ---
@@ -61,6 +65,7 @@
   let activeTooltip = $state<{
     id: string;
     text?: string;
+    perfNote?: string;
     stops: string[];
     x: number;
     y: number;
@@ -411,9 +416,22 @@
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
+    const perf = performance?.trips[trip.trainNumber];
+    let perfNote: string | undefined;
+    if (perf) {
+      const destStop = trip.stopIds[trip.stopIds.length - 1];
+      const stopPerf = (destStop && perf.stops[destStop]) || Object.values(perf.stops)[0];
+      if (stopPerf) {
+        const p50Mins = Math.round(stopPerf.p50Delay / 60);
+        const p90Mins = Math.round(stopPerf.p90Delay / 60);
+        perfNote = `90d baseline: ${p50Mins <= 0 ? 'on time' : `+${p50Mins}m`} (p90: +${p90Mins}m)`;
+      }
+    }
+
     activeTooltip = {
       id: trip.trainNumber,
       text,
+      perfNote,
       stops: trip.stopIds,
       x,
       y,
@@ -899,6 +917,13 @@
             class="bg-transit-brand-soft-bg text-transit-brand-soft-text px-3 py-2 border-b border-transit-border-subtle font-medium leading-tight shadow-sm text-center"
           >
             {activeTooltip.text}
+          </div>
+        {/if}
+        {#if activeTooltip.perfNote}
+          <div
+            class="bg-transit-surface-elevated text-transit-text-tertiary px-3 py-1 border-b border-transit-border-subtle text-[0.65rem] text-center"
+          >
+            📊 {activeTooltip.perfNote}
           </div>
         {/if}
 

@@ -8,3 +8,5 @@ worker/wrangler.toml
 *.tfstate
 *.tfstate.backup
 *.tfvars
+
+.agent-shell/

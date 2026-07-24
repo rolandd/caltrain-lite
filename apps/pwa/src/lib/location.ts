@@ -7,7 +7,7 @@ import type { VehiclePosition } from '@packages/types/schema';
 /**
  * Calculate the Haversine distance between two points in meters.
  */
-function getDistanceFromLatLonInMeters(
+export function getDistanceFromLatLonInMeters(
   lat1: number,
   lon1: number,
   lat2: number,
@@ -28,14 +28,42 @@ function deg2rad(deg: number): number {
 }
 
 /**
- * Generate a human-readable description of a train's location.
- *
- * Heuristics:
- * 1. If < 250m from a station, returns "At [Station Name]".
- * 2. Otherwise, finds the next station in the direction of travel:
- *    - Northbound (d=0): Next station to the North (higher latitude).
- *    - Southbound (d=1): Next station to the South (lower latitude).
- *    Returns "X.Y km [North/South] of [Station Name]".
+ * Orthogonally project a point (pLat, pLon) onto a line segment (lat1, lon1)->(lat2, lon2).
+ * Returns the fractional progress alpha in [0, 1] along the segment.
+ */
+export function projectPointOntoSegment(
+  pLat: number,
+  pLon: number,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): { alpha: number; distanceMeters: number } {
+  const dx = lon2 - lon1;
+  const dy = lat2 - lat1;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq === 0) {
+    return {
+      alpha: 0,
+      distanceMeters: getDistanceFromLatLonInMeters(pLat, pLon, lat1, lon1),
+    };
+  }
+
+  // Parameter t of orthogonal projection
+  const t = Math.max(0, Math.min(1, ((pLon - lon1) * dx + (pLat - lat1) * dy) / lenSq));
+  const projLat = lat1 + t * dy;
+  const projLon = lon1 + t * dx;
+
+  return {
+    alpha: t,
+    distanceMeters: getDistanceFromLatLonInMeters(pLat, pLon, projLat, projLon),
+  };
+}
+
+/**
+ * Generate a human-readable description of a train's location, optionally augmented with
+ * continuous track segment projection.
  */
 export function getTrainLocationDescription(
   position: VehiclePosition,
@@ -45,8 +73,7 @@ export function getTrainLocationDescription(
   const pLat = position.la;
   const pLon = position.lo;
 
-  // 1. Check for "At station"
-  // We check only stations in the order list for efficiency
+  // 1. Check for "At station" (<250m)
   for (const stationId of schedule.o) {
     const s = schedule.s[stationId];
     if (!s) continue;
@@ -57,9 +84,6 @@ export function getTrainLocationDescription(
   }
 
   // 2. Find next station based on direction
-  // d=0 => Northbound => Searching for nearest station with lat > pLat
-  // d=1 => Southbound => Searching for nearest station with lat < pLat
-
   let closestStationId: string | null = null;
   let minDiff = Infinity;
 
@@ -67,11 +91,8 @@ export function getTrainLocationDescription(
     const s = schedule.s[stationId];
     if (!s) continue;
 
-    // Positive diff means station is in the direction of travel
-    // (Northbound: lat > pLat, Southbound: lat < pLat)
     const diff = direction === 0 ? s.lat - pLat : pLat - s.lat;
 
-    // We want the smallest positive lat difference
     if (diff > 0 && diff < minDiff) {
       minDiff = diff;
       closestStationId = stationId;
@@ -81,12 +102,7 @@ export function getTrainLocationDescription(
   if (closestStationId) {
     const s = schedule.s[closestStationId];
     const distMeters = getDistanceFromLatLonInMeters(pLat, pLon, s.lat, s.lon);
-    // Round to nearest 0.1km
     const distKm = (distMeters / 1000).toFixed(1);
-
-    // Direction logic for description:
-    // If train is Northbound approaching a station to the North, it is South of that station.
-    // If train is Southbound approaching a station to the South, it is North of that station.
     const relativeDir = direction === 0 ? 'South' : 'North';
 
     return `${distKm} km ${relativeDir} of ${s.n}`;
