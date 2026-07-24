@@ -8,6 +8,9 @@
   let showBanner = $derived($updated || (dev && $page.url.searchParams.has('test-update')));
 
   $effect(() => {
+    // Check for an update immediately when the component mounts
+    updated.check().catch(console.error);
+
     // Check for an update when the application comes back into the foreground
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -17,8 +20,21 @@
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Also trigger update check if the Service Worker controller changes in the background
+    let swUnsub: (() => void) | undefined;
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      const handleControllerChange = () => {
+        updated.check().catch(console.error);
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+      swUnsub = () => {
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      };
+    }
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (swUnsub) swUnsub();
     };
   });
 
