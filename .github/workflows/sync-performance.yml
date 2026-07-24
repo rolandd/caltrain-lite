@@ -30,6 +30,25 @@ jobs:
       - name: Ensure Zstandard (zstd) is installed
         run: command -v zstd >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y zstd)
 
+      - name: Generate Wrangler Config from Secrets
+        run: |
+          mkdir -p worker
+          cat <<EOF > worker/wrangler.toml
+          name = "transit-worker"
+          main = "src/index.ts"
+          compatibility_date = "2024-04-01"
+          compatibility_flags = ["nodejs_compat"]
+
+          kv_namespaces = [
+            { binding = "TRANSIT_DATA", id = "${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}" }
+          ]
+
+          [[d1_databases]]
+          binding = "TRANSIT_DB"
+          database_name = "transit-d1"
+          database_id = "${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}"
+          EOF
+
       - name: Calculate Dynamic D1 Export Cutoff
         id: d1_cutoff
         run: |

@@ -12,6 +12,7 @@ These secrets are needed for the `.github/workflows/sync-schedule.yml` workflow 
 | `CLOUDFLARE_API_TOKEN`       | Cloudflare API Token with Workers/KV write access |
 | `CLOUDFLARE_ACCOUNT_ID`      | Your Cloudflare Account ID                        |
 | `CLOUDFLARE_KV_NAMESPACE_ID` | The ID of the `transit-kv` namespace              |
+| `CLOUDFLARE_D1_DATABASE_ID`  | The ID of the `transit-d1` database               |
 
 ### Restricted GitHub Actions Token
 
@@ -23,6 +24,7 @@ These secrets are needed for the `.github/workflows/sync-schedule.yml` workflow 
 2.  Use the **Create Custom Token** option.
 3.  **Permissions**:
     - **Account** > **Workers KV Storage** > **Edit**
+    - **Account** > **D1** > **Edit**
 4.  **Account Resources**:
     - **Include** > **Specific account** > (Select your account)
 5.  Set this token as the `CLOUDFLARE_API_TOKEN` secret in GitHub.
@@ -39,6 +41,7 @@ gh secret set TRANSIT_511_API_KEY < api_key.txt
 gh secret set CLOUDFLARE_API_TOKEN < cloudflare_restricted_token.txt
 gh secret set CLOUDFLARE_ACCOUNT_ID < cloudflare_account_id.txt
 gh secret set CLOUDFLARE_KV_NAMESPACE_ID < cloudflare_kv_id.txt
+gh secret set CLOUDFLARE_D1_DATABASE_ID < cloudflare_d1_id.txt
 ```
 
 ## Worker Secrets
