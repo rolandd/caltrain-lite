@@ -420,7 +420,11 @@
     let perfNote: string | undefined;
     if (perf) {
       const destStop = trip.stopIds[trip.stopIds.length - 1];
-      const destStopPerf = (destStop && perf.stops[destStop]) || Object.values(perf.stops)[0];
+      const stopsList = Object.values(perf.stops);
+      const destStopPerf =
+        (destStop && perf.stops[destStop]) ||
+        (destStop && perf.stops[destStop.slice(0, 4)]) ||
+        stopsList[stopsList.length - 1];
       const entity = getRealtimeTrip(trip.trainNumber);
       const isRealtimeActive = !!entity;
 
