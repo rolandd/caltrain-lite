@@ -424,7 +424,7 @@
       if (stopPerf) {
         const p50Mins = Math.round(stopPerf.p50Delay / 60);
         const p90Mins = Math.round(stopPerf.p90Delay / 60);
-        perfNote = `90d baseline: ${p50Mins <= 0 ? 'on time' : `+${p50Mins}m`} (p90: +${p90Mins}m)`;
+        perfNote = `${p50Mins <= 0 ? 'on time' : `+${p50Mins}m`} (p90: +${p90Mins}m)`;
       }
     }
 
@@ -923,7 +923,7 @@
           <div
             class="bg-transit-surface-elevated text-transit-text-tertiary px-3 py-1 border-b border-transit-border-subtle text-[0.65rem] text-center"
           >
-            📊 {activeTooltip.perfNote}
+            {activeTooltip.perfNote}
           </div>
         {/if}
 
