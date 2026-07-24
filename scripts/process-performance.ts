@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { execFileSync } from 'node:child_process';
 import type {
+  StaticSchedule,
   TrainPerformanceProfile,
   TripPerformance,
   StopPerformance,
@@ -267,11 +268,37 @@ export function haversineDistanceMeters(
 export function processTrainPerformance(
   snapshots: RawTrainSnapshot[],
   windowDays = 90,
+  schedule?: StaticSchedule,
 ): TrainPerformanceProfile {
   // Map: trainNum -> stopId -> runKey -> maxDelaySec
   const runStopDelays: Record<string, Record<string, Record<string, number>>> = {};
   const tripStopDwells: Record<string, Record<string, number[]>> = {};
   const tripLegTravelSec: Record<string, Record<string, number[]>> = {};
+
+  const stopIdToCanonical: Record<string, string> = {};
+  const schedLookup: Record<string, Record<string, number>> = {};
+  if (schedule) {
+    for (const [canonicalId, station] of Object.entries(schedule.s)) {
+      stopIdToCanonical[canonicalId] = canonicalId;
+      for (const gtfsId of station.ids) {
+        stopIdToCanonical[gtfsId] = canonicalId;
+      }
+    }
+
+    for (const trip of schedule.t) {
+      const trainNum = trip.i;
+      const patternStops = schedule.p[trip.p] || [];
+      if (!schedLookup[trainNum]) schedLookup[trainNum] = {};
+
+      patternStops.forEach((canonicalStopId, idx) => {
+        const arrMin = trip.st[2 * idx];
+        if (typeof arrMin === 'number') {
+          const sec = arrMin * 60;
+          schedLookup[trainNum]![canonicalStopId] = sec;
+        }
+      });
+    }
+  }
 
   const prevTrainState: Record<
     string,
@@ -286,12 +313,13 @@ export function processTrainPerformance(
       continue;
     }
 
+    const snapshotDate = new Date(snapshot.timestamp * 1000);
     const dateStr = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Los_Angeles',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(new Date(snapshot.timestamp * 1000));
+    }).format(snapshotDate);
 
     for (const [trainNum, status] of Object.entries(byTrip)) {
       if (!runStopDelays[trainNum]) runStopDelays[trainNum] = {};
@@ -299,7 +327,26 @@ export function processTrainPerformance(
       if (!tripLegTravelSec[trainNum]) tripLegTravelSec[trainNum] = {};
 
       const stopId = status.s;
-      const delaySec = status.d ?? 0;
+      let delaySec = status.d ?? 0;
+
+      if (delaySec === 0 && status.t && stopId && schedule) {
+        const canonicalStop = stopIdToCanonical[stopId] ?? stopIdToCanonical[stopId.slice(0, 4)];
+        const schedSec = canonicalStop ? schedLookup[trainNum]?.[canonicalStop] : undefined;
+        if (typeof schedSec === 'number') {
+          const [y, m, d] = dateStr.split('-').map(Number);
+          const localMidnightUtcSec = Math.floor(Date.UTC(y!, m! - 1, d!) / 1000) + 7 * 3600;
+          let schedEpoch = localMidnightUtcSec + schedSec;
+
+          if (Math.abs(status.t - (schedEpoch + 86400)) < Math.abs(status.t - schedEpoch)) {
+            schedEpoch += 86400;
+          } else if (Math.abs(status.t - (schedEpoch - 86400)) < Math.abs(status.t - schedEpoch)) {
+            schedEpoch -= 86400;
+          }
+
+          delaySec = Math.max(0, status.t - schedEpoch);
+        }
+      }
+
       const runKey = `${dateStr}:${trainNum}`;
 
       if (stopId) {
