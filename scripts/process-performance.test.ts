@@ -109,6 +109,36 @@ describe('process-performance', () => {
       expect(stop2Delay).toBeGreaterThanOrEqual(stop1Delay);
     });
 
+    it('calculates non-zero p90Delay across multiple trip runs and ensures p90 >= p50', () => {
+      const snapshots: RawTrainSnapshot[] = [];
+      const baseTime = 1774000000;
+
+      // 10 trip runs across 10 days with delays on some runs
+      for (let day = 0; day < 10; day++) {
+        const dayTime = baseTime + day * 86400;
+        const delaySec = day > 7 ? 300 : 60; // Delays on last 2 runs
+
+        // Multiple 2-minute tick pings per stop
+        for (let ping = 0; ping < 5; ping++) {
+          snapshots.push({
+            id: snapshots.length + 1,
+            timestamp: dayTime + ping * 120,
+            data: JSON.stringify({
+              '668': { d: delaySec, s: '70261', st: 1 },
+            }),
+          });
+        }
+      }
+
+      const profile = processTrainPerformance(snapshots, 90);
+      const stopPerf = profile.trips['668']?.stops['70261'];
+
+      expect(stopPerf).toBeDefined();
+      expect(stopPerf?.p50Delay).toBeGreaterThan(0);
+      expect(stopPerf?.p90Delay).toBeGreaterThan(0);
+      expect(stopPerf?.p90Delay).toBeGreaterThanOrEqual(stopPerf?.p50Delay!);
+    });
+
     it('handles missing point-in-time snapshots and gaps cleanly', () => {
       const snapshots: RawTrainSnapshot[] = [
         // Ping at origin
