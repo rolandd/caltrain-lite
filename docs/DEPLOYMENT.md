@@ -144,9 +144,11 @@ The Pages project was created by Terraform. Now we connect it to Git (one-time s
 
 ## Step 7: Initial Data Populate
 
-Trigger the GitHub Action manually to populate the KV store for the first time.
+Trigger the GitHub Actions manually to populate the KV store and performance profile for the first time.
 
 1.  Go to **GitHub Repo** > **Actions** > **Sync Schedule**.
 2.  Click **Run workflow**.
+3.  Go to **GitHub Repo** > **Actions** > **Sync On-Time Performance**.
+4.  Click **Run workflow**.
 
-Once complete, your PWA will have schedule data!
+Once complete, your PWA will have both schedule data and historical delay estimation profiles!
