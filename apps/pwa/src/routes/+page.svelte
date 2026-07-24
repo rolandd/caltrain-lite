@@ -420,11 +420,25 @@
     let perfNote: string | undefined;
     if (perf) {
       const destStop = trip.stopIds[trip.stopIds.length - 1];
-      const stopPerf = (destStop && perf.stops[destStop]) || Object.values(perf.stops)[0];
-      if (stopPerf) {
-        const p50Mins = Math.round(stopPerf.p50Delay / 60);
-        const p90Mins = Math.round(stopPerf.p90Delay / 60);
-        perfNote = `${p50Mins <= 0 ? 'on time' : `+${p50Mins}m`} (p90: +${p90Mins}m)`;
+      const destStopPerf = (destStop && perf.stops[destStop]) || Object.values(perf.stops)[0];
+      const entity = getRealtimeTrip(trip.trainNumber);
+
+      if (entity && typeof entity.d === 'number' && destStopPerf) {
+        const currentStop = entity.s;
+        const currentStopPerf = currentStop ? perf.stops[currentStop] : undefined;
+        const currentStopP50 = currentStopPerf ? currentStopPerf.p50Delay : 0;
+
+        const remainingP50Sec = Math.max(0, destStopPerf.p50Delay - currentStopP50);
+        const remainingP90Sec = Math.max(0, destStopPerf.p90Delay - currentStopP50);
+
+        const estP50Mins = Math.round((entity.d + remainingP50Sec) / 60);
+        const estP90Mins = Math.round((entity.d + remainingP90Sec) / 60);
+
+        perfNote = `est. ${estP50Mins <= 0 ? 'on time' : `+${estP50Mins}m`} (p90: +${estP90Mins}m)`;
+      } else if (destStopPerf) {
+        const p50Mins = Math.round(destStopPerf.p50Delay / 60);
+        const p90Mins = Math.round(destStopPerf.p90Delay / 60);
+        perfNote = `typical ${p50Mins <= 0 ? 'on time' : `+${p50Mins}m`} (p90: +${p90Mins}m)`;
       }
     }
 
