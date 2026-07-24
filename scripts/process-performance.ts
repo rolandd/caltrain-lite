@@ -22,9 +22,7 @@ export interface RawTrainSnapshot {
 /**
  * Combine and deduplicate snapshot lists by timestamp.
  */
-export function mergeSnapshots(
-  ...snapshotLists: RawTrainSnapshot[][]
-): RawTrainSnapshot[] {
+export function mergeSnapshots(...snapshotLists: RawTrainSnapshot[][]): RawTrainSnapshot[] {
   const map = new Map<number, RawTrainSnapshot>();
   for (const list of snapshotLists) {
     for (const item of list) {
@@ -84,10 +82,7 @@ function decompressFile(filePath: string): string {
 /**
  * Load archived daily raw snapshots from data/history directory for the rolling window.
  */
-export function loadArchivedSnapshots(
-  historyDir: string,
-  windowDays = 90,
-): RawTrainSnapshot[] {
+export function loadArchivedSnapshots(historyDir: string, windowDays = 90): RawTrainSnapshot[] {
   if (!existsSync(historyDir)) return [];
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -128,10 +123,7 @@ export function loadArchivedSnapshots(
 /**
  * Archive completed past dates to data/history in Zstandard format (.json.zst).
  */
-export function archiveCompletedDays(
-  snapshots: RawTrainSnapshot[],
-  historyDir: string,
-): number {
+export function archiveCompletedDays(snapshots: RawTrainSnapshot[], historyDir: string): number {
   const pstDateStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Los_Angeles',
     year: 'numeric',
@@ -175,7 +167,9 @@ export function archiveCompletedDays(
       const content = rows.map((r) => JSON.stringify(r)).join('\n');
       execFileSync('zstd', ['-19', '-f', '-o', target], { input: content });
       updatedCount++;
-      console.log(`Archived ${rows.length} rows for ${dateStr} -> ${target} (was ${existingLineCount} rows)`);
+      console.log(
+        `Archived ${rows.length} rows for ${dateStr} -> ${target} (was ${existingLineCount} rows)`,
+      );
     }
   }
 
