@@ -66,7 +66,12 @@
     id: string;
     text?: string;
     perfNote?: string;
-    stops: string[];
+    stops: Array<{
+      stopId: string;
+      name: string;
+      estText?: string;
+      delayClass?: string;
+    }>;
     x: number;
     y: number;
   } | null>(null);
@@ -417,7 +422,10 @@
     const y = rect.top + rect.height / 2;
 
     const perf = performance?.trips[trip.trainNumber];
+    const entity = getRealtimeTrip(trip.trainNumber);
+    const isRealtimeActive = !!entity;
     let perfNote: string | undefined;
+
     if (perf) {
       const destStop = trip.stopIds[trip.stopIds.length - 1];
       const stopsList = Object.values(perf.stops);
@@ -425,8 +433,6 @@
         (destStop && perf.stops[destStop]) ||
         (destStop && perf.stops[destStop.slice(0, 4)]) ||
         stopsList[stopsList.length - 1];
-      const entity = getRealtimeTrip(trip.trainNumber);
-      const isRealtimeActive = !!entity;
 
       if (isRealtimeActive && destStopPerf) {
         const liveDelaySec = entity.d ?? 0;
@@ -455,11 +461,50 @@
       }
     }
 
+    const stops = trip.stopIds.map((stopId) => {
+      const name = getStationName(stopId);
+      let estText: string | undefined;
+      let delayClass: string | undefined;
+
+      if (perf) {
+        const stopPerf = perf.stops[stopId] || perf.stops[stopId.slice(0, 4)];
+        if (isRealtimeActive && entity) {
+          const liveDelaySec = entity.d ?? 0;
+          const currentStop = entity.s;
+          const currentStopPerf = currentStop ? perf.stops[currentStop] : undefined;
+          const currentStopP50 = currentStopPerf ? currentStopPerf.p50Delay : 0;
+          const targetP50 = stopPerf ? stopPerf.p50Delay : 0;
+
+          const remainingP50Sec = Math.max(0, targetP50 - currentStopP50);
+          const estP50Mins = Math.round((liveDelaySec + remainingP50Sec) / 60);
+
+          if (estP50Mins <= 0) {
+            estText = 'on time';
+            delayClass = 'text-transit-brand-soft-text font-medium';
+          } else {
+            estText = `+${estP50Mins}m`;
+            delayClass = `${getDelayClass(estP50Mins)} font-semibold`;
+          }
+        } else if (stopPerf) {
+          const p50Mins = Math.round(stopPerf.p50Delay / 60);
+          if (p50Mins <= 0) {
+            estText = 'on time';
+            delayClass = 'text-transit-text-tertiary';
+          } else {
+            estText = `+${p50Mins}m`;
+            delayClass = `${getDelayClass(p50Mins)} font-medium`;
+          }
+        }
+      }
+
+      return { stopId, name, estText, delayClass };
+    });
+
     activeTooltip = {
       id: trip.trainNumber,
       text,
       perfNote,
-      stops: trip.stopIds,
+      stops,
       x,
       y,
     };
@@ -933,7 +978,7 @@
 
       <!-- Tooltip Bubble -->
       <div
-        class="fixed z-[50] w-[200px] flex flex-col bg-transit-tooltip-bg text-transit-text-primary text-[0.75rem] rounded-xl shadow-2xl border border-transit-border-strong transform -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-auto"
+        class="fixed z-[50] w-[235px] flex flex-col bg-transit-tooltip-bg text-transit-text-primary text-[0.75rem] rounded-xl shadow-2xl border border-transit-border-strong transform -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-auto"
         style="top: {activeTooltip.y}px; left: {activeTooltip.x}px;"
         role="dialog"
         aria-label="Trip Stops"
@@ -955,10 +1000,10 @@
         {/if}
 
         <!-- Stop List -->
-        <div class="flex flex-col py-2 px-1 max-h-[300px] overflow-y-auto w-full box-border">
-          {#each activeTooltip.stops as stop, i (stop)}
+        <div class="flex flex-col py-2 px-1 max-h-[320px] overflow-y-auto w-full box-border">
+          {#each activeTooltip.stops as stop, i (stop.stopId)}
             <div class="flex items-stretch min-h-[1.75rem]">
-              <div class="w-8 flex flex-col items-center flex-shrink-0">
+              <div class="w-7 flex flex-col items-center flex-shrink-0">
                 <div
                   class="w-0.5 {i === 0
                     ? 'bg-transparent h-1/2 mt-auto'
@@ -975,13 +1020,23 @@
                     : 'bg-transit-tooltip-line h-full'}"
                 ></div>
               </div>
-              <div
-                class="flex-1 flex items-center py-1 pr-3 text-[0.8rem] {i === 0 ||
-                i === activeTooltip.stops.length - 1
-                  ? 'text-transit-text-primary font-medium'
-                  : 'text-transit-text-muted'}"
-              >
-                {getStationName(stop)}
+              <div class="flex-1 flex items-center justify-between py-1 pr-2.5 min-w-0">
+                <span
+                  class="truncate text-[0.78rem] pr-1.5 {i === 0 ||
+                  i === activeTooltip.stops.length - 1
+                    ? 'text-transit-text-primary font-medium'
+                    : 'text-transit-text-muted'}"
+                >
+                  {stop.name}
+                </span>
+                {#if stop.estText}
+                  <span
+                    class="text-[0.65rem] px-1.5 py-0.5 rounded bg-transit-surface-elevated flex-shrink-0 {stop.delayClass ??
+                      'text-transit-text-tertiary'}"
+                  >
+                    {stop.estText}
+                  </span>
+                {/if}
               </div>
             </div>
           {/each}
