@@ -32,6 +32,19 @@
   const LS_DEST = 'transit-destination';
   const LS_DATE = 'transit-date';
 
+  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const scheduleEndDateFormatter = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
   // State
   let origin = $state('');
   let destination = $state('');
@@ -40,12 +53,7 @@
   const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
     const date = getTransitDateAtNoon(dateStr);
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
+    return dateFormatter.format(date);
   });
   const scheduleType = $derived(
     schedule && dateStr ? getScheduleType(schedule, getTransitDateAtNoon(dateStr)) : null,
@@ -84,11 +92,7 @@
     const m = Math.floor((dateInt % 10000) / 100);
     const d = dateInt % 100;
     const date = new Date(y, m - 1, d, 12, 0, 0);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
+    return scheduleEndDateFormatter.format(date);
   });
 
   const isPastEndOfSchedule = $derived.by(() => {
