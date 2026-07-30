@@ -73,7 +73,7 @@ sw.addEventListener('fetch', (event) => {
     // 3. Default: Network first, then cache match
     try {
       return await fetch(event.request);
-    } catch (err) {
+    } catch {
       const response = await cache.match(event.request);
       if (response) return response;
       // For anything else, just let the fetch fail naturally
