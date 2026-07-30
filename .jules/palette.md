@@ -1,0 +1,3 @@
+## 2026-05-08 - Added Focus Outlines for Keyboard Navigation and Removed Unnecessary Tab Stops
+**Learning:** In complex interactive UIs like the transit trip table, buttons intended purely as full-screen dismiss backdrops shouldn't receive focus, and interactive elements require distinct `focus-visible` states to enable keyboard users to track their position.
+**Action:** When building custom overlay or backdrop patterns, always add `tabindex="-1"` if it's purely a click dismiss. Ensure all custom interactive elements (like `role="button"`) receive `focus-visible` styling using the project's brand colors.
