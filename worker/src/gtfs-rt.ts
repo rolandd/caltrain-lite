@@ -10,6 +10,11 @@ import type {
   ServiceAlert,
 } from '@packages/types/schema';
 
+function isDangerousKey(key: string | undefined): boolean {
+  if (!key) return false;
+  return key === 'prototype' || key in Object.prototype;
+}
+
 interface ParsedTripEntity extends RealtimeTripStatus {
   i: string;
 }
@@ -92,7 +97,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.trip_update) {
       const tu = entity.trip_update;
       const tripId = tu.trip?.trip_id;
-      if (tripId) {
+      if (tripId && !isDangerousKey(tripId)) {
         let delay = 0;
         let time = 0;
         let stopId = '';
@@ -145,7 +150,7 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.vehicle) {
       const v = entity.vehicle;
       const tripId = v.trip?.trip_id;
-      if (tripId && v.position) {
+      if (tripId && !isDangerousKey(tripId) && v.position) {
         const la = Math.round(v.position.latitude * 100000) / 100000;
         const lo = Math.round(v.position.longitude * 100000) / 100000;
         if (!Number.isFinite(la) || !Number.isFinite(lo)) {
@@ -177,7 +182,9 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
           return acc;
         }, []),
         tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
+          if (e.trip?.trip_id && !isDangerousKey(e.trip.trip_id)) {
+            acc.push(e.trip.trip_id);
+          }
           return acc;
         }, []),
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
@@ -197,7 +204,8 @@ export function buildRealtimeStatus(
   vehiclePositions: ParsedFeed,
   serviceAlerts: ParsedFeed,
 ): RealtimeStatus {
-  const byTrip: Record<string, RealtimeTripStatus> = {};
+  // Use Object.create(null) to prevent prototype pollution from external feed IDs
+  const byTrip: Record<string, RealtimeTripStatus> = Object.create(null);
 
   for (const entity of tripUpdates.e) {
     const trip: RealtimeTripStatus = {};

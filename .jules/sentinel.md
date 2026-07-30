@@ -9,3 +9,9 @@
 **Vulnerability:** The API fetch handler in Cloudflare workers did not restrict HTTP methods, so it handled everything (POST, PUT, DELETE, etc.) just like a GET request. This is a bad practice for read-only APIs and could allow logic bypasses.
 **Learning:** Cloudflare Workers do not automatically filter HTTP methods. Read-only APIs must explicitly restrict accepted HTTP methods inside their fetch handlers to GET, HEAD, and OPTIONS (to ensure CORS preflight checks don't break), returning 405 Method Allowed with security headers for unsupported methods to prevent CSRF or logic bypasses.
 **Prevention:** Always check `request.method` in Cloudflare Worker `fetch` handlers and reject unsupported methods (e.g. POST to read-only APIs) with `405 Method Not Allowed`.
+
+## 2024-06-05 - Prototype Pollution via Dictionary Keys
+
+**Vulnerability:** External data (GTFS-RT feed IDs) was being used as keys in a plain JavaScript object (`{}`). Since plain objects inherit from `Object.prototype`, maliciously crafted or unexpected keys (like `__proto__`, `constructor`, `toString`) could overwrite prototype properties, leading to unexpected behavior, denial of service, or logic bypasses in subsequent lookups.
+**Learning:** Using `{}` as a dictionary for external or unvalidated keys is unsafe.
+**Prevention:** Always initialize dictionaries meant to store external string keys with `Object.create(null)`. This creates an object with no prototype chain, making it safe to use any string as a key.
