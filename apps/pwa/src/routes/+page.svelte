@@ -866,9 +866,11 @@
 
                     <!-- Trip body: departure / middle info / arrival -->
                     <div
-                      class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-transit-surface-hover-soft transition-colors rounded"
+                      class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-transit-surface-hover-soft transition-colors rounded focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
                       role="button"
                       tabindex="0"
+                      aria-haspopup="dialog"
+                      aria-expanded={activeTooltip?.id === trip.trainNumber}
                       onclick={(e) => toggleTooltip(e, trip, rt.tooltipText)}
                       onkeydown={(e) => e.key === 'Enter' && toggleTooltip(e, trip, rt.tooltipText)}
                       title={rt.tooltipText || 'View trip details'}
@@ -974,6 +976,7 @@
         class="fixed inset-0 cursor-default bg-transparent border-none w-full h-full z-40"
         onclick={closeTooltip}
         aria-label="Close tooltip"
+        tabindex="-1"
       ></button>
 
       <!-- Tooltip Bubble -->
