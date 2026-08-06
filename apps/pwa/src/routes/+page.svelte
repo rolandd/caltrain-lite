@@ -37,11 +37,13 @@
   const LS_ORIGIN = 'transit-origin';
   const LS_DEST = 'transit-destination';
   const LS_DATE = 'transit-date';
+  const LS_SCROLL = 'transit-scroll-left';
 
   // State
   let origin = $state('');
   let destination = $state('');
   let dateStr = $state(getTransitDateStr());
+  let scrollLeft = $state(0);
 
   const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
@@ -135,9 +137,11 @@
     dateStr = getTransitDateStr();
     results = [];
     searched = false;
+    scrollLeft = 0;
     localStorage.removeItem(LS_ORIGIN);
     localStorage.removeItem(LS_DEST);
     localStorage.removeItem(LS_DATE);
+    localStorage.removeItem(LS_SCROLL);
   }
 
   function getStationName(id: string) {
@@ -173,9 +177,16 @@
     const savedOrigin = localStorage.getItem(LS_ORIGIN);
     const savedDest = localStorage.getItem(LS_DEST);
     const savedDate = localStorage.getItem(LS_DATE);
+    const savedScroll = localStorage.getItem(LS_SCROLL);
     if (savedOrigin) origin = savedOrigin;
     if (savedDest) destination = savedDest;
     if (savedDate) dateStr = savedDate;
+    if (savedScroll) {
+      const parsed = parseFloat(savedScroll);
+      if (!isNaN(parsed) && parsed >= 0) {
+        scrollLeft = parsed;
+      }
+    }
     updateRealtime();
     pollInterval = setInterval(updateRealtime, 60000);
   });
@@ -189,6 +200,7 @@
     localStorage.setItem(LS_ORIGIN, origin);
     localStorage.setItem(LS_DEST, destination);
     localStorage.setItem(LS_DATE, dateStr);
+    localStorage.setItem(LS_SCROLL, String(scrollLeft));
   });
 
   $effect(() => {
@@ -524,6 +536,13 @@
     // If we have origin/dest set (e.g. from favorite), auto search when schedule loads
     if (schedule && origin && destination && !searched) {
       search();
+      if (scrollLeft > 0) {
+        tick().then(() => {
+          if (tripScrollEl) {
+            tripScrollEl.scrollLeft = scrollLeft;
+          }
+        });
+      }
     }
   });
 
@@ -531,6 +550,11 @@
   let currentFare = $derived(
     schedule && origin && destination ? calculateFare(schedule, origin, destination) : null,
   );
+  function restoreScroll(node: HTMLDivElement) {
+    if (scrollLeft > 0) {
+      node.scrollLeft = scrollLeft;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -793,7 +817,14 @@
             The outer wrapper clips overflow; the inner flex row holds both panels.
           -->
           <div class="relative rounded-xl overflow-hidden border border-transit-border-subtle">
-            <div class="flex overflow-x-auto" bind:this={tripScrollEl}>
+            <div
+              class="flex overflow-x-auto"
+              bind:this={tripScrollEl}
+              use:restoreScroll
+              onscroll={() => {
+                if (tripScrollEl) scrollLeft = tripScrollEl.scrollLeft;
+              }}
+            >
               <!-- Fixed left panel: origin → fare → destination -->
               <div
                 class="sticky left-0 z-10 flex-shrink-0 w-[108px] bg-transit-surface-card border-r border-transit-border-subtle flex flex-col"
