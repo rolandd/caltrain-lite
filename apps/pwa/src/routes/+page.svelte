@@ -9,6 +9,8 @@
     calculateFare,
     normalizeDate,
     getScheduleType,
+    getCanonicalStationId,
+    findStopIndex,
     type StaticSchedule,
     type TripResult,
   } from '$lib/schedule';
@@ -139,7 +141,9 @@
   }
 
   function getStationName(id: string) {
-    return schedule?.s[id]?.n || id;
+    if (!schedule) return id;
+    const canonicalId = getCanonicalStationId(schedule, id);
+    return schedule.s[canonicalId]?.n || id;
   }
 
   // Realtime logic
@@ -364,7 +368,7 @@
       // Find the scheduled time for the stop entity.s in this trip.
       const fullTrip = schedule.t.find((t) => t.i === trainNum);
       if (fullTrip) {
-        const stopIdx = fullTrip.p ? schedule.p[fullTrip.p].indexOf(entity.s) : -1;
+        const stopIdx = fullTrip.p ? findStopIndex(schedule, fullTrip.p, entity.s) : -1;
         if (stopIdx !== -1) {
           // Use arrival time for the stop. st is [arr0, dep0, arr1, dep1, ...]
           const scheduledMins = fullTrip.st[stopIdx * 2];
@@ -424,6 +428,10 @@
     const perf = performance?.trips[trip.trainNumber];
     const entity = getRealtimeTrip(trip.trainNumber);
     const isRealtimeActive = !!entity;
+    const realtimeData = getTripRealtimeRenderData(trip);
+    const liveDelaySec = realtimeData.delay ?? entity?.d ?? 0;
+    const currentStopCanonical =
+      entity?.s && schedule ? getCanonicalStationId(schedule, entity.s) : entity?.s;
     let perfNote: string | undefined;
 
     if (perf) {
@@ -435,9 +443,7 @@
         stopsList[stopsList.length - 1];
 
       if (isRealtimeActive && destStopPerf) {
-        const liveDelaySec = entity.d ?? 0;
-        const currentStop = entity.s;
-        const currentStopPerf = currentStop ? perf.stops[currentStop] : undefined;
+        const currentStopPerf = currentStopCanonical ? perf.stops[currentStopCanonical] : undefined;
         const currentStopP50 = currentStopPerf ? currentStopPerf.p50Delay : 0;
 
         const remainingP50Sec = Math.max(0, destStopPerf.p50Delay - currentStopP50);
@@ -469,9 +475,9 @@
       if (perf) {
         const stopPerf = perf.stops[stopId] || perf.stops[stopId.slice(0, 4)];
         if (isRealtimeActive && entity) {
-          const liveDelaySec = entity.d ?? 0;
-          const currentStop = entity.s;
-          const currentStopPerf = currentStop ? perf.stops[currentStop] : undefined;
+          const currentStopPerf = currentStopCanonical
+            ? perf.stops[currentStopCanonical]
+            : undefined;
           const currentStopP50 = currentStopPerf ? currentStopPerf.p50Delay : 0;
           const targetP50 = stopPerf ? stopPerf.p50Delay : 0;
 

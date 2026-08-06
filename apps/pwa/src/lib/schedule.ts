@@ -192,13 +192,32 @@ export function getScheduleType(
 }
 
 /**
+ * Maps a station ID or GTFS stop_id to its canonical station ID key in schedule.s.
+ */
+export function getCanonicalStationId(schedule: StaticSchedule, stopId: string): string {
+  if (!stopId) return stopId;
+  if (schedule.s[stopId]) return stopId;
+  for (const [canonicalId, station] of Object.entries(schedule.s)) {
+    if (station.ids?.includes(stopId)) {
+      return canonicalId;
+    }
+  }
+  return stopId;
+}
+
+/**
  * Find the stop index of a station within a pattern.
  * Returns -1 if the station is not in the pattern.
  */
-function findStopIndex(schedule: StaticSchedule, patternId: string, stationId: string): number {
+export function findStopIndex(
+  schedule: StaticSchedule,
+  patternId: string,
+  stationId: string,
+): number {
   const stops = schedule.p[patternId];
   if (!stops) return -1;
-  return stops.indexOf(stationId);
+  const canonicalId = getCanonicalStationId(schedule, stationId);
+  return stops.indexOf(canonicalId);
 }
 
 /**

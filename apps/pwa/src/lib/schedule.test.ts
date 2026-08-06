@@ -8,6 +8,8 @@ import {
   getStationList,
   isServiceActive,
   getScheduleType,
+  getCanonicalStationId,
+  findStopIndex,
 } from './schedule';
 import type { StaticSchedule } from './schedule';
 import { getTransitDateAtNoon } from './time';
@@ -254,5 +256,36 @@ describe('calculateFare', () => {
   it('returns null for pair without a fare entry', () => {
     // Zone 3 → Zone 1 is not in the fares map
     expect(calculateFare(mockSchedule, 'st3', 'st1')).toBeNull();
+  });
+});
+
+describe('getCanonicalStationId and findStopIndex', () => {
+  it('maps GTFS stop_id to canonical station ID', () => {
+    const sched: StaticSchedule = {
+      ...mockSchedule,
+      s: {
+        menlo_park: { n: 'Menlo Park', z: '3', ids: ['70161', '70162'], lat: 0, lon: 0 },
+      },
+    };
+    expect(getCanonicalStationId(sched, '70161')).toBe('menlo_park');
+    expect(getCanonicalStationId(sched, '70162')).toBe('menlo_park');
+    expect(getCanonicalStationId(sched, 'menlo_park')).toBe('menlo_park');
+    expect(getCanonicalStationId(sched, 'unknown')).toBe('unknown');
+  });
+
+  it('finds stop index in pattern using GTFS stop_id', () => {
+    const sched: StaticSchedule = {
+      ...mockSchedule,
+      s: {
+        st1: { n: 'Station Alpha', z: '1', ids: ['70011', '70012'], lat: 10, lon: 10 },
+        st2: { n: 'Station Bravo', z: '2', ids: ['70021', '70022'], lat: 20, lon: 20 },
+      },
+      p: {
+        p1: ['st1', 'st2'],
+      },
+    };
+    expect(findStopIndex(sched, 'p1', '70021')).toBe(1);
+    expect(findStopIndex(sched, 'p1', 'st1')).toBe(0);
+    expect(findStopIndex(sched, 'p1', '70999')).toBe(-1);
   });
 });
