@@ -33,6 +33,26 @@
   const performance = $derived(performanceCtx?.value ?? null);
   const stations = $derived(schedule ? getStationList(schedule) : []);
 
+  // Cache formatters to improve runtime performance by avoiding repeated instantiation
+  const formattedDateFormatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const scheduleEndDateFormatter = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const noTripsDateFormatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
   // --- localStorage keys for persisted UI state ---
   const LS_ORIGIN = 'transit-origin';
   const LS_DEST = 'transit-destination';
@@ -46,12 +66,7 @@
   const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
     const date = getTransitDateAtNoon(dateStr);
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
+    return formattedDateFormatter.format(date);
   });
   const scheduleType = $derived(
     schedule && dateStr ? getScheduleType(schedule, getTransitDateAtNoon(dateStr)) : null,
@@ -96,11 +111,7 @@
     const m = Math.floor((dateInt % 10000) / 100);
     const d = dateInt % 100;
     const date = new Date(y, m - 1, d, 12, 0, 0);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
+    return scheduleEndDateFormatter.format(date);
   });
 
   const isPastEndOfSchedule = $derived.by(() => {
@@ -944,9 +955,8 @@
               {#if isPastEndOfSchedule}
                 Schedule only available through {scheduleEndDate}
               {:else}
-                No trips found for this route on {getTransitDateAtNoon(dateStr).toLocaleDateString(
-                  'en-US',
-                  { weekday: 'long', month: 'long', day: 'numeric' },
+                No trips found for this route on {noTripsDateFormatter.format(
+                  getTransitDateAtNoon(dateStr),
                 )}
               {/if}
             </p>
