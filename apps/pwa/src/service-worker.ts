@@ -46,8 +46,12 @@ sw.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     const cache = await caches.open(CACHE);
 
-    // 1. Static assets: serve from cache if available
-    if (ASSETS.has(url.pathname)) {
+    // If this is a forced update navigation (e.g. ?v=timestamp from Update Banner),
+    // bypass the static asset cache lookup to fetch fresh from network.
+    const isForcedUpdate = event.request.mode === 'navigate' && url.searchParams.has('v');
+
+    // 1. Static assets: serve from cache if available (unless forced update)
+    if (!isForcedUpdate && ASSETS.has(url.pathname)) {
       const response = await cache.match(url.pathname);
       if (response) return response;
     }
@@ -56,7 +60,12 @@ sw.addEventListener('fetch', (event) => {
     if (event.request.mode === 'navigate') {
       try {
         const response = await fetch(event.request);
-        if (response.ok) return response;
+        if (response.ok) {
+          if (isForcedUpdate) {
+            await cache.put('/', response.clone());
+          }
+          return response;
+        }
       } catch {
         // We are offline or network failed
       }

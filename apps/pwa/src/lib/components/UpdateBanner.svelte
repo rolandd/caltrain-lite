@@ -8,6 +8,15 @@
   let showBanner = $derived($updated || (dev && $page.url.searchParams.has('test-update')));
 
   $effect(() => {
+    // Clean up update query parameter from address bar if present
+    if (typeof window !== 'undefined' && $page.url.searchParams.has('v')) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('v');
+      const newSearch = cleanUrl.searchParams.toString();
+      const newUrl = cleanUrl.pathname + (newSearch ? `?${newSearch}` : '') + cleanUrl.hash;
+      history.replaceState({}, '', newUrl);
+    }
+
     // Check for an update immediately when the component mounts
     updated.check().catch(console.error);
 
@@ -39,9 +48,10 @@
   });
 
   const reload = () => {
-    // SvelteKit's built-in update mechanism ensures the new assets are fetched
-    // when we trigger a hard reload.
-    window.location.reload();
+    // Append a unique timestamp query parameter to bypass static asset SW cache on reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('v', Date.now().toString());
+    window.location.href = url.toString();
   };
 </script>
 
