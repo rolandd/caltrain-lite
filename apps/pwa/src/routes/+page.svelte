@@ -23,6 +23,9 @@
     getTransitDateAtNoon,
     getTransitTimeStr,
     getTransitDayStartEpoch,
+    formatTransitDateLong,
+    formatScheduleEndDate,
+    formatNoTripsDate,
   } from '$lib/time';
 
   import type { TrainPerformanceProfile } from '@packages/types/schema';
@@ -48,13 +51,7 @@
 
   const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
-    const date = getTransitDateAtNoon(dateStr);
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
+    return formatTransitDateLong(getTransitDateAtNoon(dateStr));
   });
   const scheduleType = $derived(
     schedule && dateStr ? getScheduleType(schedule, getTransitDateAtNoon(dateStr)) : null,
@@ -94,16 +91,7 @@
 
   const scheduleEndDate = $derived.by(() => {
     if (!schedule) return '';
-    const dateInt = schedule.m.e;
-    const y = Math.floor(dateInt / 10000);
-    const m = Math.floor((dateInt % 10000) / 100);
-    const d = dateInt % 100;
-    const date = new Date(y, m - 1, d, 12, 0, 0);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
+    return formatScheduleEndDate(schedule.m.e);
   });
 
   const isPastEndOfSchedule = $derived.by(() => {
@@ -1040,10 +1028,7 @@
               {#if isPastEndOfSchedule}
                 Schedule only available through {scheduleEndDate}
               {:else}
-                No trips found for this route on {getTransitDateAtNoon(dateStr).toLocaleDateString(
-                  'en-US',
-                  { weekday: 'long', month: 'long', day: 'numeric' },
-                )}
+                No trips found for this route on {formatNoTripsDate(getTransitDateAtNoon(dateStr))}
               {/if}
             </p>
           </div>
