@@ -20,6 +20,14 @@ export interface RawTrainSnapshot {
   data: string; // JSON string of Record<string, RealtimeTripStatus>
 }
 
+// Cache formatter to avoid repeated instantiations in snapshot loops
+const pstDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Los_Angeles',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 /**
  * Combine and deduplicate snapshot lists by timestamp.
  */
@@ -125,21 +133,11 @@ export function loadArchivedSnapshots(historyDir: string, windowDays = 90): RawT
  * Archive completed past dates to data/history in Zstandard format (.json.zst).
  */
 export function archiveCompletedDays(snapshots: RawTrainSnapshot[], historyDir: string): number {
-  const pstDateStr = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
+  const pstDateStr = pstDateFormatter.format(new Date());
 
   const byDate: Record<string, RawTrainSnapshot[]> = {};
   for (const s of snapshots) {
-    const d = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date(s.timestamp * 1000));
+    const d = pstDateFormatter.format(s.timestamp * 1000);
 
     if (d >= pstDateStr) continue;
 
@@ -328,13 +326,7 @@ export function processTrainPerformance(
       continue;
     }
 
-    const snapshotDate = new Date(snapshot.timestamp * 1000);
-    const dateStr = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(snapshotDate);
+    const dateStr = pstDateFormatter.format(snapshot.timestamp * 1000);
 
     for (const [trainNum, status] of Object.entries(byTrip)) {
       if (!runStopDelays[trainNum]) runStopDelays[trainNum] = {};
