@@ -197,7 +197,7 @@ export function buildRealtimeStatus(
   vehiclePositions: ParsedFeed,
   serviceAlerts: ParsedFeed,
 ): RealtimeStatus {
-  const byTrip: Record<string, RealtimeTripStatus> = {};
+  const byTrip: Record<string, RealtimeTripStatus> = Object.create(null);
 
   for (const entity of tripUpdates.e) {
     const trip: RealtimeTripStatus = {};
