@@ -258,6 +258,7 @@ export function queryTrips(
     // Extract times: st is interleaved [arr0, dep0, arr1, dep1, ...]
     const departureMinutes = trip.st[originIdx * 2 + 1]; // departure from origin
     const arrivalMinutes = trip.st[destIdx * 2]; // arrival at destination
+    if (departureMinutes == null || arrivalMinutes == null) continue;
     const durationMinutes = arrivalMinutes - departureMinutes;
     // Intermediate stops: stations in the pattern between origin and destination (exclusive).
     // Express/limited patterns have fewer stops than local, so this naturally reflects skipped stations.

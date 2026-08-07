@@ -17,6 +17,7 @@
   import { getFavorites, toggleFavorite } from '$lib/favorites';
   import { fetchRealtime, type RealtimeStatusWithMetadata } from '$lib/realtime';
   import { getTrainLocationDescription } from '$lib/location';
+  import { estimateDelay, computeDistanceBehind } from '$lib/delay-estimation';
   import {
     getTransitDateStr,
     getTransitDateAtNoon,
@@ -335,17 +336,41 @@
     return 'text-transit-warning';
   }
 
-  /** Helper to get location description for a trip */
+  /** Helper to get location description for a trip, with "miles behind" for late trains. */
   function getTooltipText(trainNum: string, direction: 0 | 1): string | undefined {
     if (!schedule || !realtime) return undefined;
     const entity = getRealtimeTrip(trainNum);
     if (!entity?.p) return undefined;
 
-    const cacheKey = `${schedule.m.v}:${trainNum}:${direction}:${entity.p.la}:${entity.p.lo}`;
+    const cacheKey = `${schedule.m.v}:${trainNum}:${direction}:${entity.p.la}:${entity.p.lo}:${entity.d ?? 0}`;
     const cached = tooltipTextCache[cacheKey];
     if (cached !== undefined) return cached;
 
-    const text = getTrainLocationDescription(entity.p, direction, schedule);
+    let text = getTrainLocationDescription(entity.p, direction, schedule);
+
+    // Append "X.X mi behind" for trains that are behind schedule
+    if (entity.s && schedule) {
+      const fullTrip = schedule.t.find((t) => t.i === trainNum);
+      const canonicalStop = getCanonicalStationId(schedule, entity.s);
+      if (fullTrip && canonicalStop) {
+        const perf = performance?.trips[trainNum];
+        const dayStart = getTransitDayStartEpoch(dateStr);
+        const behindMeters = computeDistanceBehind(
+          entity.p,
+          canonicalStop,
+          fullTrip,
+          schedule,
+          perf,
+          Date.now() / 1000,
+          dayStart,
+        );
+        if (behindMeters !== undefined && behindMeters > 400) {
+          const behindMiles = (behindMeters / 1609.34).toFixed(1);
+          text += ` · ${behindMiles} mi behind`;
+        }
+      }
+    }
+
     if (tooltipTextCacheSize > TOOLTIP_CACHE_MAX) {
       for (const key in tooltipTextCache) {
         delete tooltipTextCache[key];
@@ -372,19 +397,33 @@
     }
 
     let delay = entity.d ?? 0;
-    // If the delay is zero, check if we have a predicted time and can calculate it.
-    if (delay === 0 && entity.t && entity.s && schedule) {
-      const dayStart = getTransitDayStartEpoch(dateStr);
-      const predictedMins = (entity.t - dayStart) / 60;
+    const dayStart = getTransitDayStartEpoch(dateStr);
+    const fullTrip = schedule?.t.find((t) => t.i === trainNum);
 
-      // Find the scheduled time for the stop entity.s in this trip.
-      const fullTrip = schedule.t.find((t) => t.i === trainNum);
-      if (fullTrip) {
+    if (schedule && fullTrip) {
+      const currentStopCanonical = entity.s ? getCanonicalStationId(schedule, entity.s) : undefined;
+      const perf = performance?.trips[trainNum];
+      const estimate = estimateDelay(
+        entity.d ?? 0,
+        entity.p,
+        currentStopCanonical,
+        fullTrip,
+        schedule,
+        perf,
+        Date.now() / 1000,
+        dayStart,
+      );
+
+      delay = estimate.delaySec;
+
+      if (delay === 0 && estimate.source === 'feed' && entity.t && entity.s) {
+        const predictedMins = (entity.t - dayStart) / 60;
         const stopIdx = fullTrip.p ? findStopIndex(schedule, fullTrip.p, entity.s) : -1;
         if (stopIdx !== -1) {
-          // Use arrival time for the stop. st is [arr0, dep0, arr1, dep1, ...]
           const scheduledMins = fullTrip.st[stopIdx * 2];
-          delay = (predictedMins - scheduledMins) * 60;
+          if (scheduledMins != null) {
+            delay = (predictedMins - scheduledMins) * 60;
+          }
         }
       }
     }
@@ -441,7 +480,33 @@
     const entity = getRealtimeTrip(trip.trainNumber);
     const isRealtimeActive = !!entity;
     const realtimeData = getTripRealtimeRenderData(trip);
-    const liveDelaySec = realtimeData.delay ?? entity?.d ?? 0;
+
+    let liveDelaySec = realtimeData.delay;
+    if (liveDelaySec === undefined) {
+      if (schedule && entity) {
+        const fullTrip = schedule.t.find((t) => t.i === trip.trainNumber);
+        const dayStart = getTransitDayStartEpoch(dateStr);
+        if (fullTrip) {
+          const currentStopCanonical = entity.s
+            ? getCanonicalStationId(schedule, entity.s)
+            : undefined;
+          liveDelaySec = estimateDelay(
+            entity.d ?? 0,
+            entity.p,
+            currentStopCanonical,
+            fullTrip,
+            schedule,
+            perf,
+            Date.now() / 1000,
+            dayStart,
+          ).delaySec;
+        } else {
+          liveDelaySec = entity.d ?? 0;
+        }
+      } else {
+        liveDelaySec = entity?.d ?? 0;
+      }
+    }
     const currentStopCanonical =
       entity?.s && schedule ? getCanonicalStationId(schedule, entity.s) : entity?.s;
     let perfNote: string | undefined;

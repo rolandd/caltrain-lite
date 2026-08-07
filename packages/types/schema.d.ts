@@ -123,9 +123,9 @@ export interface Trip {
    *
    * The array length is `2 * patternStops.length`. For stops with no
    * dwell time, `arr === dep`. Values may exceed 1440 (midnight) for
-   * trips that run past midnight.
+   * trips that run past midnight. Values may be null for untimed stops.
    */
-  st: number[];
+  st: (number | null)[];
   /** Route / service type. */
   rt: RouteType;
 }
@@ -277,6 +277,23 @@ export interface LegPerformance {
   p90TravelSec: number;
   /** Historical median velocity (m/s) along this leg. */
   medianSpeedMS: number;
+  /**
+   * Empirical distance→time progress curve (10 bins).
+   *
+   * `curve[i]` = typical fraction of travel *time* completed when the train
+   * has covered `(i * 10 + 5)%` of the leg's *distance*.
+   *
+   * For example, `curve[0]` is the time fraction at 5% distance,
+   * `curve[4]` is the time fraction at 45% distance, and
+   * `curve[9]` is the time fraction at 95% distance.
+   *
+   * A train traveling at constant speed would produce
+   * `[0.05, 0.15, 0.25, ..., 0.95]` (linear). Real trains produce an
+   * S-curve because they accelerate out of stations and decelerate into them.
+   *
+   * Built from historical GPS observations in `process-performance.ts`.
+   */
+  curve?: number[];
 }
 
 // ---------------------------------------------------------------------------

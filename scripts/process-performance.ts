@@ -270,10 +270,22 @@ export function processTrainPerformance(
   windowDays = 90,
   schedule?: StaticSchedule,
 ): TrainPerformanceProfile {
-  // Map: trainNum -> stopId -> runKey -> maxDelaySec
   const runStopDelays: Record<string, Record<string, Record<string, number>>> = {};
   const tripStopDwells: Record<string, Record<string, number[]>> = {};
   const tripLegTravelSec: Record<string, Record<string, number[]>> = {};
+  const tripLegProgressObs: Record<
+    string,
+    Record<string, Array<{ distFrac: number; timeFrac: number }>>
+  > = {};
+
+  const trainActiveLeg: Record<
+    string,
+    {
+      fromStop: string;
+      departTs: number;
+      obs: Array<{ ts: number; lat: number; lon: number }>;
+    }
+  > = {};
 
   const stopIdToCanonical: Record<string, string> = {};
   const schedLookup: Record<string, Record<string, number>> = {};
@@ -300,6 +312,9 @@ export function processTrainPerformance(
     }
   }
 
+  const getCanon = (id: string) =>
+    stopIdToCanonical[id] ?? stopIdToCanonical[id.slice(0, 4)] ?? id.slice(0, 4);
+
   const prevTrainState: Record<
     string,
     { timestamp: number; stopId?: string; status?: number; lat?: number; lon?: number }
@@ -325,6 +340,7 @@ export function processTrainPerformance(
       if (!runStopDelays[trainNum]) runStopDelays[trainNum] = {};
       if (!tripStopDwells[trainNum]) tripStopDwells[trainNum] = {};
       if (!tripLegTravelSec[trainNum]) tripLegTravelSec[trainNum] = {};
+      if (!tripLegProgressObs[trainNum]) tripLegProgressObs[trainNum] = {};
 
       const stopId = status.s;
       let delaySec = status.d ?? 0;
@@ -361,6 +377,9 @@ export function processTrainPerformance(
       if (prev && stopId && prev.stopId) {
         const timeDiff = snapshot.timestamp - prev.timestamp;
 
+        const prevCanon = getCanon(prev.stopId);
+        const currCanon = getCanon(stopId);
+
         if (stopId === prev.stopId && (status.st === 1 || status.st === 0)) {
           if (!tripStopDwells[trainNum]![stopId]) {
             tripStopDwells[trainNum]![stopId] = [];
@@ -368,13 +387,63 @@ export function processTrainPerformance(
           tripStopDwells[trainNum]![stopId]!.push(timeDiff);
         }
 
-        if (stopId !== prev.stopId && timeDiff > 0 && timeDiff < 3600) {
-          const legKey = `${prev.stopId}->${stopId}`;
-          if (!tripLegTravelSec[trainNum]![legKey]) {
-            tripLegTravelSec[trainNum]![legKey] = [];
+        if (currCanon !== prevCanon) {
+          if (timeDiff > 0 && timeDiff < 3600) {
+            const legKey = `${prevCanon}->${currCanon}`;
+            if (!tripLegTravelSec[trainNum]![legKey]) {
+              tripLegTravelSec[trainNum]![legKey] = [];
+            }
+            tripLegTravelSec[trainNum]![legKey]!.push(timeDiff);
           }
-          tripLegTravelSec[trainNum]![legKey]!.push(timeDiff);
+
+          const active = trainActiveLeg[trainNum];
+          if (active && schedule && schedule.s[active.fromStop] && schedule.s[prevCanon]) {
+            const legKey = `${active.fromStop}->${prevCanon}`;
+            const fromCoords = schedule.s[active.fromStop]!;
+            const toCoords = schedule.s[prevCanon]!;
+            const totalDist = haversineDistanceMeters(
+              fromCoords.lat,
+              fromCoords.lon,
+              toCoords.lat,
+              toCoords.lon,
+            );
+            const arrivalTs = snapshot.timestamp;
+
+            if (totalDist > 0 && arrivalTs > active.departTs) {
+              if (!tripLegProgressObs[trainNum]![legKey]) {
+                tripLegProgressObs[trainNum]![legKey] = [];
+              }
+              for (const o of active.obs) {
+                const distFromStart = haversineDistanceMeters(
+                  fromCoords.lat,
+                  fromCoords.lon,
+                  o.lat,
+                  o.lon,
+                );
+                const distFrac = Math.max(0, Math.min(1, distFromStart / totalDist));
+                const timeFrac = Math.max(
+                  0,
+                  Math.min(1, (o.ts - active.departTs) / (arrivalTs - active.departTs)),
+                );
+                tripLegProgressObs[trainNum]![legKey]!.push({ distFrac, timeFrac });
+              }
+            }
+          }
+
+          trainActiveLeg[trainNum] = {
+            fromStop: prevCanon,
+            departTs: snapshot.timestamp,
+            obs: [],
+          };
         }
+      }
+
+      if (status.p && trainActiveLeg[trainNum]) {
+        trainActiveLeg[trainNum]!.obs.push({
+          ts: snapshot.timestamp,
+          lat: status.p.la,
+          lon: status.p.lo,
+        });
       }
 
       prevTrainState[trainNum] = {
@@ -421,14 +490,71 @@ export function processTrainPerformance(
 
     const legs: Record<string, LegPerformance> = {};
     const legSecMap = tripLegTravelSec[trainNum] ?? {};
+    const obsMap = tripLegProgressObs[trainNum] ?? {};
     for (const [legKey, times] of Object.entries(legSecMap)) {
       if (times.length === 0) continue;
       const medianTravelSec = percentile(times, 50);
       const p90TravelSec = percentile(times, 90);
+
+      let curve: number[] | undefined = undefined;
+      const obs = obsMap[legKey];
+      if (obs && obs.length >= 20) {
+        curve = [];
+        const bins: number[][] = Array.from({ length: 10 }, () => []);
+        for (const o of obs) {
+          let binIdx = Math.floor(o.distFrac * 10);
+          if (binIdx === 10) binIdx = 9;
+          bins[binIdx]!.push(o.timeFrac);
+        }
+
+        for (let i = 0; i < 10; i++) {
+          if (bins[i]!.length > 0) {
+            curve[i] =
+              percentile(
+                bins[i]!.map((x) => x * 10000),
+                50,
+              ) / 10000;
+          } else {
+            curve[i] = -1;
+          }
+        }
+
+        for (let i = 0; i < 10; i++) {
+          if (curve[i] === -1) {
+            let prevVal = 0;
+            let prevIdx = -0.5;
+            for (let j = i - 1; j >= 0; j--) {
+              if (curve[j] !== -1) {
+                prevVal = curve[j]!;
+                prevIdx = j;
+                break;
+              }
+            }
+
+            let nextVal = 1;
+            let nextIdx = 9.5;
+            for (let j = i + 1; j < 10; j++) {
+              if (curve[j] !== -1) {
+                nextVal = curve[j]!;
+                nextIdx = j;
+                break;
+              }
+            }
+
+            const weight = (i - prevIdx) / (nextIdx - prevIdx);
+            curve[i] = prevVal + weight * (nextVal - prevVal);
+          }
+        }
+
+        const curveScaled = pavaIsotonicRegression(curve.map((x) => Math.round(x * 10000)));
+        curve = curveScaled.map((x) => x / 10000);
+      }
+
       legs[legKey] = {
         medianTravelSec,
         p90TravelSec,
         medianSpeedMS: 25,
+        ...(curve ? { curve } : {}),
       };
     }
 

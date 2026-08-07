@@ -8,6 +8,7 @@ import {
   processTrainPerformance,
   type RawTrainSnapshot,
 } from './process-performance';
+import type { StaticSchedule } from '../packages/types/schema.d.ts';
 
 describe('process-performance', () => {
   describe('pavaIsotonicRegression', () => {
@@ -161,6 +162,128 @@ describe('process-performance', () => {
       expect(profile.trips['101']).toBeDefined();
       expect(profile.trips['101']?.stops['70011']).toBeDefined();
       expect(profile.trips['101']?.stops['70031']).toBeDefined();
+    });
+
+    it('builds empirical progress curves and interpolates missing data', () => {
+      const schedule = {
+        s: {
+          '7001': { ids: ['70011'], lat: 37.776, lon: -122.394, n: 'SF' },
+          '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
+        },
+        t: [{ i: '101', p: 'P1', st: [0, null, 10, null] }],
+        p: { P1: ['7001', '7002'] },
+      } as unknown as StaticSchedule;
+
+      const snapshots: RawTrainSnapshot[] = [];
+      let ts = 1774284000;
+
+      snapshots.push({
+        id: 0,
+        timestamp: ts,
+        data: JSON.stringify({ '101': { s: '70011', st: 1 } }),
+      });
+      ts += 60;
+
+      snapshots.push({
+        id: 1,
+        timestamp: ts,
+        data: JSON.stringify({ '101': { s: '70021', st: 2, p: { la: 37.776, lo: -122.394 } } }),
+      });
+
+      for (let i = 1; i <= 22; i++) {
+        ts += 30;
+        const progress = i / 25;
+        snapshots.push({
+          id: i + 1,
+          timestamp: ts,
+          data: JSON.stringify({
+            '101': {
+              s: '70021',
+              st: 2,
+              p: {
+                la: 37.776 + progress * (37.662 - 37.776),
+                lo: -122.394 + progress * (-122.404 - -122.394),
+              },
+            },
+          }),
+        });
+      }
+
+      ts += 60;
+      snapshots.push({
+        id: 25,
+        timestamp: ts,
+        data: JSON.stringify({ '101': { s: '70031', st: 1, p: { la: 37.662, lo: -122.404 } } }),
+      });
+
+      const profile = processTrainPerformance(snapshots, 90, schedule);
+      const leg = profile.trips['101']?.legs?.['7001->7002'];
+      expect(leg).toBeDefined();
+      expect(leg?.curve).toBeDefined();
+      expect(leg!.curve!).toHaveLength(10);
+
+      for (let i = 1; i < 10; i++) {
+        expect(leg!.curve![i]!).toBeGreaterThanOrEqual(leg!.curve![i - 1]!);
+      }
+
+      for (let i = 0; i < 10; i++) {
+        expect(leg!.curve![i]!).toBeGreaterThanOrEqual(0);
+        expect(leg!.curve![i]!).toBeLessThanOrEqual(1);
+      }
+    });
+
+    it('produces non-linear curves for non-linear speed profiles', () => {
+      const schedule = {
+        s: {
+          '7001': { ids: ['70011'], lat: 37.7, lon: -122.4, n: 'A' },
+          '7002': { ids: ['70021'], lat: 37.6, lon: -122.4, n: 'B' },
+        },
+        t: [{ i: '101', p: 'P1', st: [0, null, 10, null] }],
+        p: { P1: ['7001', '7002'] },
+      } as unknown as StaticSchedule;
+
+      const snapshots: RawTrainSnapshot[] = [];
+      let ts = 1774284000;
+      snapshots.push({
+        id: 0,
+        timestamp: ts,
+        data: JSON.stringify({ '101': { s: '70011', st: 1 } }),
+      });
+      ts += 60;
+      snapshots.push({
+        id: 1,
+        timestamp: ts,
+        data: JSON.stringify({ '101': { s: '70021', st: 2, p: { la: 37.7, lo: -122.4 } } }),
+      });
+
+      for (let i = 1; i <= 22; i++) {
+        ts += 30;
+        const progressTime = i / 25;
+        const progressDist =
+          progressTime < 0.8
+            ? (progressTime / 0.8) * 0.2
+            : 0.2 + ((progressTime - 0.8) / 0.2) * 0.8;
+
+        snapshots.push({
+          id: i + 1,
+          timestamp: ts,
+          data: JSON.stringify({
+            '101': { s: '70021', st: 2, p: { la: 37.7 - progressDist * 0.1, lo: -122.4 } },
+          }),
+        });
+      }
+
+      ts += 60;
+      snapshots.push({
+        id: 25,
+        timestamp: ts,
+        data: JSON.stringify({ '101': { s: '70031', st: 1, p: { la: 37.6, lo: -122.4 } } }),
+      });
+
+      const profile = processTrainPerformance(snapshots, 90, schedule);
+      const leg = profile.trips['101']?.legs?.['7001->7002'];
+      expect(leg?.curve).toBeDefined();
+      expect(leg!.curve![1]!).toBeGreaterThan(0.3);
     });
   });
 });
