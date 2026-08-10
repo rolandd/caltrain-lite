@@ -38,6 +38,8 @@
     class="fixed inset-0 cursor-default bg-transparent border-none w-full h-full z-40"
     onclick={onClose}
     aria-label="Close tooltip"
+    title="Close tooltip"
+    tabindex="-1"
   ></button>
 
   <!-- Tooltip Bubble -->
