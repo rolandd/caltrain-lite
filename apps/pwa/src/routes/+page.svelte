@@ -28,6 +28,7 @@
   } from '$lib/time';
 
   import type { TrainPerformanceProfile } from '@packages/types/schema';
+  import { SvelteMap } from 'svelte/reactivity';
   import FavoritesList from '$lib/components/FavoritesList.svelte';
   import TripSearchForm from '$lib/components/TripSearchForm.svelte';
   import ServiceAlertsBanner from '$lib/components/ServiceAlertsBanner.svelte';
@@ -280,8 +281,7 @@
   };
 
   const TOOLTIP_CACHE_MAX = 512;
-  const tooltipTextCache: Record<string, string> = Object.create(null);
-  let tooltipTextCacheSize = 0;
+  const tooltipTextCache = new SvelteMap<string, string>();
 
   function getRealtimeTrip(trainNum: string) {
     if (!realtime) return undefined;
@@ -306,7 +306,7 @@
     if (!entity?.p) return undefined;
 
     const cacheKey = `${schedule.m.v}:${trainNum}:${direction}:${entity.p.la}:${entity.p.lo}:${entity.d ?? 0}`;
-    const cached = tooltipTextCache[cacheKey];
+    const cached = tooltipTextCache.get(cacheKey);
     if (cached !== undefined) return cached;
 
     let text = getTrainLocationDescription(entity.p, direction, schedule);
@@ -333,14 +333,13 @@
       }
     }
 
-    if (tooltipTextCacheSize > TOOLTIP_CACHE_MAX) {
-      for (const key in tooltipTextCache) {
-        delete tooltipTextCache[key];
+    if (tooltipTextCache.size >= TOOLTIP_CACHE_MAX) {
+      const oldestKey = tooltipTextCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        tooltipTextCache.delete(oldestKey);
       }
-      tooltipTextCacheSize = 0;
     }
-    tooltipTextCache[cacheKey] = text;
-    tooltipTextCacheSize += 1;
+    tooltipTextCache.set(cacheKey, text);
     return text;
   }
 
@@ -407,6 +406,20 @@
       hasLocation,
       tooltipText,
     };
+  }
+
+  // Pre-computed realtime render data map derived from reactivity signals
+  const realtimeRenderDataMap = $derived.by(() => {
+    const map = new SvelteMap<string, TripRealtimeRenderData>();
+    if (!results.length) return map;
+    for (const trip of results) {
+      map.set(trip.trainNumber, getTripRealtimeRenderData(trip));
+    }
+    return map;
+  });
+
+  function getTripRealtimeRenderDataFromMap(trip: TripResult): TripRealtimeRenderData {
+    return realtimeRenderDataMap.get(trip.trainNumber) ?? { hasLocation: false };
   }
 
   function toggleTooltip(
@@ -633,7 +646,7 @@
         {getStationName}
         {truncateStation}
         {getRouteStyle}
-        {getTripRealtimeRenderData}
+        getTripRealtimeRenderData={getTripRealtimeRenderDataFromMap}
         onToggleTooltip={toggleTooltip}
       />
     {/if}
