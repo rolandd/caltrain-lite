@@ -49,9 +49,10 @@
 
   <!-- Trip body: departure / middle info / arrival -->
   <div
-    class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-transit-surface-hover-soft transition-colors rounded"
+    class="flex flex-col items-center justify-between flex-1 py-3 px-1 gap-2 cursor-pointer hover:bg-transit-surface-hover-soft transition-colors rounded focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
     role="button"
     tabindex="0"
+    aria-haspopup="dialog"
     onclick={(e) => onToggleTooltip(e, trip, rt.tooltipText)}
     onkeydown={(e) => e.key === 'Enter' && onToggleTooltip(e, trip, rt.tooltipText)}
     title={rt.tooltipText || 'View trip details'}
