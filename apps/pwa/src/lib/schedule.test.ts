@@ -177,6 +177,19 @@ describe('getScheduleType', () => {
   it('identifies day with no active services as null', () => {
     expect(getScheduleType(mockSchedule, getTransitDateAtNoon('2024-01-15'))).toBeNull();
   });
+
+  it('identifies conflicting active weekday and weekend services as special', () => {
+    const sched = JSON.parse(JSON.stringify(mockSchedule)) as StaticSchedule;
+    // Activate sat service on a regular weekday where wkd service is already active
+    sched.r.c['sat'].days[0] = 1; // Mon active on sat calendar
+    expect(getScheduleType(sched, getTransitDateAtNoon('2024-01-08'))).toBe('Special');
+  });
+
+  it('identifies exception-only services without regular calendar as special', () => {
+    const sched = JSON.parse(JSON.stringify(mockSchedule)) as StaticSchedule;
+    sched.r.e['extra_event'] = [{ date: 20240108, type: 1 }];
+    expect(getScheduleType(sched, getTransitDateAtNoon('2024-01-08'))).toBe('Special');
+  });
 });
 
 // ---- Trip Query ----
