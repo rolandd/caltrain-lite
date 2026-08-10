@@ -11,6 +11,8 @@
 import type { Trip, StaticSchedule } from '../../../../packages/types/schema';
 
 export type { StaticSchedule };
+export type ScheduleType = 'Weekday' | 'Weekend' | 'Special';
+
 export interface StationInfo {
   id: string;
   name: string;
@@ -132,6 +134,14 @@ export function isServiceActive(schedule: StaticSchedule, serviceId: string, dat
 }
 
 /**
+ * Classifies a regular calendar service into Weekday or Weekend.
+ */
+function getCalendarType(cal: { days: number[] }): 'Weekday' | 'Weekend' {
+  const weekdayCount = cal.days.slice(0, 5).reduce((sum, active) => sum + active, 0);
+  return weekdayCount >= 3 ? 'Weekday' : 'Weekend';
+}
+
+/**
  * Determine the type of schedule running on a given date.
  * Analyzes the active services to see if they are Weekday, Weekend, or Special configurations.
  * Performance: O(S) where S is the number of active services (typically < 10), so near-zero impact.
@@ -139,56 +149,40 @@ export function isServiceActive(schedule: StaticSchedule, serviceId: string, dat
 export function getScheduleType(
   schedule: StaticSchedule,
   date: Date,
-): 'Weekday' | 'Weekend' | 'Special' | null {
+): ScheduleType | null {
   const allServices = new Set([
     ...Object.keys(schedule.r.c || {}),
     ...Object.keys(schedule.r.e || {}),
   ]);
 
-  const activeServices: string[] = [];
-  for (const sId of allServices) {
-    if (isServiceActive(schedule, sId, date)) {
-      activeServices.push(sId);
-    }
-  }
+  const activeServices = Array.from(allServices).filter((sId) =>
+    isServiceActive(schedule, sId, date),
+  );
 
   if (activeServices.length === 0) return null;
 
-  let isWeekday = false;
-  let isWeekend = false;
-  let isSpecial = false;
-
   const calDayIndex = getCalendarDayIndex(date);
+  let resolvedType: 'Weekday' | 'Weekend' | null = null;
 
   for (const sId of activeServices) {
     const cal = schedule.r.c[sId];
-    if (cal) {
-      let weekdayCount = 0;
-      for (let i = 0; i < 5; i++) weekdayCount += cal.days[i];
 
-      if (weekdayCount >= 3) {
-        isWeekday = true;
-      } else {
-        isWeekend = true;
-      }
+    // Exception-only service OR service running on a non-standard day => Special
+    if (!cal || cal.days[calDayIndex] === 0) {
+      return 'Special';
+    }
 
-      // If the service is running, but it doesn't normally run on this day of the week,
-      // it means it was added via an exception date (i.e. a holiday).
-      if (cal.days[calDayIndex] === 0) {
-        isSpecial = true;
-      }
-    } else {
-      // Service only exists in exceptions, no regular calendar
-      isSpecial = true;
+    const type = getCalendarType(cal);
+
+    if (resolvedType === null) {
+      resolvedType = type;
+    } else if (resolvedType !== type) {
+      // Both weekday and weekend services are active simultaneously => Special
+      return 'Special';
     }
   }
 
-  if (isSpecial) return 'Special';
-  if (isWeekday && !isWeekend) return 'Weekday';
-  if (isWeekend && !isWeekday) return 'Weekend';
-
-  // If both weekday and weekend services are somehow active simultaneously, or something else
-  return 'Special';
+  return resolvedType;
 }
 
 /**
