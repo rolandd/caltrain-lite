@@ -16,7 +16,7 @@
   } from '$lib/schedule';
   import { getFavorites, toggleFavorite } from '$lib/favorites';
   import { fetchRealtime, type RealtimeStatusWithMetadata } from '$lib/realtime';
-  import { getTrainLocationDescription } from '$lib/location';
+  import { getTrainLocationDescription, metersToMiles } from '$lib/location';
   import { estimateDelay, computeDistanceBehind } from '$lib/delay-estimation';
   import {
     getTransitDateStr,
@@ -353,7 +353,7 @@
           dayStart,
         );
         if (behindMeters !== undefined && behindMeters > 400) {
-          const behindMiles = (behindMeters / 1609.34).toFixed(1);
+          const behindMiles = metersToMiles(behindMeters).toFixed(1);
           text += ` · ${behindMiles} mi behind`;
         }
       }

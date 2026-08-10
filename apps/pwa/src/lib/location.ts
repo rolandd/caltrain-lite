@@ -4,6 +4,15 @@
 import type { StaticSchedule } from './schedule';
 import type { VehiclePosition } from '@packages/types/schema';
 
+export const METERS_PER_MILE = 1609.344;
+
+/**
+ * Convert distance in meters to miles.
+ */
+export function metersToMiles(meters: number): number {
+  return meters / METERS_PER_MILE;
+}
+
 /**
  * Calculate the Haversine distance between two points in meters.
  */
@@ -102,10 +111,10 @@ export function getTrainLocationDescription(
   if (closestStationId) {
     const s = schedule.s[closestStationId];
     const distMeters = getDistanceFromLatLonInMeters(pLat, pLon, s.lat, s.lon);
-    const distKm = (distMeters / 1000).toFixed(1);
+    const distMiles = metersToMiles(distMeters).toFixed(1);
     const relativeDir = direction === 0 ? 'South' : 'North';
 
-    return `${distKm} km ${relativeDir} of ${s.n}`;
+    return `${distMiles} mi ${relativeDir} of ${s.n}`;
   }
 
   return 'In Transit';
