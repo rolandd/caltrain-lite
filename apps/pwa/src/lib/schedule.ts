@@ -146,10 +146,7 @@ function getCalendarType(cal: { days: number[] }): 'Weekday' | 'Weekend' {
  * Analyzes the active services to see if they are Weekday, Weekend, or Special configurations.
  * Performance: O(S) where S is the number of active services (typically < 10), so near-zero impact.
  */
-export function getScheduleType(
-  schedule: StaticSchedule,
-  date: Date,
-): ScheduleType | null {
+export function getScheduleType(schedule: StaticSchedule, date: Date): ScheduleType | null {
   const allServices = new Set([
     ...Object.keys(schedule.r.c || {}),
     ...Object.keys(schedule.r.e || {}),
