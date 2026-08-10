@@ -2,7 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { describe, it, expect } from 'vitest';
-import { getTrainLocationDescription } from './location';
+import { getTrainLocationDescription, metersToMiles } from './location';
 import type { StaticSchedule } from './schedule';
 import type { VehiclePosition } from '@packages/types/schema';
 
@@ -23,6 +23,14 @@ const mockSchedule: StaticSchedule = {
   },
 } as unknown as StaticSchedule;
 
+describe('metersToMiles', () => {
+  it('correctly converts meters to miles', () => {
+    expect(metersToMiles(1609.344)).toBeCloseTo(1.0, 5);
+    expect(metersToMiles(3218.688)).toBeCloseTo(2.0, 5);
+    expect(metersToMiles(0)).toBe(0);
+  });
+});
+
 describe('getTrainLocationDescription', () => {
   it('returns "At [Station]" when within 250m', () => {
     // Exact location of San Mateo
@@ -40,12 +48,12 @@ describe('getTrainLocationDescription', () => {
   it('Example: Southbound train North of San Mateo', () => {
     // Train is at Lat 37.60 (North of San Mateo 37.568)
     // Moving South (d=1). Next station South is San Mateo.
-    // Distance approx: 37.60 - 37.568 = 0.032 deg ~= 3.5 km
+    // Distance approx: 37.60 - 37.568 = 0.032 deg ~= 2.2 mi
     const pos: VehiclePosition = { la: 37.6, lo: -122.33 }; // Rough longitude match
 
-    // Expect: "X km North of San Mateo"
+    // Expect: "X mi North of San Mateo"
     const desc = getTrainLocationDescription(pos, 1, mockSchedule);
-    expect(desc).toMatch(/km North of San Mateo$/);
+    expect(desc).toMatch(/mi North of San Mateo$/);
   });
 
   it('Example: Northbound train South of San Mateo', () => {
@@ -53,9 +61,9 @@ describe('getTrainLocationDescription', () => {
     // Moving North (d=0). Next station North is San Mateo.
     const pos: VehiclePosition = { la: 37.5, lo: -122.3 };
 
-    // Expect: "X km South of San Mateo"
+    // Expect: "X mi South of San Mateo"
     const desc = getTrainLocationDescription(pos, 0, mockSchedule);
-    expect(desc).toMatch(/km South of San Mateo$/);
+    expect(desc).toMatch(/mi South of San Mateo$/);
   });
 
   it('returns "In Transit" if no station found in direction', () => {
