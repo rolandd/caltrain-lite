@@ -149,7 +149,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge --auto --squash "${{ steps.create_pr.outputs.pull-request-number }}"
+          gh pr merge --auto --squash --delete-branch "${{ steps.create_pr.outputs.pull-request-number }}"
 
       - name: Prune D1 Database Records Older Than 90 Days
         if: steps.create_pr.conclusion == 'success'
