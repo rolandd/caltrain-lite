@@ -28,7 +28,6 @@
   } from '$lib/time';
 
   import type { TrainPerformanceProfile } from '@packages/types/schema';
-  import { SvelteMap } from 'svelte/reactivity';
   import FavoritesList from '$lib/components/FavoritesList.svelte';
   import TripSearchForm from '$lib/components/TripSearchForm.svelte';
   import ServiceAlertsBanner from '$lib/components/ServiceAlertsBanner.svelte';
@@ -281,7 +280,8 @@
   };
 
   const TOOLTIP_CACHE_MAX = 512;
-  const tooltipTextCache = new SvelteMap<string, string>();
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const tooltipTextCache = new Map<string, string>();
 
   function getRealtimeTrip(trainNum: string) {
     if (!realtime) return undefined;
@@ -410,7 +410,8 @@
 
   // Pre-computed realtime render data map derived from reactivity signals
   const realtimeRenderDataMap = $derived.by(() => {
-    const map = new SvelteMap<string, TripRealtimeRenderData>();
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const map = new Map<string, TripRealtimeRenderData>();
     if (!results.length) return map;
     for (const trip of results) {
       map.set(trip.trainNumber, getTripRealtimeRenderData(trip));
