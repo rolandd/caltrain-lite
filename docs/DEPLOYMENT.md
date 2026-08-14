@@ -17,11 +17,11 @@ This guide details how to deploy the Transit PWA and Worker stack to Cloudflare,
 
 1.  **Cloudflare Account**: You need an active Cloudflare account.
 2.  **Tools**:
-    - `node` (v20+) & `npm`
+    - `node` (v24+) & `pnpm` (v11+)
     - `terraform`
-    - `wrangler` (installed via `npm install -g wrangler` or run with `npx`)
+    - `wrangler` (installed via `pnpm add -g wrangler` or run with `pnpm exec wrangler`)
 3.  **Authentication**:
-    - Run `npx wrangler login` to authenticate your local machine.
+    - Run `pnpm exec wrangler login` to authenticate your local machine.
 
 ---
 
@@ -120,7 +120,7 @@ The Pages project was created by Terraform. Now we connect it to Git (one-time s
     - Select your repo (`roland/Transit`).
     - Branch: `main`.
     - Build settings (already configured by TF, but verify):
-      - Command: `npm run build --prefix apps/pwa`
+      - Command: `pnpm --filter pwa build`
       - Output: `apps/pwa/build`
       - Root: `/` (Repository root)
       - Env Vars: `NODE_VERSION: 24`

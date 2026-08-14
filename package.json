@@ -4,22 +4,17 @@
   "description": "The system is built on an \"Offline-First, Real-Time Second\" philosophy, specifically optimized for Smartphone/Mobile use and designed for Open Source distribution.",
   "main": "index.js",
   "scripts": {
-    "test": "npm test --prefix scripts && npm test --prefix worker && npm test --prefix apps/pwa",
-    "check": "npm run check --prefix scripts && npm run check --prefix worker && npm run check --prefix apps/pwa",
+    "test": "pnpm -r --if-present run test",
+    "check": "pnpm -r --if-present run check",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
+  "packageManager": "pnpm@11.21.0",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "workspaces": [
-    "apps/*",
-    "worker",
-    "scripts",
-    "packages/*"
-  ],
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260714.1",
     "@eslint/js": "^10.0.1",

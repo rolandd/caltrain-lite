@@ -1,0 +1,11 @@
+packages:
+  - 'apps/*'
+  - 'worker'
+  - 'scripts'
+  - 'packages/*'
+
+allowBuilds:
+  esbuild: true
+
+onlyBuiltDependencies:
+  - esbuild

@@ -4,14 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "generate": "tsx generate-schedule.ts",
     "parse": "tsx parse-gtfs.ts",
     "validate": "tsx validate-schedule.ts",
     "realtime:snapshot": "tsx generate-realtime-snapshot.ts",
     "test": "vitest run",
     "check": "tsc --noEmit",
-    "lint": "cd .. && npm run lint -- scripts",
-    "format": "cd .. && npm run format -- scripts",
-    "format:check": "cd .. && npm run format:check -- scripts"
+    "lint": "pnpm -w run lint -- scripts",
+    "format": "pnpm -w run format -- scripts",
+    "format:check": "pnpm -w run format:check -- scripts"
   },
   "dependencies": {
     "csv-parse": "^7.0.1",
