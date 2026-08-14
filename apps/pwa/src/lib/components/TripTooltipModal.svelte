@@ -30,6 +30,21 @@
     const padding = 125; // Half width of tooltip bubble (235px) + padding
     return Math.max(padding, Math.min(activeTooltip.x, window.innerWidth - padding));
   });
+
+  $effect(() => {
+    if (!activeTooltip) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  });
 </script>
 
 {#if activeTooltip}
