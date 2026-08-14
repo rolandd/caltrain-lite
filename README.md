@@ -37,7 +37,7 @@ Visit the [live site](https://transit.rolandd.dev) (or deploy your own instance)
 ### For Developers
 
 1.  Clone the repo.
-2.  Run `npm install`.
+2.  Run `pnpm install`.
 3.  See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development instructions.
 
 ## Project Structure
