@@ -22,17 +22,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
 
       - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Ensure Zstandard (zstd) is installed
         run: command -v zstd >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y zstd)
@@ -70,7 +66,7 @@ jobs:
       - name: Calculate Dynamic D1 Export Cutoff
         id: d1_cutoff
         run: |
-          SINCE_TIMESTAMP=$(pnpm exec tsx -e '
+          SINCE_TIMESTAMP=$(npx tsx -e '
             import { getLatestArchivedTimestamp } from "./scripts/process-performance.ts";
             console.log(getLatestArchivedTimestamp("data/history"));
           ')
@@ -86,7 +82,7 @@ jobs:
 
       - name: Process Monotonic Performance Profile (Git History + Fresh D1)
         run: |
-          pnpm exec tsx -e '
+          npx tsx -e '
             import { readFileSync, writeFileSync } from "fs";
             import { processTrainPerformance, loadArchivedSnapshots, mergeSnapshots } from "./scripts/process-performance.ts";
 
@@ -127,7 +123,7 @@ jobs:
 
       - name: Self-Healing Daily Archival to Git (Zstandard .json.zst)
         run: |
-          pnpm exec tsx -e '
+          npx tsx -e '
             import { readFileSync } from "fs";
             import { archiveCompletedDays } from "./scripts/process-performance.ts";
             const snapshots = JSON.parse(readFileSync("d1-clean.json", "utf8"));

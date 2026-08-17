@@ -54,7 +54,7 @@ resource "cloudflare_pages_project" "pwa" {
   }
 
   build_config {
-    build_command   = "pnpm --filter pwa build"
+    build_command   = "npm run build --prefix apps/pwa"
     destination_dir = "apps/pwa/build"
     root_dir        = ""
   }
@@ -63,14 +63,12 @@ resource "cloudflare_pages_project" "pwa" {
     production {
       environment_variables = {
         NODE_VERSION  = "24"
-        PNPM_VERSION  = "11"
         PUBLIC_DOMAIN = "https://${var.domain}"
       }
     }
     preview {
       environment_variables = {
         NODE_VERSION  = "24"
-        PNPM_VERSION  = "11"
         PUBLIC_DOMAIN = "https://${var.domain}"
       }
     }

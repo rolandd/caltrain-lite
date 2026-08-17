@@ -15,39 +15,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
 
       - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Fetch and Parse GTFS
         env:
           TRANSIT_511_API_KEY: ${{ secrets.TRANSIT_511_API_KEY }}
-        run: pnpm exec tsx scripts/parse-gtfs.ts > static-schedule.json
+        run: npx tsx scripts/parse-gtfs.ts > static-schedule.json
 
       - name: Validate Schedule
-        run: pnpm --filter @transit/scripts run validate ../static-schedule.json
+        run: npm run validate --prefix scripts ../static-schedule.json
 
       - name: Extract Metadata
         run: jq .m static-schedule.json > meta.json
 
       - name: Upload Schedule Data to KV
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          npx -y wrangler kv key put schedule:data --path=./static-schedule.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.x'
+          command: kv key put schedule:data --path=./static-schedule.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
 
       - name: Upload Schedule Meta to KV
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          npx -y wrangler kv key put schedule:meta --path=./meta.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.x'
+          command: kv key put schedule:meta --path=./meta.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
