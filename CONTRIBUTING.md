@@ -10,8 +10,8 @@ environment and making changes.
 ## Prerequisites
 
 - **Node.js**: Version 24 or higher is recommended.
-- **pnpm**: Version 11 or higher (used for dependency and workspace management).
-- **Wrangler**: Cloudflare's CLI tool (`pnpm add -g wrangler` or use via `pnpm exec wrangler`).
+- **npm**: Used for dependency management.
+- **Wrangler**: Cloudflare's CLI tool (`npm install -g wrangler` or use via `npx`).
 
 ## Getting Started
 
@@ -23,10 +23,10 @@ environment and making changes.
     ```
 
 2.  **Install dependencies:**
-    We use pnpm workspaces, so running install at the root installs dependencies for all packages.
+    We use npm workspaces, so running install at the root installs dependencies for all packages.
 
     ```bash
-    pnpm install
+    npm install
     ```
 
 3.  **Environment Setup:**
@@ -46,7 +46,7 @@ The project is a monorepo with the following main workspaces:
 To run the PWA in development mode:
 
 ```bash
-pnpm --filter pwa dev
+npm run dev --prefix apps/pwa
 ```
 
 This command will:
@@ -59,7 +59,8 @@ This command will:
 To develop the Cloudflare Worker locally:
 
 ```bash
-pnpm --filter worker dev
+cd worker
+npx wrangler dev
 ```
 
 This will start a local instance of the Worker, emulating Cloudflare's environment.
@@ -71,19 +72,18 @@ We use `vitest` for the PWA and custom test scripts for other parts.
 - **Run all tests:**
 
   ```bash
-  pnpm test
+  npm test
   ```
 
 - **Run PWA tests only:**
 
   ```bash
-  pnpm --filter pwa test
+  npm test --prefix apps/pwa
   ```
 
 - **Run Worker tests only:**
-
   ```bash
-  pnpm --filter worker test
+  npm test --prefix worker
   ```
 
 ## Linting & Formatting
@@ -93,13 +93,12 @@ We use ESLint and Prettier to maintain code quality.
 - **Lint code:**
 
   ```bash
-  pnpm run lint
+  npm run lint
   ```
 
 - **Format code:**
-
   ```bash
-  pnpm run format
+  npm run format
   ```
 
 ## Documentation

@@ -20,13 +20,13 @@ npx sv create --template minimal --types ts --no-install /home/roland/Src/Transi
 
 ## Developing
 
-Once you've created a project and installed dependencies with `pnpm install`, start a development server:
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```sh
-pnpm run dev
+npm run dev
 
 # or start the server and open the app in a new browser tab
-pnpm run dev -- --open
+npm run dev -- --open
 ```
 
 ## Building
@@ -34,9 +34,9 @@ pnpm run dev -- --open
 To create a production version of your app:
 
 ```sh
-pnpm run build
+npm run build
 ```
 
-You can preview the production build with `pnpm run preview`.
+You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
