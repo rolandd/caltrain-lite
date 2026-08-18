@@ -5,7 +5,7 @@ terraform {
   required_providers {
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -22,6 +22,9 @@ resource "cloudflare_workers_kv_namespace" "transit_kv" {
 resource "cloudflare_d1_database" "transit_d1" {
   account_id = var.cloudflare_account_id
   name       = "transit-d1"
+  read_replication = {
+    mode = "disabled"
+  }
 }
 
 resource "local_file" "wrangler_toml" {
@@ -39,35 +42,33 @@ resource "cloudflare_pages_project" "pwa" {
   name              = "transit-pwa"
   production_branch = "main"
 
-  source {
+  source = {
     type = "github"
-    config {
+    config = {
       owner                         = var.github_owner
       repo_name                     = var.github_repo
       production_branch             = "main"
       pr_comments_enabled           = false
-      deployments_enabled           = true
       production_deployment_enabled = true
       preview_deployment_setting    = "none"
-      preview_branch_includes       = []
     }
   }
 
-  build_config {
+  build_config = {
     build_command   = "pnpm --filter pwa build"
     destination_dir = "apps/pwa/build"
     root_dir        = ""
   }
 
-  deployment_configs {
-    production {
+  deployment_configs = {
+    production = {
       environment_variables = {
         NODE_VERSION  = "24"
         PNPM_VERSION  = "11"
         PUBLIC_DOMAIN = "https://${var.domain}"
       }
     }
-    preview {
+    preview = {
       environment_variables = {
         NODE_VERSION  = "24"
         PNPM_VERSION  = "11"
