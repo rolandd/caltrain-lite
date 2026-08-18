@@ -51,6 +51,7 @@ resource "cloudflare_pages_project" "pwa" {
       pr_comments_enabled           = false
       production_deployment_enabled = true
       preview_deployment_setting    = "none"
+      path_excludes                 = ["data/*", ".github/*", "docs/*"]
     }
   }
 
