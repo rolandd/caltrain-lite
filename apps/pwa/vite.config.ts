@@ -15,57 +15,61 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const scheduleDataPath = resolve(__dirname, 'src/lib/schedule-data.json');
 
 /**
- * Vite plugin that serves local schedule data during development.
+ * Vite plugin that serves local schedule data during development and preview.
  *
  * Intercepts:
  *   GET /api/schedule → serves src/lib/schedule-data.json
+ *   GET /api/realtime → serves src/lib/realtime-snapshot.json
  *   GET /api/meta     → returns a lightweight meta stub derived from the file
- *
- * Only active in dev mode (configureServer is a no-op in production builds).
  */
 function devScheduleApiPlugin() {
+  const middleware: import('vite').Connect.NextHandleFunction = (req, res, next) => {
+    if (req.url === '/api/schedule') {
+      const data = readFileSync(scheduleDataPath, 'utf-8');
+
+      res.setHeader('Content-Type', 'application/json');
+      res.end(data);
+
+      return;
+    }
+
+    if (req.url === '/api/realtime') {
+      const realtimePath = resolve(__dirname, 'src/lib/realtime-snapshot.json');
+      const data = readFileSync(realtimePath, 'utf-8');
+
+      res.setHeader('Content-Type', 'application/json');
+      res.end(data);
+
+      return;
+    }
+
+    if (req.url === '/api/meta') {
+      // Build a lightweight meta stub so the PWA's version-check logic
+      // doesn't trigger a redundant re-download on every dev reload.
+      const schedule = JSON.parse(readFileSync(scheduleDataPath, 'utf-8'));
+
+      const meta = {
+        v: schedule.m.v,
+        e: schedule.m.e,
+        sv: schedule.m.sv,
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(meta));
+
+      return;
+    }
+
+    next();
+  };
+
   return {
     name: 'dev-schedule-api',
     configureServer(server: import('vite').ViteDevServer) {
-      server.middlewares.use((req, res, next) => {
-        if (req.url === '/api/schedule') {
-          const data = readFileSync(scheduleDataPath, 'utf-8');
-
-          res.setHeader('Content-Type', 'application/json');
-          res.end(data);
-
-          return;
-        }
-
-        if (req.url === '/api/realtime') {
-          const realtimePath = resolve(__dirname, 'src/lib/realtime-snapshot.json');
-          const data = readFileSync(realtimePath, 'utf-8');
-
-          res.setHeader('Content-Type', 'application/json');
-          res.end(data);
-
-          return;
-        }
-
-        if (req.url === '/api/meta') {
-          // Build a lightweight meta stub so the PWA's version-check logic
-          // doesn't trigger a redundant re-download on every dev reload.
-          const schedule = JSON.parse(readFileSync(scheduleDataPath, 'utf-8'));
-
-          const meta = {
-            v: schedule.m.v,
-            e: schedule.m.e,
-            sv: schedule.m.sv,
-          };
-
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(meta));
-
-          return;
-        }
-
-        next();
-      });
+      server.middlewares.use(middleware);
+    },
+    configurePreviewServer(server: import('vite').PreviewServer) {
+      server.middlewares.use(middleware);
     },
   };
 }
