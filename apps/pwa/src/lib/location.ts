@@ -23,17 +23,19 @@ export function getDistanceFromLatLonInMeters(
   lon2: number,
 ): number {
   const R = 6371000; // Radius of the earth in m
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const rLat1 = lat1 * (Math.PI / 180);
+  const rLat2 = lat2 * (Math.PI / 180);
+
+  const sinDLat2 = Math.sin(dLat / 2);
+  const sinDLon2 = Math.sin(dLon / 2);
+
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    sinDLat2 * sinDLat2 +
+    Math.cos(rLat1) * Math.cos(rLat2) * sinDLon2 * sinDLon2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
-}
-
-function deg2rad(deg: number): number {
-  return deg * (Math.PI / 180);
 }
 
 /**
