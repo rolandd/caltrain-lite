@@ -31,9 +31,7 @@ export function getDistanceFromLatLonInMeters(
   const sinDLat2 = Math.sin(dLat / 2);
   const sinDLon2 = Math.sin(dLon / 2);
 
-  const a =
-    sinDLat2 * sinDLat2 +
-    Math.cos(rLat1) * Math.cos(rLat2) * sinDLon2 * sinDLon2;
+  const a = sinDLat2 * sinDLat2 + Math.cos(rLat1) * Math.cos(rLat2) * sinDLon2 * sinDLon2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
