@@ -54,7 +54,14 @@
     tabindex="0"
     aria-haspopup="dialog"
     onclick={(e) => onToggleTooltip(e, trip, rt.tooltipText)}
-    onkeydown={(e) => e.key === 'Enter' && onToggleTooltip(e, trip, rt.tooltipText)}
+    onkeydown={(e) => {
+      if (e.key === 'Enter') {
+        onToggleTooltip(e, trip, rt.tooltipText);
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        onToggleTooltip(e, trip, rt.tooltipText);
+      }
+    }}
     title={rt.tooltipText || 'View trip details'}
   >
     <!-- Departure + optional delay -->
