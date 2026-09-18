@@ -141,7 +141,7 @@ function deduplicatePatterns(tripStops: Map<string, string[]>): {
   tripPatternMap: Map<string, string>;
 } {
   const signatureToId = new Map<string, string>();
-  const patterns: Record<string, string[]> = {};
+  const patterns: Record<string, string[]> = Object.create(null);
   const tripPatternMap = new Map<string, string>();
   let patternCounter = 0;
 
@@ -205,7 +205,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
   // ----- Build canonical stations -----
   // Stations are location_type=1 (parent stations).
   // Platform stops (location_type=0) reference their parent via parent_station.
-  const stationMap: Record<string, Station> = {};
+  const stationMap: Record<string, Station> = Object.create(null);
 
   // Index: stop_id → zone_id (for platform-level stops that have zone data)
   const stopZoneMap = new Map<string, string>();
@@ -311,7 +311,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
   }
 
   // ----- Build service rules -----
-  const calendarEntries: Record<string, CalendarEntry> = {};
+  const calendarEntries: Record<string, CalendarEntry> = Object.create(null);
   for (const cal of calendar) {
     calendarEntries[cal.service_id] = {
       days: [
@@ -328,7 +328,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
     };
   }
 
-  const calendarExceptions: Record<string, CalendarException[]> = {};
+  const calendarExceptions: Record<string, CalendarException[]> = Object.create(null);
   for (const cd of calendarDates) {
     if (!calendarExceptions[cd.service_id]) {
       calendarExceptions[cd.service_id] = [];
@@ -341,7 +341,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
 
   // ----- Build fare rules -----
   // Zone metadata from farezone_attributes.txt
-  const zones: Record<string, { name: string }> = {};
+  const zones: Record<string, { name: string }> = Object.create(null);
   for (const fz of farezones) {
     zones[fz.zone_id] = { name: fz.zone_name };
   }
@@ -352,7 +352,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
     fareById.set(fa.fare_id, priceToCents(fa.price));
   }
 
-  const fareLookup: Record<string, number> = {};
+  const fareLookup: Record<string, number> = Object.create(null);
   for (const fr of fareRules) {
     if (fr.origin_id && fr.destination_id) {
       const price = fareById.get(fr.fare_id);
@@ -378,7 +378,7 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
     pairKeysByPattern.set(patternId, pairKeys);
   }
 
-  const pairIndex: Record<string, string[]> = {};
+  const pairIndex: Record<string, string[]> = Object.create(null);
   for (const trip of outputTrips) {
     const pairKeys = pairKeysByPattern.get(trip.p);
     if (!pairKeys) continue;
