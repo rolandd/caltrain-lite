@@ -15,13 +15,16 @@
     type TripResult,
   } from '$lib/schedule';
   import { getFavorites, toggleFavorite } from '$lib/favorites';
-  import { fetchRealtime, type RealtimeStatusWithMetadata } from '$lib/realtime';
+  import {
+    fetchRealtime,
+    isRealtimeApplicable,
+    type RealtimeStatusWithMetadata,
+  } from '$lib/realtime';
   import { getTrainLocationDescription, metersToMiles } from '$lib/location';
   import { estimateDelay, computeDistanceBehind } from '$lib/delay-estimation';
   import {
     getTransitDateStr,
     getTransitDateAtNoon,
-    getTransitTimeStr,
     getTransitDayStartEpoch,
     formatTransitDateLong,
     formatScheduleEndDate,
@@ -75,10 +78,7 @@
     origin && destination ? favorites.includes(`${origin}-${destination}`) : false,
   );
 
-  const isToday = $derived.by(() => {
-    if (!dateStr) return false;
-    return dateStr === getTransitDateStr();
-  });
+  const isRealtimeAvailable = $derived(isRealtimeApplicable(dateStr, realtime));
 
   const scheduleEndDate = $derived.by(() => {
     if (!schedule) return '';
@@ -217,9 +217,9 @@
 
   // Date navigation helpers
   function shiftDate(days: number) {
-    const d = getTransitDateAtNoon(dateStr);
-    d.setDate(d.getDate() + days);
-    dateStr = d.toISOString().slice(0, 10);
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const shifted = new Date(Date.UTC(y, m - 1, d + days));
+    dateStr = shifted.toISOString().slice(0, 10);
     search();
   }
   const prevDay = () => shiftDate(-1);
@@ -232,17 +232,11 @@
 
   let tripScrollEl = $state<HTMLDivElement | undefined>();
 
-  function hasDeparted(departureStr: string): boolean {
-    const [h, m] = departureStr.split(':').map(Number);
-    const depMins = h * 60 + m;
-    const transitTime = getTransitTimeStr();
-    const [nowH, nowM] = transitTime.split(':').map(Number);
-    return depMins < nowH * 60 + nowM;
-  }
-
   function scrollToNow() {
     if (!tripScrollEl || !results.length) return;
-    const firstFutureIdx = results.findIndex((t) => !hasDeparted(t.departure));
+    const dayStart = getTransitDayStartEpoch(dateStr);
+    const nowMinutes = (Date.now() / 1000 - dayStart) / 60;
+    const firstFutureIdx = results.findIndex((t) => t.departureMinutes >= nowMinutes);
     if (firstFutureIdx > 0) {
       tripScrollEl.scrollLeft = firstFutureIdx * 84;
     }
@@ -284,7 +278,7 @@
   const tooltipTextCache = new Map<string, string>();
 
   function getRealtimeTrip(trainNum: string) {
-    if (!realtime) return undefined;
+    if (!isRealtimeAvailable || !realtime) return undefined;
     return realtime.byTrip[trainNum];
   }
 
@@ -301,7 +295,7 @@
   }
 
   function getTooltipText(trainNum: string, direction: 0 | 1): string | undefined {
-    if (!schedule || !realtime) return undefined;
+    if (!schedule || !isRealtimeAvailable) return undefined;
     const entity = getRealtimeTrip(trainNum);
     if (!entity?.p) return undefined;
 
@@ -344,13 +338,19 @@
   }
 
   function getTripRealtimeRenderData(trip: TripResult): TripRealtimeRenderData {
+    if (!isRealtimeAvailable) {
+      return {
+        hasLocation: false,
+      };
+    }
+
     const trainNum = trip.trainNumber;
     const direction = trip.direction;
     const entity = getRealtimeTrip(trainNum);
     const hasLocation = !!entity?.p;
     const tooltipText = hasLocation ? getTooltipText(trainNum, direction) : undefined;
 
-    if (!isToday || entity === undefined) {
+    if (entity === undefined) {
       return {
         hasLocation,
         tooltipText,
@@ -453,7 +453,7 @@
 
     let liveDelaySec = realtimeData.delay;
     if (liveDelaySec === undefined) {
-      if (schedule && entity) {
+      if (isRealtimeAvailable && schedule && entity) {
         const fullTrip = schedule.t.find((t) => t.i === trip.trainNumber);
         const dayStart = getTransitDayStartEpoch(dateStr);
         if (fullTrip) {
@@ -636,7 +636,7 @@
         {currentFare}
         {formattedDate}
         {scheduleType}
-        {isToday}
+        {isRealtimeAvailable}
         {realtime}
         {lastSuccessfulFetch}
         {isPastEndOfSchedule}
@@ -653,7 +653,7 @@
     {/if}
 
     <!-- Service Alerts -->
-    {#if realtime}
+    {#if isRealtimeAvailable && realtime?.a?.length}
       <ServiceAlertsBanner alerts={realtime.a} />
     {/if}
 

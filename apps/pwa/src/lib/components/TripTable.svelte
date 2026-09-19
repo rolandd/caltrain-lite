@@ -14,7 +14,7 @@
     currentFare: number | null;
     formattedDate: string;
     scheduleType: 'Weekday' | 'Weekend' | 'Special' | null;
-    isToday: boolean;
+    isRealtimeAvailable: boolean;
     realtime: RealtimeStatusWithMetadata | null;
     lastSuccessfulFetch: number | null;
     isPastEndOfSchedule: boolean;
@@ -40,7 +40,7 @@
     currentFare,
     formattedDate,
     scheduleType,
-    isToday,
+    isRealtimeAvailable,
     realtime,
     lastSuccessfulFetch,
     isPastEndOfSchedule,
@@ -73,7 +73,7 @@
           <span class="text-transit-text-muted font-normal">· {scheduleType}</span>
         {/if}
       </span>
-      {#if realtime && isToday}
+      {#if isRealtimeAvailable && realtime}
         {@const now = Date.now()}
         {@const fetchAgeMs = lastSuccessfulFetch ? now - lastSuccessfulFetch : 0}
         {@const feedAgeMs = realtime.initialAge + (now - realtime.fetchedAt)}
