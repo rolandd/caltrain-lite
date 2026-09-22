@@ -200,6 +200,11 @@ export function getCanonicalStationId(schedule: StaticSchedule, stopId: string):
  * Find the stop index of a station within a pattern.
  * Returns -1 if the station is not in the pattern.
  */
+// Cache stop index maps per pattern per schedule for O(1) lookups
+const stopIndexCache = new WeakMap<StaticSchedule, Map<string, Map<string, number>>>();
+// Cache trip lookup maps per schedule for O(1) access without rebuilding
+const tripLookupCache = new WeakMap<StaticSchedule, Map<string, Trip>>();
+
 export function findStopIndex(
   schedule: StaticSchedule,
   patternId: string,
@@ -207,8 +212,27 @@ export function findStopIndex(
 ): number {
   const stops = schedule.p[patternId];
   if (!stops) return -1;
+
+  let scheduleIndexMap = stopIndexCache.get(schedule);
+  if (!scheduleIndexMap) {
+    scheduleIndexMap = new Map();
+    stopIndexCache.set(schedule, scheduleIndexMap);
+  }
+
+  let patternMap = scheduleIndexMap.get(patternId);
+  if (!patternMap) {
+    patternMap = new Map();
+    for (let i = 0; i < stops.length; i++) {
+      if (!patternMap.has(stops[i])) {
+        patternMap.set(stops[i], i);
+      }
+    }
+    scheduleIndexMap.set(patternId, patternMap);
+  }
+
   const canonicalId = getCanonicalStationId(schedule, stationId);
-  return stops.indexOf(canonicalId);
+  const index = patternMap.get(canonicalId);
+  return index !== undefined ? index : -1;
 }
 
 /**
@@ -227,9 +251,13 @@ export function queryTrips(
   if (!candidateIds) return [];
 
   // Build a quick trip lookup by train number
-  const tripById = new Map<string, Trip>();
-  for (const trip of schedule.t) {
-    tripById.set(trip.i, trip);
+  let tripById = tripLookupCache.get(schedule);
+  if (!tripById) {
+    tripById = new Map<string, Trip>();
+    for (const trip of schedule.t) {
+      tripById.set(trip.i, trip);
+    }
+    tripLookupCache.set(schedule, tripById);
   }
 
   const results: TripResult[] = [];
