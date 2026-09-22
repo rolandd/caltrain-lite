@@ -23,6 +23,19 @@
 
   let { activeTooltip, onClose }: Props = $props();
 
+  $effect(() => {
+    if (!activeTooltip) return;
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  });
+
   // Clamp tooltip horizontal position within screen boundaries so it doesn't overflow
   let clampedX = $derived.by(() => {
     if (!activeTooltip) return 0;
