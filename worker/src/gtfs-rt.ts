@@ -75,7 +75,14 @@ interface GtfsFeedMessage {
 
 /** Extract English text from a GTFS-RT TranslatedString. */
 function extractTranslation(txt: GtfsTranslatedString | undefined): string {
-  return txt?.translation?.find((t) => t.language === 'en')?.text || '';
+  if (!txt || !txt.translation) return '';
+  const translations = txt.translation;
+  for (let i = 0; i < translations.length; i++) {
+    if (translations[i].language === 'en') {
+      return translations[i].text;
+    }
+  }
+  return '';
 }
 
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
@@ -99,7 +106,12 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
 
         if (tu.stop_time_update && tu.stop_time_update.length > 0) {
           // Prefer the first referenced stop as the active stop context.
-          stopId = tu.stop_time_update.find((u) => u.stop_id)?.stop_id || '';
+          for (let i = 0, len = tu.stop_time_update.length; i < len; i++) {
+            if (tu.stop_time_update[i].stop_id) {
+              stopId = tu.stop_time_update[i].stop_id || '';
+              break;
+            }
+          }
 
           // Prefer the first non-zero stop-level delay; it is more specific than trip-level delay.
           for (const update of tu.stop_time_update) {
@@ -167,21 +179,36 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
+      let s: string[] | undefined;
+      let tr: string[] | undefined;
+
+      const informedEntities = a.informed_entity;
+      if (informedEntities) {
+        for (let i = 0, len = informedEntities.length; i < len; i++) {
+          const e = informedEntities[i];
+          if (e.stop_id) {
+            s = s || [];
+            s.push(e.stop_id);
+          }
+          const tripId = e.trip?.trip_id;
+          if (tripId) {
+            tr = tr || [];
+            tr.push(tripId);
+          }
+        }
+      }
+
+      const activePeriod = a.active_period && a.active_period[0];
+
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
-        st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
-        en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
+        s,
+        tr,
+        st: activePeriod?.start ? Number(activePeriod.start) : undefined,
+        en: activePeriod?.end ? Number(activePeriod.end) : undefined,
       });
     }
   }
