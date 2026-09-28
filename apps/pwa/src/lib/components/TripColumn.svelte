@@ -59,6 +59,7 @@
         if (e.key === ' ') {
           e.preventDefault();
         }
+        if (e.repeat) return;
         onToggleTooltip(e, trip, rt.tooltipText);
       }
     }}

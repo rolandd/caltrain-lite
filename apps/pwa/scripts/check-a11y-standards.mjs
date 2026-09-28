@@ -45,11 +45,22 @@ function parseAttributes(rawAttrs) {
         i++;
       } else if (rawAttrs[i] === '{') {
         let depth = 1;
+        let inStr = null;
         i++;
         const valStart = i;
         while (i < rawAttrs.length && depth > 0) {
-          if (rawAttrs[i] === '{') depth++;
-          else if (rawAttrs[i] === '}') depth--;
+          const ch = rawAttrs[i];
+          if (inStr) {
+            if (ch === inStr && rawAttrs[i - 1] !== '\\') {
+              inStr = null;
+            }
+          } else if (ch === '"' || ch === "'" || ch === '`') {
+            inStr = ch;
+          } else if (ch === '{') {
+            depth++;
+          } else if (ch === '}') {
+            depth--;
+          }
           i++;
         }
         attrs[name] = rawAttrs.slice(valStart, i - 1);
@@ -185,9 +196,9 @@ async function main() {
 
       // Rule 5: Custom elements with role="button" must handle Space key with preventDefault
       if (attrs.role === 'button') {
-        const rawAttrs = tag.rawAttrs;
-        const handlesSpace = rawAttrs.includes("' '") || rawAttrs.includes('" "');
-        const hasPreventDefault = rawAttrs.includes('preventDefault');
+        const keydown = typeof attrs.onkeydown === 'string' ? attrs.onkeydown : '';
+        const handlesSpace = keydown.includes("' '") || keydown.includes('" "');
+        const hasPreventDefault = keydown.includes('preventDefault');
         if (!handlesSpace || !hasPreventDefault) {
           failures.push({
             file: relPath,
@@ -210,10 +221,16 @@ async function main() {
     }
 
     // Rule 7: Modal dialog components must handle Escape key dismissal in an $effect block
-    if (content.includes('role="dialog"') && content.includes('aria-modal="true"')) {
-      const handlesEscape = content.includes("'Escape'") || content.includes('"Escape"');
-      const hasEffect = content.includes('$effect');
-      if (!handlesEscape || !hasEffect) {
+    const hasModalDialog = tags.some(
+      ({ attrs }) =>
+        attrs.role === 'dialog' && (attrs['aria-modal'] === 'true' || attrs['aria-modal'] === true),
+    );
+    if (hasModalDialog) {
+      const effectHasEscape =
+        /\$effect\s*\([^)]*=>[\s\S]*?addEventListener\s*\(\s*['"]keydown['"][\s\S]*?['"](?:Escape|Esc)['"]/.test(
+          content,
+        );
+      if (!effectHasEscape) {
         failures.push({
           file: relPath,
           rule: 'Modal Escape Dismissal',
