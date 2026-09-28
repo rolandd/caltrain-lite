@@ -43,9 +43,29 @@ const noTripsDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 });
 
-/** Return today's date string in the local transit timezone (YYYY-MM-DD). */
-export function getTransitDateStr(date: Date = new Date()): string {
-  return transitDateFormatter.format(date);
+/**
+ * Caltrain transit operational day cutoff hour (3:00 AM).
+ * Late-night trains operating past midnight (up to ~01:30 AM) belong to the previous day's
+ * GTFS service schedule. Rolling over at 3:00 AM aligns the active service day with the
+ * natural overnight service gap (01:30 AM - 04:30 AM).
+ */
+export const TRANSIT_DAY_CUTOFF_HOURS = 3;
+
+/** Return today's service date string in the local transit timezone (YYYY-MM-DD), rolling over at 3:00 AM. */
+export function getTransitDateStr(
+  date: Date = new Date(),
+  cutoffHours: number = TRANSIT_DAY_CUTOFF_HOURS,
+): string {
+  const dateStr = transitDateFormatter.format(date);
+  const hourPart = transitHourFormatter.formatToParts(date).find((p) => p.type === 'hour');
+  let hour = parseInt(hourPart?.value || '0', 10);
+  if (hour === 24) hour = 0;
+
+  if (hour < cutoffHours) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+  }
+  return dateStr;
 }
 
 /**
@@ -83,17 +103,14 @@ export function formatNoTripsDate(date: Date): string {
  * Return the epoch seconds for midnight (00:00:00) of the given date in transit timezone.
  */
 export function getTransitDayStartEpoch(dateStr: string): number {
-  // Construct a Date at noon UTC on the target date.
-  const d = new Date(`${dateStr}T12:00:00Z`);
-  // See what hour it is in the transit timezone at that UTC moment.
-  const hourPart = transitHourFormatter.formatToParts(d).find((p) => p.type === 'hour');
-  const ptHour = parseInt(hourPart?.value || '12', 10);
-  // Noon UTC (12) -> ptHour (e.g. 4 for PST). The difference is the UTC offset.
-  // Note: ptHour can be 24 instead of 0 in some environments, but since we use Noon UTC,
-  // it will be e.g. 4 or 5 AM PT.
-  const offsetHours = 12 - ptHour;
-  // Midnight PT (wall-clock) is 0:00 PT.
-  // Midnight UTC is d.getTime() - 12 hours.
-  // Midnight PT (in UTC) is Midnight UTC + offsetHours.
-  return d.getTime() / 1000 - 12 * 3600 + offsetHours * 3600;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  // 08:00:00 UTC is either 00:00:00 PST (ptHour=0) or 01:00:00 PDT (ptHour=1).
+  // In America/Los_Angeles, this UTC moment is always on the target date before the 2:00 AM DST shift.
+  const guessMs = Date.UTC(y, m - 1, d, 8, 0, 0);
+  const hourPart = transitHourFormatter
+    .formatToParts(new Date(guessMs))
+    .find((p) => p.type === 'hour');
+  let ptHour = parseInt(hourPart?.value || '0', 10);
+  if (ptHour === 24) ptHour = 0;
+  return (guessMs - ptHour * 3600 * 1000) / 1000;
 }

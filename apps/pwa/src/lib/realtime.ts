@@ -3,6 +3,7 @@
 
 import type { RealtimeStatus } from '@packages/types/schema';
 import { assert } from 'typia';
+import { getTransitDateStr } from './time';
 
 export interface RealtimeStatusWithMetadata extends RealtimeStatus {
   /** Initial age of the feed in milliseconds at the moment it was fetched. */
@@ -41,4 +42,17 @@ export async function fetchRealtime(): Promise<RealtimeStatusWithMetadata | null
     console.warn('Failed to fetch realtime data:', err);
     return null;
   }
+}
+
+/**
+ * Determine if real-time data is applicable for the currently selected schedule date.
+ * Real-time feeds reflect live operations today and must never be applied to past or future dates.
+ */
+export function isRealtimeApplicable<T extends RealtimeStatus>(
+  dateStr: string | null | undefined,
+  realtime: T | null | undefined,
+  todayStr: string = getTransitDateStr(),
+): realtime is T {
+  if (!dateStr || !realtime) return false;
+  return dateStr === todayStr;
 }
