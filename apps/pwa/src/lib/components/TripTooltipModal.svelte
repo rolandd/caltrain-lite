@@ -30,6 +30,23 @@
     const padding = 125; // Half width of tooltip bubble (235px) + padding
     return Math.max(padding, Math.min(activeTooltip.x, window.innerWidth - padding));
   });
+
+  $effect(() => {
+    if (!activeTooltip || typeof window === 'undefined') return;
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  });
 </script>
 
 {#if activeTooltip}
@@ -48,6 +65,8 @@
     style="top: {activeTooltip.y}px; left: {clampedX}px;"
     role="dialog"
     aria-label="Trip Stops"
+    aria-modal="true"
+    tabindex="-1"
   >
     <!-- Optional Realtime Location Header -->
     {#if activeTooltip.text}

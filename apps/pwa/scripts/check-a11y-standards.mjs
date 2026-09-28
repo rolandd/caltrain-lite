@@ -24,27 +24,90 @@ async function getSvelteFiles(dir) {
   return files;
 }
 
+function parseAttributes(rawAttrs) {
+  const attrs = {};
+  let i = 0;
+  while (i < rawAttrs.length) {
+    while (i < rawAttrs.length && /\s/.test(rawAttrs[i])) i++;
+    if (i >= rawAttrs.length) break;
+    const nameStart = i;
+    while (i < rawAttrs.length && !/[\s=>]/.test(rawAttrs[i])) i++;
+    const name = rawAttrs.slice(nameStart, i);
+    while (i < rawAttrs.length && /\s/.test(rawAttrs[i])) i++;
+    if (i < rawAttrs.length && rawAttrs[i] === '=') {
+      i++;
+      while (i < rawAttrs.length && /\s/.test(rawAttrs[i])) i++;
+      if (rawAttrs[i] === '"' || rawAttrs[i] === "'") {
+        const quote = rawAttrs[i++];
+        const valStart = i;
+        while (i < rawAttrs.length && rawAttrs[i] !== quote) i++;
+        attrs[name] = rawAttrs.slice(valStart, i);
+        i++;
+      } else if (rawAttrs[i] === '{') {
+        let depth = 1;
+        let inStr = null;
+        i++;
+        const valStart = i;
+        while (i < rawAttrs.length && depth > 0) {
+          const ch = rawAttrs[i];
+          if (inStr) {
+            if (ch === inStr && rawAttrs[i - 1] !== '\\') {
+              inStr = null;
+            }
+          } else if (ch === '"' || ch === "'" || ch === '`') {
+            inStr = ch;
+          } else if (ch === '{') {
+            depth++;
+          } else if (ch === '}') {
+            depth--;
+          }
+          i++;
+        }
+        attrs[name] = rawAttrs.slice(valStart, i - 1);
+      } else {
+        const valStart = i;
+        while (i < rawAttrs.length && !/\s/.test(rawAttrs[i])) i++;
+        attrs[name] = rawAttrs.slice(valStart, i);
+      }
+    } else {
+      attrs[name] = true;
+    }
+  }
+  return attrs;
+}
+
 /**
- * Parses tags from HTML/Svelte markup.
+ * Parses tags from HTML/Svelte markup, properly handling braces and quotes.
  */
 function parseTags(content) {
-  const tagRegex = /<([a-zA-Z0-9-]+)\s+([^>]*?)>/gs;
   const tags = [];
+  const startRegex = /<([a-zA-Z0-9-]+)\s+/g;
   let match;
-  while ((match = tagRegex.exec(content)) !== null) {
+  while ((match = startRegex.exec(content)) !== null) {
     const tagName = match[1];
-    const rawAttrs = match[2];
-    const attrs = {};
-
-    // Parse key-value attributes
-    const attrRegex = /([a-zA-Z0-9-:]+)(?:=(?:"([^"]*)"|'([^']*)'|\{([^}]*)\}))?/g;
-    let attrMatch;
-    while ((attrMatch = attrRegex.exec(rawAttrs)) !== null) {
-      const key = attrMatch[1];
-      const val = attrMatch[2] ?? attrMatch[3] ?? attrMatch[4] ?? true;
-      attrs[key] = val;
+    let i = match.index + match[0].length;
+    let inQuote = null;
+    let braceDepth = 0;
+    let rawAttrs = '';
+    while (i < content.length) {
+      const char = content[i];
+      if (inQuote) {
+        if (char === inQuote && content[i - 1] !== '\\') {
+          inQuote = null;
+        }
+      } else if (char === '"' || char === "'") {
+        inQuote = char;
+      } else if (char === '{') {
+        braceDepth++;
+      } else if (char === '}') {
+        if (braceDepth > 0) braceDepth--;
+      } else if (char === '>' && braceDepth === 0) {
+        break;
+      }
+      rawAttrs += char;
+      i++;
     }
-
+    const attrs = parseAttributes(rawAttrs);
     tags.push({
       tagName,
       rawAttrs,
@@ -129,6 +192,50 @@ async function main() {
             message: `Interactive tooltip trigger element missing aria-haspopup="dialog".`,
           });
         }
+      }
+
+      // Rule 5: Custom elements with role="button" must handle Space key with preventDefault
+      if (attrs.role === 'button') {
+        const keydown = typeof attrs.onkeydown === 'string' ? attrs.onkeydown : '';
+        const handlesSpace = keydown.includes("' '") || keydown.includes('" "');
+        const hasPreventDefault = keydown.includes('preventDefault');
+        if (!handlesSpace || !hasPreventDefault) {
+          failures.push({
+            file: relPath,
+            rule: 'Button Space Key Support',
+            message: `<${tagName} role="button"> must handle Space key activation and call preventDefault() to prevent page scrolling.`,
+          });
+        }
+      }
+
+      // Rule 6: Modal dialogs with backdrop must specify aria-modal="true"
+      if (attrs.role === 'dialog' && content.includes('fixed inset-0')) {
+        if (attrs['aria-modal'] !== 'true' && attrs['aria-modal'] !== true) {
+          failures.push({
+            file: relPath,
+            rule: 'Modal Dialog ARIA',
+            message: `<${tagName} role="dialog"> with a backdrop must declare aria-modal="true".`,
+          });
+        }
+      }
+    }
+
+    // Rule 7: Modal dialog components must handle Escape key dismissal in an $effect block
+    const hasModalDialog = tags.some(
+      ({ attrs }) =>
+        attrs.role === 'dialog' && (attrs['aria-modal'] === 'true' || attrs['aria-modal'] === true),
+    );
+    if (hasModalDialog) {
+      const effectHasEscape =
+        /\$effect\s*\([^)]*=>[\s\S]*?addEventListener\s*\(\s*['"]keydown['"][\s\S]*?['"](?:Escape|Esc)['"]/.test(
+          content,
+        );
+      if (!effectHasEscape) {
+        failures.push({
+          file: relPath,
+          rule: 'Modal Escape Dismissal',
+          message: `Modal dialog components must handle Escape key dismissal in an $effect block.`,
+        });
       }
     }
   }
