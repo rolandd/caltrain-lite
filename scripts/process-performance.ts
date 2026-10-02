@@ -135,7 +135,7 @@ export function loadArchivedSnapshots(historyDir: string, windowDays = 90): RawT
 export function archiveCompletedDays(snapshots: RawTrainSnapshot[], historyDir: string): number {
   const pstDateStr = pstDateFormatter.format(new Date());
 
-  const byDate: Record<string, RawTrainSnapshot[]> = {};
+  const byDate: Record<string, RawTrainSnapshot[]> = Object.create(null);
   for (const s of snapshots) {
     const d = pstDateFormatter.format(s.timestamp * 1000);
 
@@ -268,13 +268,13 @@ export function processTrainPerformance(
   windowDays = 90,
   schedule?: StaticSchedule,
 ): TrainPerformanceProfile {
-  const runStopDelays: Record<string, Record<string, Record<string, number>>> = {};
-  const tripStopDwells: Record<string, Record<string, number[]>> = {};
-  const tripLegTravelSec: Record<string, Record<string, number[]>> = {};
+  const runStopDelays: Record<string, Record<string, Record<string, number>>> = Object.create(null);
+  const tripStopDwells: Record<string, Record<string, number[]>> = Object.create(null);
+  const tripLegTravelSec: Record<string, Record<string, number[]>> = Object.create(null);
   const tripLegProgressObs: Record<
     string,
     Record<string, Array<{ distFrac: number; timeFrac: number }>>
-  > = {};
+  > = Object.create(null);
 
   const trainActiveLeg: Record<
     string,
@@ -283,10 +283,10 @@ export function processTrainPerformance(
       departTs: number;
       obs: Array<{ ts: number; lat: number; lon: number }>;
     }
-  > = {};
+  > = Object.create(null);
 
-  const stopIdToCanonical: Record<string, string> = {};
-  const schedLookup: Record<string, Record<string, number>> = {};
+  const stopIdToCanonical: Record<string, string> = Object.create(null);
+  const schedLookup: Record<string, Record<string, number>> = Object.create(null);
   if (schedule) {
     for (const [canonicalId, station] of Object.entries(schedule.s)) {
       stopIdToCanonical[canonicalId] = canonicalId;
@@ -298,7 +298,7 @@ export function processTrainPerformance(
     for (const trip of schedule.t) {
       const trainNum = trip.i;
       const patternStops = schedule.p[trip.p] || [];
-      if (!schedLookup[trainNum]) schedLookup[trainNum] = {};
+      if (!schedLookup[trainNum]) schedLookup[trainNum] = Object.create(null);
 
       patternStops.forEach((canonicalStopId, idx) => {
         const arrMin = trip.st[2 * idx];
@@ -316,7 +316,7 @@ export function processTrainPerformance(
   const prevTrainState: Record<
     string,
     { timestamp: number; stopId?: string; status?: number; lat?: number; lon?: number }
-  > = {};
+  > = Object.create(null);
 
   for (const snapshot of snapshots) {
     let byTrip: Record<string, RealtimeTripStatus>;
@@ -329,10 +329,10 @@ export function processTrainPerformance(
     const dateStr = pstDateFormatter.format(snapshot.timestamp * 1000);
 
     for (const [trainNum, status] of Object.entries(byTrip)) {
-      if (!runStopDelays[trainNum]) runStopDelays[trainNum] = {};
-      if (!tripStopDwells[trainNum]) tripStopDwells[trainNum] = {};
-      if (!tripLegTravelSec[trainNum]) tripLegTravelSec[trainNum] = {};
-      if (!tripLegProgressObs[trainNum]) tripLegProgressObs[trainNum] = {};
+      if (!runStopDelays[trainNum]) runStopDelays[trainNum] = Object.create(null);
+      if (!tripStopDwells[trainNum]) tripStopDwells[trainNum] = Object.create(null);
+      if (!tripLegTravelSec[trainNum]) tripLegTravelSec[trainNum] = Object.create(null);
+      if (!tripLegProgressObs[trainNum]) tripLegProgressObs[trainNum] = Object.create(null);
 
       const stopId = status.s;
       let delaySec = status.d ?? 0;
@@ -359,7 +359,7 @@ export function processTrainPerformance(
 
       if (stopId) {
         if (!runStopDelays[trainNum]![stopId]) {
-          runStopDelays[trainNum]![stopId] = {};
+          runStopDelays[trainNum]![stopId] = Object.create(null);
         }
         const existing = runStopDelays[trainNum]![stopId]![runKey] ?? 0;
         runStopDelays[trainNum]![stopId]![runKey] = Math.max(existing, delaySec);
@@ -448,7 +448,7 @@ export function processTrainPerformance(
     }
   }
 
-  const profileTrips: Record<string, TripPerformance> = {};
+  const profileTrips: Record<string, TripPerformance> = Object.create(null);
   let totalTripRuns = 0;
 
   for (const [trainNum, stopRunsMap] of Object.entries(runStopDelays)) {
@@ -470,7 +470,7 @@ export function processTrainPerformance(
     const monotonicP50 = pavaIsotonicRegression(rawP50Delays);
     const monotonicP90 = pavaIsotonicRegression(rawP90Delays);
 
-    const stops: Record<string, StopPerformance> = {};
+    const stops: Record<string, StopPerformance> = Object.create(null);
     for (let i = 0; i < stopIds.length; i++) {
       const s = stopIds[i]!;
       stops[s] = {
@@ -480,9 +480,9 @@ export function processTrainPerformance(
       };
     }
 
-    const legs: Record<string, LegPerformance> = {};
-    const legSecMap = tripLegTravelSec[trainNum] ?? {};
-    const obsMap = tripLegProgressObs[trainNum] ?? {};
+    const legs: Record<string, LegPerformance> = Object.create(null);
+    const legSecMap = tripLegTravelSec[trainNum] ?? Object.create(null);
+    const obsMap = tripLegProgressObs[trainNum] ?? Object.create(null);
     for (const [legKey, times] of Object.entries(legSecMap)) {
       if (times.length === 0) continue;
       const medianTravelSec = percentile(times, 50);
