@@ -227,7 +227,7 @@ async function main() {
     );
     if (hasModalDialog) {
       const effectHasEscape =
-        /\$effect\s*\([^)]*=>[\s\S]*?addEventListener\s*\(\s*['"]keydown['"][\s\S]*?['"](?:Escape|Esc)['"]/.test(
+        /\$effect\s*\(\s*\(\s*\)\s*=>[\s\S]*?(?:addEventListener\s*\(\s*['"]keydown['"][\s\S]*?['"](?:Escape|Esc)['"]|['"](?:Escape|Esc)['"][\s\S]*?addEventListener\s*\(\s*['"]keydown['"])/.test(
           content,
         );
       if (!effectHasEscape) {
