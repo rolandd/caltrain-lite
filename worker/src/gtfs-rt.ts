@@ -75,7 +75,13 @@ interface GtfsFeedMessage {
 
 /** Extract English text from a GTFS-RT TranslatedString. */
 function extractTranslation(txt: GtfsTranslatedString | undefined): string {
-  return txt?.translation?.find((t) => t.language === 'en')?.text || '';
+  if (!txt || !txt.translation) return '';
+  for (let i = 0; i < txt.translation.length; i++) {
+    if (txt.translation[i].language === 'en') {
+      return txt.translation[i].text;
+    }
+  }
+  return '';
 }
 
 export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
@@ -99,10 +105,16 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
 
         if (tu.stop_time_update && tu.stop_time_update.length > 0) {
           // Prefer the first referenced stop as the active stop context.
-          stopId = tu.stop_time_update.find((u) => u.stop_id)?.stop_id || '';
+          for (let i = 0; i < tu.stop_time_update.length; i++) {
+            if (tu.stop_time_update[i].stop_id) {
+              stopId = tu.stop_time_update[i].stop_id || '';
+              break;
+            }
+          }
 
           // Prefer the first non-zero stop-level delay; it is more specific than trip-level delay.
-          for (const update of tu.stop_time_update) {
+          for (let i = 0; i < tu.stop_time_update.length; i++) {
+            const update = tu.stop_time_update[i];
             const event = update.departure || update.arrival;
             if (event) {
               if (event.delay !== 0 && delay === 0) {
@@ -167,19 +179,30 @@ export function parseFeed(buffer: ArrayBuffer): ParsedFeed {
     if (entity.alert) {
       const a = entity.alert;
 
+      let s: string[] | undefined;
+      let tr: string[] | undefined;
+
+      if (a.informed_entity) {
+        for (let i = 0; i < a.informed_entity.length; i++) {
+          const ent = a.informed_entity[i];
+          if (ent.stop_id) {
+            s = s || [];
+            s.push(ent.stop_id);
+          }
+          if (ent.trip?.trip_id) {
+            tr = tr || [];
+            tr.push(ent.trip.trip_id);
+          }
+        }
+      }
+
       alerts.push({
         h: extractTranslation(a.header_text),
         d: extractTranslation(a.description_text),
         c: a.cause ? String(a.cause) : undefined,
         e: a.effect ? String(a.effect) : undefined,
-        s: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.stop_id) acc.push(e.stop_id);
-          return acc;
-        }, []),
-        tr: a.informed_entity?.reduce((acc: string[], e: GtfsInformedEntity) => {
-          if (e.trip?.trip_id) acc.push(e.trip.trip_id);
-          return acc;
-        }, []),
+        s,
+        tr,
         st: a.active_period?.[0]?.start ? Number(a.active_period[0].start) : undefined,
         en: a.active_period?.[0]?.end ? Number(a.active_period[0].end) : undefined,
       });

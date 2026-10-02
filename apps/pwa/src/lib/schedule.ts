@@ -137,7 +137,10 @@ export function isServiceActive(schedule: StaticSchedule, serviceId: string, dat
  * Classifies a regular calendar service into Weekday or Weekend.
  */
 function getCalendarType(cal: { days: number[] }): 'Weekday' | 'Weekend' {
-  const weekdayCount = cal.days.slice(0, 5).reduce((sum, active) => sum + active, 0);
+  let weekdayCount = 0;
+  for (let i = 0; i < 5; i++) {
+    if (cal.days[i] === 1) weekdayCount++;
+  }
   return weekdayCount >= 3 ? 'Weekday' : 'Weekend';
 }
 
