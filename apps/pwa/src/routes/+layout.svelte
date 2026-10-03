@@ -30,23 +30,22 @@
   import InstallPrompt from '$lib/components/InstallPrompt.svelte';
   import UpdateBanner from '$lib/components/UpdateBanner.svelte';
 
-  $effect(() => {
-    initSchedule((newSchedule) => {
-      schedule = newSchedule;
+  // Eagerly kick off cache read at component init to avoid waiting for $effect post-mount
+  initSchedule((newSchedule) => {
+    schedule = newSchedule;
+  })
+    .then((data) => {
+      schedule = data;
     })
-      .then((data) => {
-        schedule = data;
-      })
-      .catch((err) => {
-        console.error('Init failed:', err);
-        error = 'Failed to load schedule. Using offline mode?';
-      });
-
-    initPerformance((newPerf) => {
-      performance = newPerf;
-    }).then((perf) => {
-      performance = perf;
+    .catch((err) => {
+      console.error('Init failed:', err);
+      error = 'Failed to load schedule. Using offline mode?';
     });
+
+  initPerformance((newPerf) => {
+    performance = newPerf;
+  }).then((perf) => {
+    performance = perf;
   });
 </script>
 

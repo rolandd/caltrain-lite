@@ -11,6 +11,7 @@
     getScheduleType,
     getCanonicalStationId,
     findStopIndex,
+    getTripByIdMap,
     type StaticSchedule,
     type TripResult,
   } from '$lib/schedule';
@@ -56,6 +57,8 @@
   let destination = $state('');
   let dateStr = $state(getTransitDateStr());
   let scrollLeft = $state(0);
+
+  const dayStartEpoch = $derived(getTransitDayStartEpoch(dateStr));
 
   const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
@@ -173,8 +176,14 @@
     pollInterval = setInterval(updateRealtime, 60000);
   });
 
+  let scrollSaveTimer: ReturnType<typeof setTimeout> | undefined;
+
   onDestroy(() => {
     if (pollInterval) clearInterval(pollInterval);
+    if (scrollSaveTimer) {
+      clearTimeout(scrollSaveTimer);
+      localStorage.setItem(LS_SCROLL, String(scrollLeft));
+    }
   });
 
   // Persist form selections to localStorage whenever they change
@@ -182,7 +191,15 @@
     localStorage.setItem(LS_ORIGIN, origin);
     localStorage.setItem(LS_DEST, destination);
     localStorage.setItem(LS_DATE, dateStr);
-    localStorage.setItem(LS_SCROLL, String(scrollLeft));
+  });
+
+  // Debounce scrollLeft persistence to avoid blocking the main thread during touch momentum scrolling
+  $effect(() => {
+    const val = scrollLeft;
+    if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
+    scrollSaveTimer = setTimeout(() => {
+      localStorage.setItem(LS_SCROLL, String(val));
+    }, 250);
   });
 
   $effect(() => {
@@ -273,10 +290,6 @@
     return name.slice(0, maxLen - 1) + '…';
   };
 
-  const TOOLTIP_CACHE_MAX = 512;
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity
-  const tooltipTextCache = new Map<string, string>();
-
   function getRealtimeTrip(trainNum: string) {
     if (!isRealtimeAvailable || !realtime) return undefined;
     return realtime.byTrip[trainNum];
@@ -299,18 +312,14 @@
     const entity = getRealtimeTrip(trainNum);
     if (!entity?.p) return undefined;
 
-    const cacheKey = `${schedule.m.v}:${trainNum}:${direction}:${entity.p.la}:${entity.p.lo}:${entity.d ?? 0}`;
-    const cached = tooltipTextCache.get(cacheKey);
-    if (cached !== undefined) return cached;
-
     let text = getTrainLocationDescription(entity.p, direction, schedule);
 
     if (entity.s && schedule) {
-      const fullTrip = schedule.t.find((t) => t.i === trainNum);
+      const fullTrip = getTripByIdMap(schedule).get(trainNum);
       const canonicalStop = getCanonicalStationId(schedule, entity.s);
       if (fullTrip && canonicalStop) {
         const perf = performance?.trips[trainNum];
-        const dayStart = getTransitDayStartEpoch(dateStr);
+        const dayStart = dayStartEpoch;
         const behindMeters = computeDistanceBehind(
           entity.p,
           canonicalStop,
@@ -327,13 +336,6 @@
       }
     }
 
-    if (tooltipTextCache.size >= TOOLTIP_CACHE_MAX) {
-      const oldestKey = tooltipTextCache.keys().next().value;
-      if (oldestKey !== undefined) {
-        tooltipTextCache.delete(oldestKey);
-      }
-    }
-    tooltipTextCache.set(cacheKey, text);
     return text;
   }
 
@@ -345,21 +347,18 @@
     }
 
     const trainNum = trip.trainNumber;
-    const direction = trip.direction;
     const entity = getRealtimeTrip(trainNum);
     const hasLocation = !!entity?.p;
-    const tooltipText = hasLocation ? getTooltipText(trainNum, direction) : undefined;
 
     if (entity === undefined) {
       return {
         hasLocation,
-        tooltipText,
       };
     }
 
     let delay = entity.d ?? 0;
-    const dayStart = getTransitDayStartEpoch(dateStr);
-    const fullTrip = schedule?.t.find((t) => t.i === trainNum);
+    const dayStart = dayStartEpoch;
+    const fullTrip = schedule ? getTripByIdMap(schedule).get(trainNum) : undefined;
 
     if (schedule && fullTrip) {
       const currentStopCanonical = entity.s ? getCanonicalStationId(schedule, entity.s) : undefined;
@@ -404,7 +403,6 @@
       delayLabel,
       delayClass: getDelayClass(delayMins),
       hasLocation,
-      tooltipText,
     };
   }
 
@@ -423,11 +421,7 @@
     return realtimeRenderDataMap.get(trip.trainNumber) ?? { hasLocation: false };
   }
 
-  function toggleTooltip(
-    event: MouseEvent | KeyboardEvent,
-    trip: TripResult,
-    precomputedText?: string,
-  ): void {
+  function toggleTooltip(event: MouseEvent | KeyboardEvent, trip: TripResult): void {
     event.stopPropagation(); // prevent row click if we add one later
 
     // If clicking the same one, toggle off
@@ -436,7 +430,7 @@
       return;
     }
 
-    const text = precomputedText ?? getTooltipText(trip.trainNumber, trip.direction);
+    const text = getTooltipText(trip.trainNumber, trip.direction);
     // Allow tooltip if we have text or if we have stops to show
     if (!text && trip.stopIds.length < 2) return;
 
@@ -454,8 +448,8 @@
     let liveDelaySec = realtimeData.delay;
     if (liveDelaySec === undefined) {
       if (isRealtimeAvailable && schedule && entity) {
-        const fullTrip = schedule.t.find((t) => t.i === trip.trainNumber);
-        const dayStart = getTransitDayStartEpoch(dateStr);
+        const fullTrip = getTripByIdMap(schedule).get(trip.trainNumber);
+        const dayStart = dayStartEpoch;
         if (fullTrip) {
           const currentStopCanonical = entity.s
             ? getCanonicalStationId(schedule, entity.s)

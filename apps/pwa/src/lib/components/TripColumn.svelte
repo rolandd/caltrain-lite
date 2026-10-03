@@ -9,7 +9,6 @@
     delayLabel?: string;
     delayClass?: string;
     hasLocation: boolean;
-    tooltipText?: string;
   }
 
   export interface RouteStyle {
@@ -23,11 +22,7 @@
     trip: TripResult;
     rt: TripRealtimeRenderData;
     style: RouteStyle;
-    onToggleTooltip: (
-      e: MouseEvent | KeyboardEvent,
-      trip: TripResult,
-      precomputedText?: string,
-    ) => void;
+    onToggleTooltip: (e: MouseEvent | KeyboardEvent, trip: TripResult) => void;
   }
 
   let { trip, rt, style, onToggleTooltip }: Props = $props();
@@ -53,17 +48,17 @@
     role="button"
     tabindex="0"
     aria-haspopup="dialog"
-    onclick={(e) => onToggleTooltip(e, trip, rt.tooltipText)}
+    onclick={(e) => onToggleTooltip(e, trip)}
     onkeydown={(e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         if (e.key === ' ') {
           e.preventDefault();
         }
         if (e.repeat) return;
-        onToggleTooltip(e, trip, rt.tooltipText);
+        onToggleTooltip(e, trip);
       }
     }}
-    title={rt.tooltipText || 'View trip details'}
+    title="View trip details"
   >
     <!-- Departure + optional delay -->
     <div class="flex flex-col items-center gap-0.5 pointer-events-none">
