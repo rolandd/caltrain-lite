@@ -56,8 +56,16 @@ sw.addEventListener('fetch', (event) => {
       if (response) return response;
     }
 
-    // 2. Navigation: try network first, fallback to app shell
-    if (event.request.mode === 'navigate') {
+    // 2. Navigation: cache-first app shell for instant startup (unless forced update or API route)
+    if (event.request.mode === 'navigate' && !url.pathname.startsWith('/api/')) {
+      if (!isForcedUpdate) {
+        const cachedShell =
+          (await cache.match('/')) ||
+          (await cache.match('/index.html')) ||
+          (await cache.match('/404.html'));
+        if (cachedShell) return cachedShell;
+      }
+
       try {
         const response = await fetch(event.request);
         if (response.ok) {
@@ -70,7 +78,7 @@ sw.addEventListener('fetch', (event) => {
         // We are offline or network failed
       }
 
-      // Try matching the root or common app shell entry points
+      // Try matching the root or common app shell entry points as offline fallback
       return (
         (await cache.match('/')) ||
         (await cache.match('/index.html')) ||
