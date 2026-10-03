@@ -118,6 +118,56 @@ function parseTags(content) {
   return tags;
 }
 
+/**
+ * Extracts the contents of $effect(...) blocks from Svelte script content.
+ */
+function extractEffects(content) {
+  const effects = [];
+  const regex = /\$effect\s*\(/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    let i = match.index + match[0].length;
+    let depth = 1;
+    let inQuote = null;
+    let inLineComment = false;
+    let inBlockComment = false;
+    const start = i;
+    while (i < content.length && depth > 0) {
+      const ch = content[i];
+      const prev = content[i - 1];
+      if (inQuote) {
+        if (ch === inQuote && prev !== '\\') {
+          inQuote = null;
+        }
+      } else if (inLineComment) {
+        if (ch === '\n') {
+          inLineComment = false;
+        }
+      } else if (inBlockComment) {
+        if (ch === '/' && prev === '*') {
+          inBlockComment = false;
+        }
+      } else if (ch === '/' && content[i + 1] === '/') {
+        inLineComment = true;
+        i++;
+      } else if (ch === '/' && content[i + 1] === '*') {
+        inBlockComment = true;
+        i++;
+      } else if (ch === '"' || ch === "'" || ch === '`') {
+        inQuote = ch;
+      } else if (ch === '(') {
+        depth++;
+      } else if (ch === ')') {
+        depth--;
+      }
+      i++;
+    }
+    effects.push(content.slice(start, i - 1));
+    regex.lastIndex = i;
+  }
+  return effects;
+}
+
 async function main() {
   const files = await getSvelteFiles(SRC_DIR);
   const failures = [];
@@ -226,10 +276,12 @@ async function main() {
         attrs.role === 'dialog' && (attrs['aria-modal'] === 'true' || attrs['aria-modal'] === true),
     );
     if (hasModalDialog) {
-      const effectHasEscape =
-        /\$effect\s*\([^)]*=>[\s\S]*?addEventListener\s*\(\s*['"]keydown['"][\s\S]*?['"](?:Escape|Esc)['"]/.test(
-          content,
-        );
+      const effects = extractEffects(content);
+      const effectHasEscape = effects.some(
+        (effect) =>
+          /addEventListener\s*\(\s*['"]keydown['"]/.test(effect) &&
+          /['"](?:Escape|Esc)['"]/.test(effect),
+      );
       if (!effectHasEscape) {
         failures.push({
           file: relPath,
