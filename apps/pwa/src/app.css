@@ -4,7 +4,7 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
 
   /* Core surfaces */
   --color-transit-surface-canvas: #0f1118;
