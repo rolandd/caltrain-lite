@@ -8,3 +8,10 @@ pnpm-lock.yaml
 **/gtfs-realtime.js
 apps/pwa/src/lib/schedule-data.json
 apps/pwa/src/lib/realtime-snapshot.json
+data/history
+*.zst
+*.gz
+*.pb
+*.zip
+.agent-shell
+infra/.terraform
