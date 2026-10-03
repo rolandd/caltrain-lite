@@ -26,11 +26,7 @@
     truncateStation: (name: string, maxLen?: number) => string;
     getRouteStyle: (routeType: string) => RouteStyle;
     getTripRealtimeRenderData: (trip: TripResult) => TripRealtimeRenderData;
-    onToggleTooltip: (
-      e: MouseEvent | KeyboardEvent,
-      trip: TripResult,
-      precomputedText?: string,
-    ) => void;
+    onToggleTooltip: (e: MouseEvent | KeyboardEvent, trip: TripResult) => void;
   }
 
   let {
@@ -93,7 +89,9 @@
       Route table: fixed left panel + horizontally scrollable trip columns.
       The outer wrapper clips overflow; the inner flex row holds both panels.
     -->
-    <div class="relative rounded-xl overflow-hidden border border-transit-border-subtle">
+    <div
+      class="relative rounded-xl overflow-hidden border border-transit-border-subtle contain-paint"
+    >
       <div
         class="flex overflow-x-auto touch-pan-x touch-pan-y overscroll-x-contain"
         bind:this={tripScrollEl}

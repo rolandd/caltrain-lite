@@ -182,18 +182,27 @@ export function getScheduleType(schedule: StaticSchedule, date: Date): ScheduleT
   return resolvedType;
 }
 
+const canonicalStationCache = new WeakMap<StaticSchedule, Map<string, string>>();
+
 /**
  * Maps a station ID or GTFS stop_id to its canonical station ID key in schedule.s.
  */
 export function getCanonicalStationId(schedule: StaticSchedule, stopId: string): string {
   if (!stopId) return stopId;
-  if (schedule.s[stopId]) return stopId;
-  for (const [canonicalId, station] of Object.entries(schedule.s)) {
-    if (station.ids?.includes(stopId)) {
-      return canonicalId;
+  let cache = canonicalStationCache.get(schedule);
+  if (!cache) {
+    cache = new Map();
+    for (const [canonicalId, station] of Object.entries(schedule.s)) {
+      cache.set(canonicalId, canonicalId);
+      if (station.ids) {
+        for (const id of station.ids) {
+          cache.set(id, canonicalId);
+        }
+      }
     }
+    canonicalStationCache.set(schedule, cache);
   }
-  return stopId;
+  return cache.get(stopId) || stopId;
 }
 
 /**
@@ -211,6 +220,23 @@ export function findStopIndex(
   return stops.indexOf(canonicalId);
 }
 
+const tripByIdCache = new WeakMap<StaticSchedule, Map<string, Trip>>();
+
+/**
+ * Fast O(1) trip lookup indexed by train number.
+ */
+export function getTripByIdMap(schedule: StaticSchedule): Map<string, Trip> {
+  let map = tripByIdCache.get(schedule);
+  if (!map) {
+    map = new Map();
+    for (const trip of schedule.t) {
+      map.set(trip.i, trip);
+    }
+    tripByIdCache.set(schedule, map);
+  }
+  return map;
+}
+
 /**
  * Query trips between two stations on a given date.
  * Returns results sorted by departure time.
@@ -226,11 +252,8 @@ export function queryTrips(
   const candidateIds = schedule.x[pairKey];
   if (!candidateIds) return [];
 
-  // Build a quick trip lookup by train number
-  const tripById = new Map<string, Trip>();
-  for (const trip of schedule.t) {
-    tripById.set(trip.i, trip);
-  }
+  // Use cached trip lookup by train number
+  const tripById = getTripByIdMap(schedule);
 
   const results: TripResult[] = [];
 
