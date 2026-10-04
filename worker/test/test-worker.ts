@@ -154,4 +154,14 @@ assert.equal(resV2Fallback.status, 200);
 const bodyV2Fallback = (await resV2Fallback.json()) as { m: { sv: number } };
 assert.equal(bodyV2Fallback.m.sv, 1); // Successfully fell back to schedule:data
 
+// 6. Test /api/v2/meta fallback to schedule:meta when schedule:v2:meta not populated
+const resMetaV2Fallback = await worker.fetch(
+  new Request('https://transit.example.com/api/v2/meta'),
+  mockEnvFallback,
+  ctx,
+);
+assert.equal(resMetaV2Fallback.status, 200);
+const bodyMetaV2Fallback = (await resMetaV2Fallback.json()) as { sv: number };
+assert.equal(bodyMetaV2Fallback.sv, 1); // Successfully fell back to schedule:meta
+
 console.log('Test Passed!');
