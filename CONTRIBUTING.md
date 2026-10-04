@@ -86,6 +86,33 @@ We use `vitest` for the PWA and custom test scripts for other parts.
   pnpm --filter worker test
   ```
 
+### Property-Based Testing (`fast-check`)
+
+When making changes to algorithms, scheduling math, data parsers, or API transformations, prefer or supplement targeted unit tests with **Property-Based Testing (PBT)** using [`fast-check`](https://fast-check.dev/).
+
+Targeted unit tests verify that known examples work; property tests verify that invariants hold across thousands of randomly generated inputs, edge cases, and schedule permutations.
+
+**Key areas where PBT should be used:**
+
+- **Differential testing / migrations:** Verifying that a new algorithm or data format (e.g. v2 pattern lookup) produces results identical to the reference implementation across all inputs (`*.prop.test.ts`).
+- **Mathematical invariants & round-trips:** Formatting and parsing (e.g. `timeToMinutes(minutesToTime(m)) === m`), fare matrix symmetry (`fare(A, B) === fare(B, A)`), and sorting stability.
+- **Data integrity & parser invariants:** Verifying GTFS parser invariants (pattern coverage, array alignment, topological ordering) against arbitrary synthetic inputs.
+
+Example:
+
+```typescript
+import * as fc from 'fast-check';
+
+it('satisfies invariant across arbitrary inputs', () => {
+  fc.assert(
+    fc.property(fc.integer({ min: 0, max: 2880 }), (minutes) => {
+      expect(parseTime(formatTime(minutes))).toBe(minutes);
+    }),
+    { numRuns: 1000 },
+  );
+});
+```
+
 ## Linting & Formatting
 
 We use ESLint and Prettier to maintain code quality.

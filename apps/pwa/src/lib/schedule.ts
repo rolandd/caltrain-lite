@@ -10,7 +10,7 @@
 
 import type { Trip, StaticSchedule } from '../../../../packages/types/schema';
 
-export type { StaticSchedule };
+export type { StaticSchedule, Trip };
 export type ScheduleType = 'Weekday' | 'Weekend' | 'Special';
 
 export interface StationInfo {
@@ -318,8 +318,10 @@ export function queryTrips(
     });
   }
 
-  // Sort by departure time
-  results.sort((a, b) => a.departureMinutes - b.departureMinutes);
+  // Sort by departure time (with train number tie-breaker for deterministic ordering)
+  results.sort(
+    (a, b) => a.departureMinutes - b.departureMinutes || a.trainNumber.localeCompare(b.trainNumber),
+  );
   return results;
 }
 
