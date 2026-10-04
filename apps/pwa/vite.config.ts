@@ -24,7 +24,7 @@ const scheduleDataPath = resolve(__dirname, 'src/lib/schedule-data.json');
  */
 function devScheduleApiPlugin() {
   const middleware: import('vite').Connect.NextHandleFunction = (req, res, next) => {
-    if (req.url === '/api/schedule') {
+    if (req.url === '/api/schedule' || req.url === '/api/v2/schedule') {
       const data = readFileSync(scheduleDataPath, 'utf-8');
 
       res.setHeader('Content-Type', 'application/json');
@@ -43,7 +43,7 @@ function devScheduleApiPlugin() {
       return;
     }
 
-    if (req.url === '/api/meta') {
+    if (req.url === '/api/meta' || req.url === '/api/v2/meta') {
       // Build a lightweight meta stub so the PWA's version-check logic
       // doesn't trigger a redundant re-download on every dev reload.
       const schedule = JSON.parse(readFileSync(scheduleDataPath, 'utf-8'));
