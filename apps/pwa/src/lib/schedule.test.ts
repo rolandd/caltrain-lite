@@ -249,6 +249,99 @@ describe('queryTrips', () => {
     // p2 pattern: [st1, st3] → originIdx=0, destIdx=1 → 0 intermediate stops
     expect(trips[0].intermediateStops).toBe(0);
   });
+
+  describe('v2 schedule (without pre-computed pair index x)', () => {
+    const mockScheduleV2: StaticSchedule = { ...mockSchedule };
+    delete mockScheduleV2.x;
+
+    it('returns identical results to v1 with precomputed x', () => {
+      const dates = [
+        getTransitDateAtNoon('2024-01-08'), // Monday
+        getTransitDateAtNoon('2024-01-06'), // Saturday
+        getTransitDateAtNoon('2024-01-15'), // MLK Monday (exception)
+      ];
+
+      for (const d of dates) {
+        const v1Result = queryTrips(mockSchedule, 'st1', 'st3', d);
+        const v2Result = queryTrips(mockScheduleV2, 'st1', 'st3', d);
+        expect(v2Result).toEqual(v1Result);
+      }
+    });
+
+    it('finds trips using dynamic pattern matching without x', () => {
+      const trips = queryTrips(mockScheduleV2, 'st1', 'st2', getTransitDateAtNoon('2024-01-08'));
+      expect(trips).toHaveLength(2);
+      expect(trips[0].trainNumber).toBe('101');
+      expect(trips[1].trainNumber).toBe('201');
+    });
+
+    it('handles non-existent or reverse pairs correctly without x', () => {
+      const reverse = queryTrips(mockScheduleV2, 'st3', 'st1', getTransitDateAtNoon('2024-01-08'));
+      expect(reverse).toHaveLength(0);
+
+      const unknown = queryTrips(
+        mockScheduleV2,
+        'st1',
+        'st_unknown',
+        getTransitDateAtNoon('2024-01-08'),
+      );
+      expect(unknown).toHaveLength(0);
+    });
+
+    it('dynamically adapts to schedule transitions (new & retired patterns on fixed dates)', () => {
+      // Transition scenario:
+      // Pattern p_old runs until 2024-03-31 with service svc_pre
+      // Pattern p_new (e.g. new electrified route) starts 2024-04-01 with service svc_post
+      const transitionSchedule: StaticSchedule = {
+        ...mockScheduleV2,
+        p: {
+          ...mockScheduleV2.p,
+          p_old: ['st1', 'st2'],
+          p_new: ['st1', 'st3', 'st2'],
+        },
+        t: [
+          ...mockScheduleV2.t,
+          {
+            i: 'old_1',
+            s: 'svc_pre',
+            p: 'p_old',
+            d: 0,
+            st: [400, 400, 420, 420],
+            rt: 'Local',
+          },
+          {
+            i: 'new_1',
+            s: 'svc_post',
+            p: 'p_new',
+            d: 0,
+            st: [500, 500, 530, 530, 550, 550],
+            rt: 'Express',
+          },
+        ],
+        r: {
+          ...mockScheduleV2.r,
+          c: {
+            ...mockScheduleV2.r.c,
+            svc_pre: { start: 20240101, end: 20240331, days: [1, 1, 1, 1, 1, 1, 1] },
+            svc_post: { start: 20240401, end: 20241231, days: [1, 1, 1, 1, 1, 1, 1] },
+          },
+          e: { ...mockScheduleV2.r.e },
+        },
+      };
+
+      // Before transition: March 15, 2024 -> only old_1 runs
+      const beforeDate = getTransitDateAtNoon('2024-03-15');
+      const beforeTrips = queryTrips(transitionSchedule, 'st1', 'st2', beforeDate);
+      expect(beforeTrips.some((t) => t.trainNumber === 'old_1')).toBe(true);
+      expect(beforeTrips.some((t) => t.trainNumber === 'new_1')).toBe(false);
+
+      // After transition: April 15, 2024 -> old_1 retired, new_1 runs
+      const afterDate = getTransitDateAtNoon('2024-04-15');
+      const afterTrips = queryTrips(transitionSchedule, 'st1', 'st2', afterDate);
+      expect(afterTrips.some((t) => t.trainNumber === 'old_1')).toBe(false);
+      expect(afterTrips.some((t) => t.trainNumber === 'new_1')).toBe(true);
+    });
+  });
 });
 
 // ---- Fare Calculation ----

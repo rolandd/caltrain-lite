@@ -531,7 +531,7 @@ async function main() {
   console.error(`Stations: ${Object.keys(schedule.s).length}`);
   console.error(`Trips: ${schedule.t.length}`);
   console.error(`Patterns: ${Object.keys(schedule.p).length}`);
-  console.error(`Station pairs: ${Object.keys(schedule.x).length}`);
+  console.error(`Station pairs: ${Object.keys(schedule.x || {}).length}`);
   console.error(`Fare zones: ${Object.keys(schedule.f.zones).length}`);
   console.error(`Version: ${schedule.m.v.substring(0, 12)}...`);
 }
