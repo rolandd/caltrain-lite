@@ -8,11 +8,26 @@ import realSchedule from './schedule-data.json';
 
 describe('Property-Based Testing: Schedule & Trip Querying', () => {
   // Real Caltrain schedule setup
-  const v1Schedule = realSchedule as StaticSchedule;
-  const v2Schedule: StaticSchedule = { ...(realSchedule as StaticSchedule) };
+  // Reconstruct pre-computed pair index x for v1Schedule so Property 1
+  // tests genuine v1 (with x) against v2 (without x).
+  const scheduleData = realSchedule as StaticSchedule;
+  const x: Record<string, string[]> = {};
+  for (const trip of scheduleData.t) {
+    const stops = scheduleData.p[trip.p];
+    if (!stops) continue;
+    for (let i = 0; i < stops.length; i++) {
+      for (let j = i + 1; j < stops.length; j++) {
+        const key = `${stops[i]}→${stops[j]}`;
+        (x[key] ??= []).push(trip.i);
+      }
+    }
+  }
+
+  const v1Schedule: StaticSchedule = { ...scheduleData, x };
+  const v2Schedule: StaticSchedule = { ...scheduleData };
   delete v2Schedule.x;
 
-  const stationIds = Object.keys(realSchedule.s);
+  const stationIds = Object.keys(scheduleData.s);
 
   describe('Property 1: Differential Equivalence (v1 with x vs v2 without x)', () => {
     it('produces identical query results for ANY station pair and ANY date across the calendar', () => {

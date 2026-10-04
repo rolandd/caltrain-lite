@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseGtfsZip } from './parse-gtfs';
+import { parseGtfsZip, toV2Schedule } from './parse-gtfs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = resolve(__dirname, 'fixtures/caltrain-gtfs.zip');
@@ -19,7 +19,8 @@ async function main() {
   console.error(`Reading: ${fixturePath}`);
   const zipBuf = readFileSync(fixturePath);
   const schedule = await parseGtfsZip(zipBuf);
-  const json = JSON.stringify(schedule);
+  const scheduleV2 = toV2Schedule(schedule);
+  const json = JSON.stringify(scheduleV2);
   writeFileSync(outputPath, json, 'utf-8');
   console.error(`Wrote ${json.length} bytes to ${outputPath}`);
   console.error(`  Stations: ${Object.keys(schedule.s).length}`);
