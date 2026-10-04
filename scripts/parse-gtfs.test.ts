@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import JSZip from 'jszip';
-import { parseGtfsZip } from './parse-gtfs';
+import { parseGtfsZip, toV2Schedule, SCHEMA_VERSION, SCHEMA_VERSION_V2 } from './parse-gtfs';
 
 // ---------------------------------------------------------------------------
 // Helper: build a minimal GTFS ZIP from CSV strings
@@ -363,5 +363,33 @@ describe('parseGtfsZip – real Caltrain fixture', () => {
 
     expect(sfIdx).toBeLessThan(paIdx);
     expect(paIdx).toBeLessThan(sjIdx);
+  });
+});
+
+describe('toV2Schedule', () => {
+  it('omits pair index x, sets schema version to SCHEMA_VERSION_V2, and does not mutate input', async () => {
+    const fixtureResult = await getFixtureResult();
+    expect(fixtureResult.x).toBeDefined();
+    expect(fixtureResult.m.sv).toBe(SCHEMA_VERSION);
+
+    const v2 = toV2Schedule(fixtureResult);
+
+    expect(v2.m.sv).toBe(SCHEMA_VERSION_V2);
+    expect(v2.x).toBeUndefined();
+    expect('x' in v2).toBe(false);
+
+    // Verify input schedule is not mutated
+    expect(fixtureResult.x).toBeDefined();
+    expect(fixtureResult.m.sv).toBe(SCHEMA_VERSION);
+
+    // Verify all other properties are preserved
+    expect(v2.s).toBe(fixtureResult.s);
+    expect(v2.t).toBe(fixtureResult.t);
+    expect(v2.p).toBe(fixtureResult.p);
+    expect(v2.r).toBe(fixtureResult.r);
+    expect(v2.f).toBe(fixtureResult.f);
+    expect(v2.o).toBe(fixtureResult.o);
+    expect(v2.m.v).toBe(fixtureResult.m.v);
+    expect(v2.m.e).toBe(fixtureResult.m.e);
   });
 });
