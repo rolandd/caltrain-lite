@@ -105,7 +105,10 @@ async function checkForUpdate(
   currentSchemaVersion: number,
   onUpdate?: (schedule: StaticSchedule) => void,
 ) {
-  const res = await fetch('/api/meta');
+  let res = await fetch('/api/v2/meta').catch(() => null);
+  if (!res || !res.ok) {
+    res = await fetch('/api/meta');
+  }
   if (!res.ok) throw new Error(`Meta fetch failed: ${res.status}`);
 
   const meta: ScheduleMeta = assert<ScheduleMeta>(await res.json());
@@ -120,9 +123,13 @@ async function checkForUpdate(
 }
 
 async function fetchSchedule(): Promise<StaticSchedule> {
-  const res = await fetch('/api/schedule');
-  if (!res.ok) throw new Error(`Schedule fetch failed: ${res.status}`);
-  return assert<StaticSchedule>(await res.json());
+  const res = await fetch('/api/v2/schedule').catch(() => null);
+  if (res && res.ok) {
+    return assert<StaticSchedule>(await res.json());
+  }
+  const fallbackRes = await fetch('/api/schedule');
+  if (!fallbackRes.ok) throw new Error(`Schedule fetch failed: ${fallbackRes.status}`);
+  return assert<StaticSchedule>(await fallbackRes.json());
 }
 
 async function fetchPerformance(): Promise<TrainPerformanceProfile> {
