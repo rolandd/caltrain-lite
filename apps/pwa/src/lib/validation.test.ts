@@ -6,9 +6,18 @@ import type { StaticSchedule, RealtimeStatus, ScheduleMeta } from '@packages/typ
 import scheduleData from './schedule-data.json';
 import realtimeSnapshot from './realtime-snapshot.json';
 
-test('validates valid schedule-data.json', () => {
+test('validates valid schedule-data.json (v2 without x)', () => {
   // Should not throw
   expect(() => typia.assert<StaticSchedule>(scheduleData)).not.toThrow();
+  expect((scheduleData as StaticSchedule).x).toBeUndefined();
+});
+
+test('validates valid schedule with precomputed x (v1 format)', () => {
+  const v1Schedule: StaticSchedule = {
+    ...(scheduleData as StaticSchedule),
+    x: { 'orig→dest': ['101'] },
+  };
+  expect(() => typia.assert<StaticSchedule>(v1Schedule)).not.toThrow();
 });
 
 test('validates valid realtime-snapshot.json', () => {
