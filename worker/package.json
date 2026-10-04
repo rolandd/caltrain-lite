@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "deploy": "wrangler deploy --config wrangler.toml",
+    "dev": "wrangler dev --config wrangler.toml",
     "test": "tsx test/test-worker.ts",
     "check": "tsc --noEmit",
     "bench:gtfs-rt": "tsx bench/gtfs-rt.ts",
@@ -26,6 +27,7 @@
     "@types/node": "^25.3.0",
     "tinybench": "^6.0.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.147.0"
   }
 }
