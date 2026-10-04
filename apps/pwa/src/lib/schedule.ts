@@ -247,27 +247,51 @@ export function queryTrips(
   destinationId: string,
   date: Date,
 ): TripResult[] {
-  // Use the pair index for O(1) candidate lookup
-  const pairKey = `${originId}→${destinationId}`;
-  const candidateIds = schedule.x[pairKey];
-  if (!candidateIds) return [];
+  const canonicalOrigin = getCanonicalStationId(schedule, originId);
+  const canonicalDest = getCanonicalStationId(schedule, destinationId);
 
-  // Use cached trip lookup by train number
-  const tripById = getTripByIdMap(schedule);
+  const candidates: Array<{ trip: Trip; originIdx: number; destIdx: number }> = [];
+
+  if (schedule.x) {
+    // V1 schedule: use pre-computed pair index
+    const pairKey = `${canonicalOrigin}→${canonicalDest}`;
+    const candidateIds = schedule.x[pairKey] || schedule.x[`${originId}→${destinationId}`];
+    if (!candidateIds) return [];
+
+    const tripById = getTripByIdMap(schedule);
+    for (const trainId of candidateIds) {
+      const trip = tripById.get(trainId);
+      if (!trip) continue;
+      const originIdx = findStopIndex(schedule, trip.p, canonicalOrigin);
+      const destIdx = findStopIndex(schedule, trip.p, canonicalDest);
+      if (originIdx === -1 || destIdx === -1 || originIdx >= destIdx) continue;
+      candidates.push({ trip, originIdx, destIdx });
+    }
+  } else {
+    // V2 schedule: dynamic pattern matching (Caltrain has ~17 route patterns)
+    const matchingPatterns = new Map<string, { originIdx: number; destIdx: number }>();
+    for (const [patId, stops] of Object.entries(schedule.p)) {
+      const originIdx = stops.indexOf(canonicalOrigin);
+      const destIdx = stops.indexOf(canonicalDest);
+      if (originIdx !== -1 && destIdx !== -1 && originIdx < destIdx) {
+        matchingPatterns.set(patId, { originIdx, destIdx });
+      }
+    }
+    if (matchingPatterns.size === 0) return [];
+
+    for (const trip of schedule.t) {
+      const indices = matchingPatterns.get(trip.p);
+      if (indices) {
+        candidates.push({ trip, originIdx: indices.originIdx, destIdx: indices.destIdx });
+      }
+    }
+  }
 
   const results: TripResult[] = [];
 
-  for (const trainId of candidateIds) {
-    const trip = tripById.get(trainId);
-    if (!trip) continue;
-
+  for (const { trip, originIdx, destIdx } of candidates) {
     // Check if this trip runs on the given date
     if (!isServiceActive(schedule, trip.s, date)) continue;
-
-    // Find origin and destination indices in the pattern
-    const originIdx = findStopIndex(schedule, trip.p, originId);
-    const destIdx = findStopIndex(schedule, trip.p, destinationId);
-    if (originIdx === -1 || destIdx === -1 || originIdx >= destIdx) continue;
 
     // Extract times: st is interleaved [arr0, dep0, arr1, dep1, ...]
     const departureMinutes = trip.st[originIdx * 2 + 1]; // departure from origin

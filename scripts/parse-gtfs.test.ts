@@ -110,7 +110,7 @@ describe('parseGtfsZip – synthetic data', () => {
     expect(patternStops).toEqual(['station_b', 'station_a']);
 
     // -- Station-pair index --
-    expect(result.x['station_b→station_a']).toContain('101');
+    expect(result.x?.['station_b→station_a']).toContain('101');
 
     // -- Calendar --
     expect(result.r.c['svc1']).toBeDefined();
@@ -327,8 +327,8 @@ describe('parseGtfsZip – real Caltrain fixture', () => {
         const origin = patternStops[0];
         const dest = patternStops[patternStops.length - 1];
         const key = `${origin}→${dest}`;
-        expect(result.x[key]).toBeDefined();
-        expect(result.x[key]).toContain(trip.i);
+        expect(result.x?.[key]).toBeDefined();
+        expect(result.x?.[key]).toContain(trip.i);
       }
     }
   });
@@ -337,7 +337,7 @@ describe('parseGtfsZip – real Caltrain fixture', () => {
     const result = await getFixtureResult();
     const tripIds = new Set(result.t.map((t) => t.i));
 
-    for (const ids of Object.values(result.x)) {
+    for (const ids of Object.values(result.x || {})) {
       for (const id of ids) {
         expect(tripIds.has(id)).toBe(true);
       }

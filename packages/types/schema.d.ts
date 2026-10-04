@@ -94,16 +94,16 @@ export interface StaticSchedule {
   f: FareRules;
 
   /**
-   * Pre-computed station-pair index for O(1) trip lookup.
+   * Pre-computed station-pair index for O(1) trip lookup (v1 only).
    *
    * Key format: `"<originStationId>→<destStationId>"`.
    * Value: array of trip IDs that serve this origin→destination pair
    * (in pattern stop order — origin appears before destination).
    *
-   * With ~30 stations there are at most ~870 directed pairs, so the
-   * overhead is negligible.
+   * Omitted in schema v2 (`/api/v2/schedule`) in favor of dynamic pattern-based
+   * lookup, saving ~367 KB payload and IndexedDB footprint.
    */
-  x: Record<string, string[]>;
+  x?: Record<string, string[]>;
   /** Ordered list of canonical station IDs (North-to-South). */
   o: string[];
 }
