@@ -20,12 +20,24 @@ import type {
 // Constants & Types
 // ---------------------------------------------------------------------------
 
-/**
- * Current schema version.
- * Increment this to force all PWA clients to re-download the schedule,
- * even if the GTFS data (version hash) hasn't changed.
- */
 export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION_V2 = 2;
+
+/**
+ * Converts a static schedule to v2 slim format by omitting the pair index (x)
+ * and setting schema version to 2.
+ */
+export function toV2Schedule(schedule: StaticSchedule): StaticSchedule {
+  const scheduleV2: StaticSchedule = {
+    ...schedule,
+    m: {
+      ...schedule.m,
+      sv: SCHEMA_VERSION_V2,
+    },
+  };
+  delete scheduleV2.x;
+  return scheduleV2;
+}
 
 // ---------------------------------------------------------------------------
 // CSV row types (raw GTFS)
