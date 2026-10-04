@@ -35,8 +35,20 @@ jobs:
       - name: Validate Schedule
         run: pnpm --filter @transit/scripts run validate ../static-schedule.json
 
-      - name: Extract Metadata
-        run: jq .m static-schedule.json > meta.json
+      - name: Generate v2 Schedule and Metadata
+        run: |
+          jq .m static-schedule.json > meta.json
+          pnpm exec tsx -e '
+            import { readFileSync, writeFileSync } from "node:fs";
+            import { toV2Schedule } from "./scripts/parse-gtfs.ts";
+            const s1 = JSON.parse(readFileSync("static-schedule.json", "utf8"));
+            const s2 = toV2Schedule(s1);
+            writeFileSync("static-schedule-v2.json", JSON.stringify(s2));
+            writeFileSync("meta-v2.json", JSON.stringify(s2.m));
+          '
+
+      - name: Validate v2 Schedule
+        run: pnpm --filter @transit/scripts run validate ../static-schedule-v2.json
 
       - name: Upload Schedule Data to KV
         env:
@@ -44,6 +56,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx -y wrangler kv key put schedule:data --path=./static-schedule.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
+          npx -y wrangler kv key put schedule:v2:data --path=./static-schedule-v2.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
 
       - name: Upload Schedule Meta to KV
         env:
@@ -51,3 +64,4 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx -y wrangler kv key put schedule:meta --path=./meta.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
+          npx -y wrangler kv key put schedule:v2:meta --path=./meta-v2.json --namespace-id=${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }} --remote
