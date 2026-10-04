@@ -91,8 +91,10 @@ KV's 25MB value limit and low-latency reads an ideal fit.
 
 | KV Key             | Contents                                  | Size   | Written By    |
 | ------------------ | ----------------------------------------- | ------ | ------------- |
-| `schedule:data`    | StaticSchedule JSON (full bundle)         | <100KB | GitHub Action |
-| `schedule:meta`    | ScheduleMeta JSON (version + timestamps)  | ~100B  | GitHub Action |
+| `schedule:data`    | StaticSchedule JSON (v1 legacy with `x`)  | ~441KB | GitHub Action |
+| `schedule:meta`    | ScheduleMeta JSON (v1 metadata, `sv: 1`)  | ~100B  | GitHub Action |
+| `schedule:v2:data` | StaticSchedule JSON (v2 slim without `x`) | ~74KB  | GitHub Action |
+| `schedule:v2:meta` | ScheduleMeta JSON (v2 metadata, `sv: 2`)  | ~100B  | GitHub Action |
 | `realtime:status`  | RealtimeStatus JSON (today's trains only) | ~5KB   | Worker cron   |
 | `performance:data` | TrainPerformanceProfile (90-day baseline) | <50KB  | GitHub Action |
 
@@ -170,8 +172,8 @@ interface StaticSchedule {
     zones: Record<string, { name: string }>; // Zone metadata
     fares: Record<string, number>; // Price lookup: "originZone->destZone" -> cents
   };
-  x: Record<string, string[]>; // Station-pair index: { "70011→70021": ["trip1", "trip2"] }
-  // Precomputed for O(1) origin→destination lookup
+  x?: Record<string, string[]>; // Optional station-pair index: { "70011→70021": ["trip1", "trip2"] }
+  // Present in v1 for O(1) origin→destination lookup; omitted in v2 slim format
   o: string[]; // Ordered list of canonical station IDs (North-to-South)
 }
 ```
@@ -179,6 +181,19 @@ interface StaticSchedule {
 **Fare calculation:** Fares are looked up directly from the `f.fares`
 table using the key `"<originZoneId>→<destZoneId>"`. This provides the
 price in cents.
+
+#### Schedule Evolution & v2 Slim Format
+
+In schema version 1 (`sv: 1`), the schedule included a precomputed `x` table mapping every possible origin→destination station pair to valid trip IDs. While providing $O(1)$ pair lookups, this precomputed table accounted for **~367 KB** (83%) of the 441 KB schedule payload.
+
+In schema version 2 (`sv: 2`, `/api/v2/schedule`), the schedule omits `x`, shrinking the bundle from **~441 KB down to ~74 KB** (~83% payload reduction). Caltrain operates on a small set of unique stop sequence patterns (currently 17 patterns, `p0`–`p16`). The PWA query engine dynamically resolves valid trips by checking whether the origin stop precedes the destination stop in a trip's referenced pattern (`schedule.p[trip.p]`). This dynamic lookup executes in microseconds (~7µs on Node/V8) while preserving identical trip filtering, calendar exceptions, and ordering.
+
+**Dual-API & Backward Compatibility:**
+
+- **Legacy v1 Endpoints (`/api/schedule`, `/api/meta`):** Continue to serve the full `StaticSchedule` bundle with `x` and `sv: 1`. Legacy clients with compiled Typia type validators remain 100% operational without breakage.
+- **Modern v2 Endpoints (`/api/v2/schedule`, `/api/v2/meta`):** Serve the slim schedule without `x` and `sv: 2`. The Cloudflare Worker gracefully falls back to `schedule:data` and `schedule:meta` if the v2 keys are not yet populated in KV.
+- **Client Fallback:** The PWA client queries `/api/v2/meta` and `/api/v2/schedule` first, gracefully falling back to `/api/meta` and `/api/schedule` if v2 endpoints are unreachable.
+- **Automated Sync:** `.github/workflows/sync-schedule.yml` automatically validates and uploads both v1 (`schedule:data`, `schedule:meta`) and v2 (`schedule:v2:data`, `schedule:v2:meta`) artifacts to Cloudflare KV on each schedule update.
 
 ### Real-Time Status (RealtimeStatus)
 
@@ -220,7 +235,7 @@ interface RealtimeStatus {
 
 ### Schedule Metadata (ScheduleMeta)
 
-Returned by Worker `GET /api/meta`. Allows PWA to check freshness without downloading the full bundle.
+Returned by Worker `GET /api/v2/meta` (or `GET /api/meta` for v1). Allows PWA to check freshness without downloading the full bundle.
 
 ```typescript
 interface ScheduleMeta {
@@ -264,8 +279,8 @@ A **browser-aware** approach that gives the most native experience on each platf
 
 ## Technical Requirements
 
-- **Efficiency:** O(1) station-pair lookup via precomputed index; O(n) trip filtering using integer math (minutes from midnight).
-- **Reliability:** Check `/api/meta` for `v` before downloading the full bundle. Graceful degradation when offline (schedule works, real-time unavailable).
+- **Efficiency:** Dynamic route pattern filtering across Caltrain's 17 service patterns in v2 (or O(1) station-pair lookup in v1); O(n) trip filtering using integer math (minutes from midnight).
+- **Reliability:** Check `/api/v2/meta` (with `/api/meta` fallback) for `v` before downloading the full bundle. Graceful degradation when offline (schedule works, real-time unavailable).
 - **Error Handling:** Surface clear UI states for: worker down, stale RT data (> 2min old), expired schedule, IndexedDB quota exceeded.
 - **Debuggability:** Structured `console.log` with log levels (debug/info/warn/error). No external analytics. Cloudflare Worker built-in analytics for API health (no PII).
 - **Accessibility:** WCAG AA minimum, AAA where achievable. Semantic HTML5, ARIA landmarks, focus management, 4.5:1 contrast ratio (7:1 target for AAA), 44px minimum touch targets.
