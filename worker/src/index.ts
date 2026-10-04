@@ -141,8 +141,46 @@ export default {
       });
     }
 
+    if (url.pathname === '/api/v2/schedule') {
+      const data =
+        (await env.TRANSIT_DATA.get('schedule:v2:data', { type: 'stream' })) ||
+        (await env.TRANSIT_DATA.get('schedule:data', { type: 'stream' }));
+      if (!data) {
+        return new Response(JSON.stringify({ error: 'No schedule data' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(data, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=3600', // 1 hour
+        },
+      });
+    }
+
     if (url.pathname === '/api/meta') {
       const data = await env.TRANSIT_DATA.get('schedule:meta');
+      if (!data) {
+        return new Response(JSON.stringify({ error: 'No meta data' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(data, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=60', // 1 minute
+        },
+      });
+    }
+
+    if (url.pathname === '/api/v2/meta') {
+      const data =
+        (await env.TRANSIT_DATA.get('schedule:v2:meta')) ||
+        (await env.TRANSIT_DATA.get('schedule:meta'));
       if (!data) {
         return new Response(JSON.stringify({ error: 'No meta data' }), {
           status: 404,
