@@ -38,8 +38,10 @@
 </script>
 
 <section class="bg-transit-surface-card border border-transit-border-subtle rounded-2xl p-4 mb-6">
-  <div class="flex items-center gap-2 mb-4 max-[480px]:flex-col max-[480px]:items-stretch">
-    <div class="flex-1 flex items-center gap-3">
+  <div
+    class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 max-[480px]:grid-cols-[1fr_auto] max-[480px]:gap-y-3"
+  >
+    <div class="col-start-1 row-start-1 flex items-center gap-3 min-w-0">
       <label
         class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right"
         for="origin">From</label
@@ -57,31 +59,23 @@
       </select>
     </div>
 
-    <!-- Mobile swap button -->
+    <!-- Swap button (centered horizontally between FROM/TO on desktop, vertically on right on mobile) -->
     <button
-      class="w-11 h-11 bg-transit-surface-elevated border border-transit-border-subtle rounded-[10px] text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center hidden max-[480px]:flex items-center justify-center active:scale-95 transition-transform focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
+      class="col-start-2 row-start-1 max-[480px]:row-span-2 self-center w-8 h-8 max-[480px]:w-10 max-[480px]:h-10 bg-transparent hover:bg-transit-surface-hover-soft border-none text-transit-brand hover:text-transit-text-primary text-xl cursor-pointer flex-shrink-0 flex items-center justify-center active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-full"
       onclick={onSwap}
       aria-label="Swap stations"
       title="Swap stations"
       disabled={!origin && !destination}
     >
-      ⇅
+      <span class="max-[480px]:hidden leading-none select-none">⇆</span>
+      <span class="hidden max-[480px]:inline leading-none select-none">⇅</span>
     </button>
 
-    <!-- Desktop swap button -->
-    <button
-      class="w-8 h-8 bg-transparent border-none text-transit-brand text-xl cursor-pointer flex-shrink-0 self-center max-[480px]:hidden hover:text-transit-text-primary active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-[4px]"
-      onclick={onSwap}
-      aria-label="Swap stations"
-      title="Swap stations"
-      disabled={!origin && !destination}
+    <div
+      class="col-start-3 row-start-1 max-[480px]:col-start-1 max-[480px]:row-start-2 flex items-center gap-3 min-w-0"
     >
-      ⇆
-    </button>
-
-    <div class="flex-1 flex items-center gap-3">
       <label
-        class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right max-[480px]:text-left"
+        class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right"
         for="destination">To</label
       >
       <select
