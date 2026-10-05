@@ -33,6 +33,7 @@ const checks = [
   { fg: 'transit-brand', bg: 'transit-surface-canvas', min: 4.5, label: 'Brand text on canvas' },
   { fg: 'transit-danger', bg: 'transit-surface-card', min: 4.5, label: 'Danger text on card' },
   { fg: 'transit-warning', bg: 'transit-surface-card', min: 4.5, label: 'Warning text on card' },
+  { fg: 'transit-success', bg: 'transit-surface-card', min: 4.5, label: 'Success text on card' },
   {
     fg: 'transit-warning-medium',
     bg: 'transit-surface-card',
