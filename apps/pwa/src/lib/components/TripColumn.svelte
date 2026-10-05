@@ -75,7 +75,7 @@
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="currentColor"
-                class="w-3 h-3 text-transit-warning"
+                class="w-3 h-3 flex-shrink-0"
                 viewBox="0 0 20 20"
               >
                 <path
@@ -104,7 +104,7 @@
 
     <!-- Arrival -->
     <div class="flex flex-col items-center pointer-events-none">
-      <span class="text-[0.875rem] font-semibold text-transit-text-muted tabular-nums"
+      <span class="text-[0.875rem] font-bold text-transit-text-primary tabular-nums"
         >{trip.arrival}</span
       >
     </div>

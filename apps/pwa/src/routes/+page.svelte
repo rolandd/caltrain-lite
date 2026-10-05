@@ -285,11 +285,6 @@
     };
   };
 
-  const truncateStation = (name: string, maxLen = 13): string => {
-    if (name.length <= maxLen) return name;
-    return name.slice(0, maxLen - 1) + '…';
-  };
-
   function getRealtimeTrip(trainNum: string) {
     if (!isRealtimeAvailable || !realtime) return undefined;
     return realtime.byTrip[trainNum];
@@ -304,7 +299,8 @@
   function getDelayClass(delayMins: number): string {
     if (delayMins >= 10) return 'text-transit-danger';
     if (delayMins >= 5) return 'text-transit-warning-medium';
-    return 'text-transit-warning';
+    if (delayMins >= 1) return 'text-transit-warning';
+    return 'text-transit-success';
   }
 
   function getTooltipText(trainNum: string, direction: 0 | 1): string | undefined {
@@ -401,7 +397,7 @@
     return {
       delay,
       delayLabel,
-      delayClass: getDelayClass(delayMins),
+      delayClass: delayLabel === 'delayed' ? 'text-transit-warning' : getDelayClass(delayMins),
       hasLocation,
     };
   }
@@ -527,7 +523,7 @@
 
           if (estP50Mins <= 0) {
             estText = 'on time';
-            delayClass = 'text-transit-brand-soft-text font-medium';
+            delayClass = 'text-transit-success font-medium';
           } else {
             estText = `+${estP50Mins}m`;
             delayClass = `${getDelayClass(estP50Mins)} font-semibold`;
@@ -639,7 +635,6 @@
         bind:scrollLeft
         bind:tripScrollEl
         {getStationName}
-        {truncateStation}
         {getRouteStyle}
         getTripRealtimeRenderData={getTripRealtimeRenderDataFromMap}
         onToggleTooltip={toggleTooltip}

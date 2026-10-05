@@ -23,7 +23,6 @@
     scrollLeft: number;
     tripScrollEl: HTMLDivElement | undefined;
     getStationName: (id: string) => string;
-    truncateStation: (name: string, maxLen?: number) => string;
     getRouteStyle: (routeType: string) => RouteStyle;
     getTripRealtimeRenderData: (trip: TripResult) => TripRealtimeRenderData;
     onToggleTooltip: (e: MouseEvent | KeyboardEvent, trip: TripResult) => void;
@@ -45,7 +44,6 @@
     scrollLeft = $bindable(),
     tripScrollEl = $bindable(),
     getStationName,
-    truncateStation,
     getRouteStyle,
     getTripRealtimeRenderData,
     onToggleTooltip,
@@ -111,12 +109,14 @@
           <!-- Station info body -->
           <div class="flex flex-col flex-1 items-center justify-between px-2 py-3 gap-1">
             <!-- Origin -->
-            <div class="text-center">
+            <div class="text-center w-full px-1">
               <div class="text-[0.65rem] text-transit-text-muted uppercase tracking-wider mb-0.5">
                 From
               </div>
-              <div class="text-[0.8rem] font-semibold text-transit-text-primary leading-tight">
-                {truncateStation(getStationName(origin))}
+              <div
+                class="text-[0.8rem] font-semibold text-transit-text-primary leading-tight break-words"
+              >
+                {getStationName(origin)}
               </div>
             </div>
 
@@ -134,12 +134,14 @@
             </div>
 
             <!-- Destination -->
-            <div class="text-center">
+            <div class="text-center w-full px-1">
               <div class="text-[0.65rem] text-transit-text-muted uppercase tracking-wider mb-0.5">
                 To
               </div>
-              <div class="text-[0.8rem] font-semibold text-transit-text-primary leading-tight">
-                {truncateStation(getStationName(destination))}
+              <div
+                class="text-[0.8rem] font-semibold text-transit-text-primary leading-tight break-words"
+              >
+                {getStationName(destination)}
               </div>
             </div>
           </div>
