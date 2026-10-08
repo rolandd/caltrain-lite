@@ -1,5 +1,12 @@
 {
   "name": "@transit/utils",
   "version": "1.0.0",
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2",
+    "vitest": "^3.0.0"
+  }
 }
