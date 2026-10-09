@@ -25,6 +25,8 @@
         >
           <button
             class="flex-1 text-left flex items-center gap-2 p-3 cursor-pointer bg-transparent border-none text-transit-text-primary text-base font-inherit focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-lg"
+            aria-label="Select trip from {getStationName(o)} to {getStationName(d)}"
+            title="Select trip from {getStationName(o)} to {getStationName(d)}"
             onclick={() => onSelectFavorite(pair)}
           >
             <span class="font-semibold">{getStationName(o)}</span>
