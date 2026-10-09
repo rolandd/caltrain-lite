@@ -17,6 +17,7 @@
 **Prevention:** Always initialize dictionaries keyed by external or unvalidated strings with `Object.create(null)` instead of `{}`. Alternatively, use ES6 `Map` objects.
 
 ## 2024-10-25 - Missing Content-Security-Policy Header
+
 **Vulnerability:** The `Content-Security-Policy` header was documented in `docs/SECURITY.md` but was entirely missing from `apps/pwa/static/_headers`.
 **Learning:** Documentation of security controls does not guarantee their implementation. Static asset hosting (like Cloudflare Pages) requires explicit configuration files.
 **Prevention:** Ensure that all documented security headers are actually present in the deployed configuration files and add automated checks to verify header presence.
