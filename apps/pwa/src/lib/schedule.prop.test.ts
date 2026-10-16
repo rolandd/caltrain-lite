@@ -11,7 +11,7 @@ describe('Property-Based Testing: Schedule & Trip Querying', () => {
   // Reconstruct pre-computed pair index x for v1Schedule so Property 1
   // tests genuine v1 (with x) against v2 (without x).
   const scheduleData = realSchedule as StaticSchedule;
-  const x: Record<string, string[]> = {};
+  const x: Record<string, string[]> = Object.create(null);
   for (const trip of scheduleData.t) {
     const stops = scheduleData.p[trip.p];
     if (!stops) continue;
@@ -109,7 +109,7 @@ describe('Property-Based Testing: Schedule & Trip Querying', () => {
           });
         })
         .chain(({ stations, patterns }) => {
-          const patternRecord: Record<string, string[]> = {};
+          const patternRecord: Record<string, string[]> = Object.create(null);
           patterns.forEach((p, idx) => {
             patternRecord[`p${idx}`] = p;
           });
@@ -160,13 +160,13 @@ describe('Property-Based Testing: Schedule & Trip Querying', () => {
             patterns,
             trips,
           }): { v1: StaticSchedule; v2: StaticSchedule; stations: string[] } => {
-            const stationRecord: StaticSchedule['s'] = {};
+            const stationRecord: StaticSchedule['s'] = Object.create(null);
             stations.forEach((id) => {
               stationRecord[id] = { n: id, z: '1', ids: [id], lat: 0, lon: 0 };
             });
 
             // Precompute pair index x for v1
-            const x: Record<string, string[]> = {};
+            const x: Record<string, string[]> = Object.create(null);
             for (const trip of trips) {
               const stops = patterns[trip.p];
               for (let oIdx = 0; oIdx < stops.length; oIdx++) {
