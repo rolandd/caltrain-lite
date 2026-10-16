@@ -17,6 +17,7 @@
 **Prevention:** Always initialize dictionaries keyed by external or unvalidated strings with `Object.create(null)` instead of `{}`. Alternatively, use ES6 `Map` objects.
 
 ## 2024-10-16 - Prototype Pollution in Testing Infrastructure
+
 **Vulnerability:** Dictionaries in test infrastructure (`apps/pwa/src/lib/schedule.prop.test.ts`) keyed by arbitrary strings were initialized using `{}`, allowing prototype pollution if `__proto__` is used as a key in fuzz testing.
 **Learning:** Property-based testing (like `fast-check`) explores edge cases that regular tests miss. If the code under test correctly handles `Object.create(null)` but the test infrastructure uses `{}`, tests will fail or become vulnerable themselves when the fuzzer hits prototype pollution edge cases.
 **Prevention:** Ensure test infrastructure and mock builders use `Object.create(null)` just like production code to handle malicious strings correctly.
