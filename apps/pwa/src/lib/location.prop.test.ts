@@ -19,12 +19,20 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
     it('always bounds alpha within [0, 1] and distanceMeters >= 0 for any coordinates', () => {
       fc.assert(
         fc.property(
-          latArb, lonArb,
-          latArb, lonArb,
-          latArb, lonArb,
+          latArb,
+          lonArb,
+          latArb,
+          lonArb,
+          latArb,
+          lonArb,
           (pLat, pLon, lat1, lon1, lat2, lon2) => {
             const { alpha, distanceMeters } = projectPointOntoSegment(
-              pLat, pLon, lat1, lon1, lat2, lon2,
+              pLat,
+              pLon,
+              lat1,
+              lon1,
+              lat2,
+              lon2,
             );
 
             expect(alpha).toBeGreaterThanOrEqual(0);
@@ -38,27 +46,23 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
 
     it('projects endpoints to alpha=0 and alpha=1 with zero distance', () => {
       fc.assert(
-        fc.property(
-          latArb, lonArb,
-          latArb, lonArb,
-          (lat1, lon1, lat2, lon2) => {
-            const startProj = projectPointOntoSegment(lat1, lon1, lat1, lon1, lat2, lon2);
-            expect(startProj.alpha).toBe(0);
-            expect(startProj.distanceMeters).toBeCloseTo(0, 4);
+        fc.property(latArb, lonArb, latArb, lonArb, (lat1, lon1, lat2, lon2) => {
+          const startProj = projectPointOntoSegment(lat1, lon1, lat1, lon1, lat2, lon2);
+          expect(startProj.alpha).toBe(0);
+          expect(startProj.distanceMeters).toBeCloseTo(0, 4);
 
-            const endProj = projectPointOntoSegment(lat2, lon2, lat1, lon1, lat2, lon2);
-            const dx = lon2 - lon1;
-            const dy = lat2 - lat1;
-            const isDegenerate = dx * dx + dy * dy === 0;
+          const endProj = projectPointOntoSegment(lat2, lon2, lat1, lon1, lat2, lon2);
+          const dx = lon2 - lon1;
+          const dy = lat2 - lat1;
+          const isDegenerate = dx * dx + dy * dy === 0;
 
-            if (isDegenerate) {
-              expect(endProj.alpha).toBe(0);
-            } else {
-              expect(endProj.alpha).toBeCloseTo(1, 5);
-            }
-            expect(endProj.distanceMeters).toBeCloseTo(0, 4);
-          },
-        ),
+          if (isDegenerate) {
+            expect(endProj.alpha).toBe(0);
+          } else {
+            expect(endProj.alpha).toBeCloseTo(1, 5);
+          }
+          expect(endProj.distanceMeters).toBeCloseTo(0, 4);
+        }),
         { numRuns: 500 },
       );
     });
@@ -70,8 +74,10 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
 
       fc.assert(
         fc.property(
-          localLatArb, localLonArb,
-          localLatArb, localLonArb,
+          localLatArb,
+          localLonArb,
+          localLatArb,
+          localLonArb,
           fc.double({ min: 0.01, max: 0.99, noNaN: true }),
           (lat1, lon1, lat2, lon2, t) => {
             // Require non-degenerate segment
@@ -81,7 +87,12 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
             const pLon = lon1 + t * (lon2 - lon1);
 
             const { alpha, distanceMeters } = projectPointOntoSegment(
-              pLat, pLon, lat1, lon1, lat2, lon2,
+              pLat,
+              pLon,
+              lat1,
+              lon1,
+              lat2,
+              lon2,
             );
 
             expect(alpha).toBeCloseTo(t, 4);
@@ -98,8 +109,10 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
 
       fc.assert(
         fc.property(
-          localLatArb, localLonArb,
-          localLatArb, localLonArb,
+          localLatArb,
+          localLonArb,
+          localLatArb,
+          localLonArb,
           fc.double({ min: 0.05, max: 5.0, noNaN: true }),
           (lat1, lon1, lat2, lon2, offset) => {
             fc.pre(Math.abs(lat2 - lat1) > 0.001 || Math.abs(lon2 - lon1) > 0.001);
@@ -107,7 +120,14 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
             // Point before start (t < 0)
             const beforeLat = lat1 - offset * (lat2 - lat1);
             const beforeLon = lon1 - offset * (lon2 - lon1);
-            const beforeProj = projectPointOntoSegment(beforeLat, beforeLon, lat1, lon1, lat2, lon2);
+            const beforeProj = projectPointOntoSegment(
+              beforeLat,
+              beforeLon,
+              lat1,
+              lon1,
+              lat2,
+              lon2,
+            );
             expect(beforeProj.alpha).toBe(0);
 
             // Point past end (t > 1)
@@ -123,18 +143,15 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
 
     it('gracefully handles degenerate zero-length segments without NaN', () => {
       fc.assert(
-        fc.property(
-          latArb, lonArb,
-          latArb, lonArb,
-          (pLat, pLon, lat, lon) => {
-            const { alpha, distanceMeters } = projectPointOntoSegment(
-              pLat, pLon, lat, lon, lat, lon,
-            );
-            expect(alpha).toBe(0);
-            expect(Number.isNaN(distanceMeters)).toBe(false);
-            expect(distanceMeters).toBeCloseTo(getDistanceFromLatLonInMeters(pLat, pLon, lat, lon), 2);
-          },
-        ),
+        fc.property(latArb, lonArb, latArb, lonArb, (pLat, pLon, lat, lon) => {
+          const { alpha, distanceMeters } = projectPointOntoSegment(pLat, pLon, lat, lon, lat, lon);
+          expect(alpha).toBe(0);
+          expect(Number.isNaN(distanceMeters)).toBe(false);
+          expect(distanceMeters).toBeCloseTo(
+            getDistanceFromLatLonInMeters(pLat, pLon, lat, lon),
+            2,
+          );
+        }),
         { numRuns: 300 },
       );
     });
@@ -152,15 +169,11 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
 
     it('satisfies symmetry: dist(A, B) === dist(B, A)', () => {
       fc.assert(
-        fc.property(
-          latArb, lonArb,
-          latArb, lonArb,
-          (lat1, lon1, lat2, lon2) => {
-            const d1 = getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2);
-            const d2 = getDistanceFromLatLonInMeters(lat2, lon2, lat1, lon1);
-            expect(d1).toBeCloseTo(d2, 5);
-          },
-        ),
+        fc.property(latArb, lonArb, latArb, lonArb, (lat1, lon1, lat2, lon2) => {
+          const d1 = getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2);
+          const d2 = getDistanceFromLatLonInMeters(lat2, lon2, lat1, lon1);
+          expect(d1).toBeCloseTo(d2, 5);
+        }),
         { numRuns: 500 },
       );
     });
@@ -168,9 +181,12 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
     it('satisfies triangle inequality (dist(A, C) <= dist(A, B) + dist(B, C))', () => {
       fc.assert(
         fc.property(
-          latArb, lonArb,
-          latArb, lonArb,
-          latArb, lonArb,
+          latArb,
+          lonArb,
+          latArb,
+          lonArb,
+          latArb,
+          lonArb,
           (latA, lonA, latB, lonB, latC, lonC) => {
             const dAC = getDistanceFromLatLonInMeters(latA, lonA, latC, lonC);
             const dAB = getDistanceFromLatLonInMeters(latA, lonA, latB, lonB);
@@ -188,13 +204,10 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
   describe('metersToMiles', () => {
     it('is an exact linear scaling by METERS_PER_MILE', () => {
       fc.assert(
-        fc.property(
-          fc.double({ min: 0, max: 10000000, noNaN: true }),
-          (meters) => {
-            const miles = metersToMiles(meters);
-            expect(miles * METERS_PER_MILE).toBeCloseTo(meters, 4);
-          },
-        ),
+        fc.property(fc.double({ min: 0, max: 10000000, noNaN: true }), (meters) => {
+          const miles = metersToMiles(meters);
+          expect(miles * METERS_PER_MILE).toBeCloseTo(meters, 4);
+        }),
         { numRuns: 500 },
       );
     });

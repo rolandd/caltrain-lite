@@ -72,13 +72,9 @@ describe('Property-Based Testing: Secret Redaction (redact)', () => {
   describe('Property 3: Identity & Neutral Elements', () => {
     it('returns original string unchanged when secret is null, undefined, or empty', () => {
       fc.assert(
-        fc.property(
-          fc.string(),
-          fc.constantFrom(null, undefined, ''),
-          (str, emptySecret) => {
-            expect(redact(str, emptySecret)).toBe(str);
-          },
-        ),
+        fc.property(fc.string(), fc.constantFrom(null, undefined, ''), (str, emptySecret) => {
+          expect(redact(str, emptySecret)).toBe(str);
+        }),
         { numRuns: 200 },
       );
     });
@@ -90,7 +86,9 @@ describe('Property-Based Testing: Secret Redaction (redact)', () => {
           fc.string({ minLength: 4, maxLength: 20 }),
           (str, secretCandidate) => {
             // Ensure candidate secret does not appear anywhere in str
-            fc.pre(!str.includes(secretCandidate) && !str.includes(encodeURIComponent(secretCandidate)));
+            fc.pre(
+              !str.includes(secretCandidate) && !str.includes(encodeURIComponent(secretCandidate)),
+            );
             expect(redact(str, secretCandidate)).toBe(str);
           },
         ),
@@ -104,8 +102,35 @@ describe('Property-Based Testing: Secret Redaction (redact)', () => {
       const specialCharArb = fc
         .array(
           fc.constantFrom(
-            '.', '*', '+', '?', '^', '$', '{', '}', '(', ')', '|', '[', ']', '\\',
-            '/', '&', '=', '%', '#', ' ', ':', ';', '!', '@', '"', "'", '<', '>', '🚀'
+            '.',
+            '*',
+            '+',
+            '?',
+            '^',
+            '$',
+            '{',
+            '}',
+            '(',
+            ')',
+            '|',
+            '[',
+            ']',
+            '\\',
+            '/',
+            '&',
+            '=',
+            '%',
+            '#',
+            ' ',
+            ':',
+            ';',
+            '!',
+            '@',
+            '"',
+            "'",
+            '<',
+            '>',
+            '🚀',
           ),
           { minLength: 2, maxLength: 20 },
         )
