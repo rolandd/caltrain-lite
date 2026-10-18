@@ -5,6 +5,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PbfWriter } from 'pbf';
 import { parseFeed } from '../src/gtfs-rt';
+import {
+  fetchFeedStage,
+  parseFeedStage,
+  FeedStage,
+  FEED_STAGE_NAMES,
+  emptyParsedFeed,
+} from '../src/feed-poll';
 import { writeFeedMessage } from '../src/gtfs-realtime';
 
 function toArrayBuffer(buf: Buffer): ArrayBuffer {
@@ -163,5 +170,202 @@ const resMetaV2Fallback = await worker.fetch(
 assert.equal(resMetaV2Fallback.status, 200);
 const bodyMetaV2Fallback = (await resMetaV2Fallback.json()) as { sv: number };
 assert.equal(bodyMetaV2Fallback.sv, 1); // Successfully fell back to schedule:meta
+
+// 7. feed-poll: per-feed pipeline stage classification
+const originalFetch = globalThis.fetch;
+try {
+  // a. fetch() throws (network/DNS/timeout) -> FETCH_ERROR, retried up to maxAttempts
+  globalThis.fetch = (async () => {
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+  let res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 3, 0);
+  assert.equal(res.stage, FeedStage.FETCH_ERROR);
+  assert.equal(res.status, null);
+  assert.equal(res.attempts, 3);
+  assert.equal(typeof res.durationMs, 'number');
+  assert.equal(res.bytes, null);
+  assert.ok(res.error);
+
+  // b. non-200 (500) -> HTTP_ERROR, retried up to maxAttempts
+  globalThis.fetch = (async () => new Response('Server Error', { status: 500 })) as typeof fetch;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 3, 0);
+  assert.equal(res.stage, FeedStage.HTTP_ERROR);
+  assert.equal(res.status, 500);
+  assert.equal(res.attempts, 3);
+  assert.equal(typeof res.durationMs, 'number');
+  assert.equal(res.bytes, 'Server Error'.length);
+
+  // c. permanent 4xx (403 Forbidden) -> HTTP_ERROR, NOT retried (attempts === 1)
+  globalThis.fetch = (async () => new Response('Forbidden', { status: 403 })) as typeof fetch;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 3, 0);
+  assert.equal(res.stage, FeedStage.HTTP_ERROR);
+  assert.equal(res.status, 403);
+  assert.equal(res.attempts, 1);
+  assert.equal(res.bytes, 'Forbidden'.length);
+
+  // c2. 429 Too Many Requests -> HTTP_ERROR, NOT retried (attempts === 1)
+  globalThis.fetch = (async () =>
+    new Response('Rate limit exceeded', { status: 429 })) as typeof fetch;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 3, 0);
+  assert.equal(res.stage, FeedStage.HTTP_ERROR);
+  assert.equal(res.status, 429);
+  assert.equal(res.attempts, 1);
+  assert.equal(res.bytes, 'Rate limit exceeded'.length);
+
+  // d. transient failure recovered on retry: attempt 1 returns 500, attempt 2 returns valid feed
+  let callCount = 0;
+  globalThis.fetch = (async () => {
+    callCount++;
+    if (callCount === 1) {
+      return new Response('Transient 500', { status: 500 });
+    }
+    return new Response(
+      encodeFeed({
+        header: { gtfs_realtime_version: '2.0', timestamp: 9999 },
+        entity: [{ id: 'e1', trip_update: { trip: { trip_id: 'T1' }, delay: 30 } }],
+      }),
+      { status: 200 },
+    );
+  }) as typeof fetch;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 3, 0);
+  assert.equal(res.stage, FeedStage.OK);
+  assert.equal(res.status, 200);
+  assert.equal(res.attempts, 2);
+  assert.ok(typeof res.bytes === 'number' && res.bytes > 0);
+  assert.equal(res.feed?.t, 9999);
+
+  // d2. durationMs accumulates active fetch/parse time across retries, excluding backoff sleep
+  callCount = 0;
+  globalThis.fetch = (async () => {
+    callCount++;
+    if (callCount === 1) {
+      return new Response('Server Error', { status: 500 });
+    }
+    return new Response(
+      encodeFeed({
+        header: { gtfs_realtime_version: '2.0', timestamp: 8888 },
+        entity: [],
+      }),
+      { status: 200 },
+    );
+  }) as typeof fetch;
+  const backoffDelay = 150;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 2, backoffDelay);
+  assert.equal(res.stage, FeedStage.OK);
+  assert.equal(res.attempts, 2);
+  assert.ok(
+    res.durationMs !== null && res.durationMs < backoffDelay,
+    `Expected durationMs (${res.durationMs}ms) to be less than backoff sleep (${backoffDelay}ms)`,
+  );
+
+  // e. 200 with zero-byte body -> EMPTY_BODY
+  globalThis.fetch = (async () =>
+    new Response(new ArrayBuffer(0), { status: 200 })) as typeof fetch;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 2, 0);
+  assert.equal(res.stage, FeedStage.EMPTY_BODY);
+  assert.equal(res.status, 200);
+  assert.equal(res.attempts, 2);
+  assert.equal(typeof res.durationMs, 'number');
+  assert.equal(res.bytes, 0);
+
+  // f. 200 with malformed protobuf -> PARSE_ERROR
+  globalThis.fetch = (async () =>
+    new Response(new Uint8Array([0x0f]), { status: 200 })) as typeof fetch;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 2, 0);
+  assert.equal(res.stage, FeedStage.PARSE_ERROR);
+  assert.equal(res.status, 200);
+  assert.equal(res.attempts, 2);
+  assert.equal(typeof res.durationMs, 'number');
+  assert.equal(res.bytes, 1);
+
+  // g. decodes but has no header timestamp -> INVALID_FEED. This is how
+  // 511.org error text served with HTTP 200 surfaces (it decodes as an
+  // empty feed with t=0 rather than throwing).
+  res = parseFeedStage(
+    'Test',
+    encodeFeed({
+      entity: [
+        {
+          id: 'e1',
+          vehicle: { trip: { trip_id: 'T1' }, position: { latitude: 37, longitude: -122 } },
+        },
+      ],
+    }),
+    200,
+  );
+  assert.equal(res.stage, FeedStage.INVALID_FEED);
+  assert.equal(res.durationMs, null);
+  assert.equal(res.attempts, 1);
+
+  // h. valid header + trip_update entity -> OK with parsed feed attached
+  res = parseFeedStage(
+    'Test',
+    encodeFeed({
+      header: { gtfs_realtime_version: '2.0', timestamp: 1234 },
+      entity: [{ id: 'e1', trip_update: { trip: { trip_id: 'T1' }, delay: 60 } }],
+    }),
+    200,
+    42,
+    1,
+  );
+  assert.equal(res.stage, FeedStage.OK);
+  assert.equal(res.status, 200);
+  assert.equal(res.durationMs, 42);
+  assert.equal(res.attempts, 1);
+  assert.equal(res.feed?.t, 1234);
+  assert.equal(res.feed?.e.length, 1);
+
+  // i. valid header with zero entities -> OK (legitimate off-hours feed)
+  res = parseFeedStage(
+    'Test',
+    encodeFeed({ header: { gtfs_realtime_version: '2.0', timestamp: 1234 } }),
+    200,
+  );
+  assert.equal(res.stage, FeedStage.OK);
+  assert.equal(res.feed?.e.length, 0);
+
+  // j. HTTP 200 with JSON error text -> PARSE_ERROR with sniffed upstream text
+  const jsonErrorBody = new TextEncoder().encode('{"message": "Rate limit exceeded"}').buffer;
+  res = parseFeedStage('Test', jsonErrorBody, 200);
+  assert.equal(res.stage, FeedStage.PARSE_ERROR);
+  assert.ok(res.error?.includes('upstream text: "{"message": "Rate limit exceeded"}"'));
+
+  // k. HTTP 503 with gateway error body -> HTTP_ERROR with sniffed status text
+  globalThis.fetch = (async () =>
+    new Response('Upstream gateway timeout', { status: 503 })) as typeof fetch;
+  res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, 1, 0);
+  assert.equal(res.stage, FeedStage.HTTP_ERROR);
+  assert.equal(res.status, 503);
+  assert.ok(res.error?.includes('HTTP 503: "Upstream gateway timeout"'));
+
+  // l. degenerate maxAttempts (0 or negative) is clamped to a single attempt
+  // rather than skipping the loop and returning null
+  let degenerateCalls = 0;
+  globalThis.fetch = (async () => {
+    degenerateCalls++;
+    return new Response(encodeFeed({ header: { gtfs_realtime_version: '2.0', timestamp: 1 } }), {
+      status: 200,
+    });
+  }) as typeof fetch;
+  for (const badMaxAttempts of [0, -1, -10]) {
+    res = await fetchFeedStage('Test', 'https://example.invalid/feed', 1000, badMaxAttempts, 0);
+    assert.equal(res.stage, FeedStage.OK);
+    assert.equal(res.attempts, 1);
+    assert.equal(res.feed?.t, 1);
+  }
+  assert.equal(degenerateCalls, 3); // exactly one attempt per call
+} finally {
+  globalThis.fetch = originalFetch;
+}
+
+// 8. feed-poll: stage names cover every code and emptyParsedFeed is inert
+for (const stage of Object.values(FeedStage)) {
+  assert.ok(FEED_STAGE_NAMES[stage], `Missing name for stage ${stage}`);
+}
+const empty = emptyParsedFeed();
+assert.equal(empty.t, 0);
+assert.equal(empty.e.length, 0);
+assert.equal(empty.p.size, 0);
+assert.equal(empty.a.length, 0);
 
 console.log('Test Passed!');

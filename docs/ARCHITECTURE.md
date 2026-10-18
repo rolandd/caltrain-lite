@@ -100,13 +100,14 @@ KV's 25MB value limit and low-latency reads an ideal fit.
 
 ### SQL Storage (D1 - Historical Realtime)
 
-Used for recording train locations over time for on-time performance processing and analysis. Detailed in [HISTORICAL_DATA.md](file:///home/roland/Src/Transit.git/docs/HISTORICAL_DATA.md).
+Used for recording train locations over time for on-time performance processing and analysis. Detailed in [HISTORICAL_DATA.md](./HISTORICAL_DATA.md).
 
-| Table             | Contents                                                          | Frequency   | Written By  |
-| ----------------- | ----------------------------------------------------------------- | ----------- | ----------- |
-| `train_locations` | `(id PK, timestamp INT, data TEXT, created_at DATETIME)` (byTrip) | Every 2 min | Worker cron |
+| Table             | Contents                                                                     | Frequency   | Written By  |
+| ----------------- | ---------------------------------------------------------------------------- | ----------- | ----------- |
+| `train_locations` | `(id PK, timestamp INT, data TEXT, created_at DATETIME)` (byTrip)            | Every 2 min | Worker cron |
+| `feed_polls`      | One row per cron tick: per-feed pipeline stages, HTTP statuses, train counts | Every 2 min | Worker cron |
 
-Note: `train_locations` has indexes on `timestamp` and `created_at` for efficient querying and 90-day retention pruning.
+Note: `train_locations` has indexes on `timestamp` and `created_at` for efficient querying and 90-day retention pruning. `feed_polls` is indexed on `polled_at` and records every tick including failures, so a missing row indicates a local infra problem rather than a data source failure. Detailed in [HISTORICAL_DATA.md](./HISTORICAL_DATA.md).
 
 ### Client Storage
 
