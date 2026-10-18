@@ -6,7 +6,7 @@
   "scripts": {
     "deploy": "wrangler deploy --config wrangler.toml",
     "dev": "wrangler dev --config wrangler.toml",
-    "test": "tsx test/test-worker.ts",
+    "test": "tsx test/test-worker.ts && tsx test/feed-poll.prop.test.ts",
     "check": "tsc --noEmit",
     "bench:gtfs-rt": "tsx bench/gtfs-rt.ts",
     "fetch:fixtures": "tsx fetch-fixture.ts",

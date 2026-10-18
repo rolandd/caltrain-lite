@@ -166,3 +166,4 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx -y wrangler d1 execute transit-d1 --remote --config=worker/wrangler.toml --command="DELETE FROM train_locations WHERE timestamp < strftime('%s', 'now', '-90 days');"
+          npx -y wrangler d1 execute transit-d1 --remote --config=worker/wrangler.toml --command="DELETE FROM feed_polls WHERE polled_at < strftime('%s', 'now', '-90 days');"
