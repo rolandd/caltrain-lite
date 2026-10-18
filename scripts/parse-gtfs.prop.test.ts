@@ -70,52 +70,50 @@ describe('Property-Based Testing: GTFS Pipeline & Schedule Invariants', () => {
         endDate: fc.constant(endDate),
       });
     })
-    .map(
-      ({ stations, patterns, trips, versionHash, endDate }): StaticSchedule => {
-        const stationRecord: StaticSchedule['s'] = {};
-        stations.forEach((id, idx) => {
-          stationRecord[id] = {
-            n: `Station ${id.toUpperCase()}`,
-            z: String((idx % 5) + 1),
-            ids: [`stop_${id}_1`, `stop_${id}_2`],
-            lat: 37.0 + idx * 0.05,
-            lon: -122.0 - idx * 0.05,
-          };
-        });
+    .map(({ stations, patterns, trips, versionHash, endDate }): StaticSchedule => {
+      const stationRecord: StaticSchedule['s'] = {};
+      stations.forEach((id, idx) => {
+        stationRecord[id] = {
+          n: `Station ${id.toUpperCase()}`,
+          z: String((idx % 5) + 1),
+          ids: [`stop_${id}_1`, `stop_${id}_2`],
+          lat: 37.0 + idx * 0.05,
+          lon: -122.0 - idx * 0.05,
+        };
+      });
 
-        // Precompute pair index x
-        const x: Record<string, string[]> = {};
-        for (const trip of trips) {
-          const stops = patterns[trip.p]!;
-          for (let i = 0; i < stops.length; i++) {
-            for (let j = i + 1; j < stops.length; j++) {
-              const key = `${stops[i]}→${stops[j]}`;
-              (x[key] ??= []).push(trip.i);
-            }
+      // Precompute pair index x
+      const x: Record<string, string[]> = {};
+      for (const trip of trips) {
+        const stops = patterns[trip.p]!;
+        for (let i = 0; i < stops.length; i++) {
+          for (let j = i + 1; j < stops.length; j++) {
+            const key = `${stops[i]}→${stops[j]}`;
+            (x[key] ??= []).push(trip.i);
           }
         }
+      }
 
-        return {
-          m: { v: versionHash, e: endDate, sv: 1 },
-          s: stationRecord,
-          o: stations,
-          p: patterns,
-          t: trips,
-          r: {
-            c: {
-              svc_standard: {
-                start: 20260101,
-                end: endDate,
-                days: [1, 1, 1, 1, 1, 1, 1],
-              },
+      return {
+        m: { v: versionHash, e: endDate, sv: 1 },
+        s: stationRecord,
+        o: stations,
+        p: patterns,
+        t: trips,
+        r: {
+          c: {
+            svc_standard: {
+              start: 20260101,
+              end: endDate,
+              days: [1, 1, 1, 1, 1, 1, 1],
             },
-            e: {},
           },
-          f: { zones: {}, fares: {} },
-          x,
-        };
-      },
-    );
+          e: {},
+        },
+        f: { zones: {}, fares: {} },
+        x,
+      };
+    });
 
   describe('toV2Schedule Conversion Invariants', () => {
     it('sets schema version to 2 and completely removes pair index x without mutating original', () => {
@@ -197,18 +195,24 @@ describe('Property-Based Testing: GTFS Pipeline & Schedule Invariants', () => {
 
     it('fault injection: detects unknown station referenced in pattern', () => {
       fc.assert(
-        fc.property(validScheduleArb, fc.stringMatching(/^ghost_[a-z]{3}$/), (schedule, ghostStop) => {
-          const firstPatKey = Object.keys(schedule.p)[0]!;
-          const mutated: StaticSchedule = {
-            ...schedule,
-            p: {
-              ...schedule.p,
-              [firstPatKey]: [...schedule.p[firstPatKey]!, ghostStop],
-            },
-          };
-          const errors = validateSchedule(mutated);
-          expect(errors.some((e) => e.includes(`references unknown station: ${ghostStop}`))).toBe(true);
-        }),
+        fc.property(
+          validScheduleArb,
+          fc.stringMatching(/^ghost_[a-z]{3}$/),
+          (schedule, ghostStop) => {
+            const firstPatKey = Object.keys(schedule.p)[0]!;
+            const mutated: StaticSchedule = {
+              ...schedule,
+              p: {
+                ...schedule.p,
+                [firstPatKey]: [...schedule.p[firstPatKey]!, ghostStop],
+              },
+            };
+            const errors = validateSchedule(mutated);
+            expect(errors.some((e) => e.includes(`references unknown station: ${ghostStop}`))).toBe(
+              true,
+            );
+          },
+        ),
         { numRuns: 100 },
       );
     });
@@ -223,7 +227,9 @@ describe('Property-Based Testing: GTFS Pipeline & Schedule Invariants', () => {
             t: mutatedTrips,
           };
           const errors = validateSchedule(mutated);
-          expect(errors.some((e) => e.includes('references unknown service: ghost_service_xyz'))).toBe(true);
+          expect(
+            errors.some((e) => e.includes('references unknown service: ghost_service_xyz')),
+          ).toBe(true);
         }),
         { numRuns: 100 },
       );

@@ -3,11 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import {
-  pavaIsotonicRegression,
-  percentile,
-  haversineDistanceMeters,
-} from './process-performance';
+import { pavaIsotonicRegression, percentile, haversineDistanceMeters } from './process-performance';
 
 describe('Property-Based Testing: Performance Algorithms (process-performance)', () => {
   describe('PAVA Isotonic Regression', () => {
@@ -210,9 +206,12 @@ describe('Property-Based Testing: Performance Algorithms (process-performance)',
     it('satisfies triangle inequality (dist(A, C) <= dist(A, B) + dist(B, C) + epsilon)', () => {
       fc.assert(
         fc.property(
-          latArb, lonArb,
-          latArb, lonArb,
-          latArb, lonArb,
+          latArb,
+          lonArb,
+          latArb,
+          lonArb,
+          latArb,
+          lonArb,
           (latA, lonA, latB, lonB, latC, lonC) => {
             const dAC = haversineDistanceMeters(latA, lonA, latC, lonC);
             const dAB = haversineDistanceMeters(latA, lonA, latB, lonB);
