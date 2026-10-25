@@ -56,9 +56,35 @@ const wallClockFormatter = new Intl.DateTimeFormat('en-US', {
  * Converges in one correction because US transitions happen at 2 AM local,
  * so midnight never falls inside a transition.
  */
-export function getLocalMidnightUtcSec(dateStr: string): number {
-  const cached = midnightUtcCache.get(dateStr);
-  if (cached !== undefined) return cached;
+/**
+ * Zone profile of a single calendar day in the transit timezone.
+ *
+ * A day has at most one DST transition, so the offset in effect at any wall
+ * time within the day is fully determined by midnight's offset plus, on the
+ * two transition days per year, the instant at which it flips.
+ */
+interface DayZoneInfo {
+  /** UTC epoch second of local midnight. */
+  midnightUtcSec: number;
+  /** Zone offset (wall clock - UTC) in seconds in effect at midnight. */
+  offsetSec: number;
+  /** First instant (UTC epoch second) whose offset differs, if any. */
+  transitionUtcSec?: number;
+  /** Offset in effect from transitionUtcSec onward. */
+  transitionOffsetSec?: number;
+  /** Wall-clock pseudo-epoch at/after which transitionOffsetSec applies. */
+  transitionWallSec?: number;
+}
+
+/** Memoization for getDayZoneInfo (pure function of dateStr). */
+const dayZoneCache = new Map<string, DayZoneInfo>();
+
+/**
+ * Compute (and memoize) the zone profile of a calendar day.
+ */
+function getDayZoneInfo(dateStr: string): DayZoneInfo {
+  const cached = dayZoneCache.get(dateStr);
+  if (cached) return cached;
 
   const [y, m, d] = dateStr.split('-').map(Number);
   const midnightAsUtcMs = Date.UTC(y!, m! - 1, d!); // local midnight treated as if UTC
@@ -83,13 +109,45 @@ export function getLocalMidnightUtcSec(dateStr: string): number {
     guessMs = correctedMs;
   }
 
-  const resultSec = Math.floor(guessMs / 1000);
-  midnightUtcCache.set(dateStr, resultSec);
-  return resultSec;
+  const midnightUtcSec = Math.floor(guessMs / 1000);
+  const offsetSec = zoneOffsetSec(midnightUtcSec);
+
+  let info: DayZoneInfo = { midnightUtcSec, offsetSec };
+
+  // If the offsets at the first and last second of the day differ, the day
+  // contains a DST transition. Binary-search the flip instant (a handful of
+  // Intl calls, computed once per date and memoized).
+  if (zoneOffsetSec(midnightUtcSec + 86399) !== offsetSec) {
+    let lo = midnightUtcSec;
+    let hi = midnightUtcSec + 86399;
+    while (lo < hi) {
+      const mid = lo + Math.floor((hi - lo) / 2);
+      if (zoneOffsetSec(mid) === offsetSec) lo = mid + 1;
+      else hi = mid;
+    }
+    info = {
+      midnightUtcSec,
+      offsetSec,
+      transitionUtcSec: lo,
+      transitionOffsetSec: zoneOffsetSec(lo),
+      // The new offset applies to wall times at or after the transition
+      // instant displayed in the old offset (e.g. 02:00 on a spring-forward
+      // day, which the old offset displays last before the gap).
+      transitionWallSec: lo + offsetSec,
+    };
+  }
+
+  dayZoneCache.set(dateStr, info);
+  return info;
 }
 
-/** Memoization for getLocalMidnightUtcSec (pure function of dateStr). */
-const midnightUtcCache = new Map<string, number>();
+/**
+ * UTC epoch second of local midnight of the given date in the transit
+ * timezone (08:00 UTC during PST, 07:00 UTC during PDT).
+ */
+export function getLocalMidnightUtcSec(dateStr: string): number {
+  return getDayZoneInfo(dateStr).midnightUtcSec;
+}
 
 /**
  * Zone offset (local wall clock minus UTC) in seconds in effect at the given
@@ -111,6 +169,14 @@ function zoneOffsetSec(epochSec: number): number {
 }
 
 /**
+ * Shift a YYYY-MM-DD date string by a whole number of days.
+ */
+function addLocalDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
+}
+
+/**
  * Resolve a local wall-clock time to a UTC epoch second.
  *
  * `secSinceMidnight` is seconds since local midnight of `dateStr` (the GTFS
@@ -122,33 +188,34 @@ function zoneOffsetSec(epochSec: number): number {
  * spring-forward day like 2026-03-08 in Los Angeles (02:00 -> 03:00), a
  * 03:10 wall time is in PDT while midnight is PST, so the naive sum lands an
  * hour late; on a fall-back day like 2026-11-01 it lands an hour early.
- * This resolves the offset at the target instant itself: an instant E
- * displays as wall clock E + off(E), so we need the fixed point of
  *
- *   E = midnightUtcSec + off(midnight) + secSinceMidnight - off(E)
+ * Instead, work on the naive local time line, where wall clocks are linear:
+ * the target wall clock is `midnightWall(targetDay) + withinDaySec`, and the
+ * offset in effect there is picked with a single comparison against the
+ * day's transition point (see DayZoneInfo). All Intl work happens once per
+ * calendar day inside getDayZoneInfo; this function is pure integer
+ * arithmetic.
  *
- * For real wall times this converges in at most two steps. For wall times
- * skipped by a spring-forward transition (02:00-02:59, which no real
- * schedule should contain) no instant displays that wall clock; the
- * iteration oscillates and the last iterate (an adjacent real time) is
- * returned.
+ * Edge cases: for the ambiguous fall-back hour (a wall time that occurs
+ * twice) the first occurrence is used; for wall times skipped by a
+ * spring-forward transition (02:00-02:59, which no real schedule should
+ * contain) no instant displays that wall clock and the preceding real time
+ * is returned.
  */
 export function getLocalWallTimeUtcSec(dateStr: string, secSinceMidnight: number): number {
-  const midnightUtcSec = getLocalMidnightUtcSec(dateStr);
-  const midnightOffsetSec = zoneOffsetSec(midnightUtcSec);
+  const dayOffset = Math.floor(secSinceMidnight / 86400);
+  const withinDaySec = secSinceMidnight - dayOffset * 86400;
+  const info = getDayZoneInfo(addLocalDays(dateStr, dayOffset));
 
-  // Initial guess: exact unless a transition lies between midnight and the
-  // target instant (only the two transition days per year reach the loop).
-  let epochSec = midnightUtcSec + secSinceMidnight;
-  if (zoneOffsetSec(epochSec) === midnightOffsetSec) return epochSec;
+  // Target wall clock as a pseudo-epoch on the naive local time line.
+  const targetWallSec = info.midnightUtcSec + info.offsetSec + withinDaySec;
 
-  for (let i = 0; i < 3; i++) {
-    const correctedSec =
-      midnightUtcSec + midnightOffsetSec + secSinceMidnight - zoneOffsetSec(epochSec);
-    if (correctedSec === epochSec) break;
-    epochSec = correctedSec;
-  }
-  return epochSec;
+  const offsetSec =
+    info.transitionWallSec !== undefined && targetWallSec >= info.transitionWallSec
+      ? info.transitionOffsetSec!
+      : info.offsetSec;
+
+  return targetWallSec - offsetSec;
 }
 
 /**

@@ -120,6 +120,13 @@ describe('process-performance', () => {
       );
     });
 
+    it('spills across multiple calendar days', () => {
+      // 2026-03-06 + 51:10 = 03:10 PDT on 2026-03-08 (two days later)
+      expect(getLocalWallTimeUtcSec('2026-03-06', 51 * 3600 + 600)).toBe(
+        Date.parse('2026-03-08T03:10:00-07:00') / 1000,
+      );
+    });
+
     it('agrees with getLocalMidnightUtcSec for secSinceMidnight = 0 on transition days', () => {
       expect(getLocalWallTimeUtcSec('2026-03-08', 0)).toBe(getLocalMidnightUtcSec('2026-03-08'));
       expect(getLocalWallTimeUtcSec('2026-11-01', 0)).toBe(getLocalMidnightUtcSec('2026-11-01'));
