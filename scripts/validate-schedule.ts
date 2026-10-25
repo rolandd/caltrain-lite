@@ -79,6 +79,41 @@ export function validateSchedule(schedule: StaticSchedule): string[] {
     }
   }
 
+  // 5. Station/service coverage
+  // Every station must be served by at least one pattern: a station with no
+  // trips (e.g. a platform-only stop like Stanford in the base schedule)
+  // would show an empty results list in the UI and break the assumption that
+  // the ordered list covers usable stations.
+  const servedStations = new Set<string>();
+  for (const pStops of Object.values(schedule.p || {})) {
+    for (const stopId of pStops) {
+      servedStations.add(stopId);
+    }
+  }
+  for (const id of stationIds) {
+    if (!servedStations.has(id)) {
+      errors.push(`Station ${id} is not referenced by any pattern (zero trips)`);
+    }
+  }
+
+  // The ordered station list must be a permutation of the station map:
+  // duplicates or omissions silently corrupt "next station" lookups and
+  // downstream ordering logic.
+  if (Array.isArray(schedule.o)) {
+    const orderedIds = new Set<string>();
+    for (const id of schedule.o) {
+      if (orderedIds.has(id)) {
+        errors.push(`Ordered list contains duplicate station: ${id}`);
+      }
+      orderedIds.add(id);
+    }
+    for (const id of stationIds) {
+      if (!orderedIds.has(id)) {
+        errors.push(`Ordered list is missing station: ${id}`);
+      }
+    }
+  }
+
   return errors;
 }
 

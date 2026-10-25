@@ -26,11 +26,13 @@ const VALID_MINIMAL: StaticSchedule = {
       s: 'svc1',
       p: 'p1',
       d: 0,
-      st: [0, 0, 10, 10],
+      // 10 stops -> 20 time values
+      st: Array.from({ length: 20 }, (_, k) => k),
       rt: 'Local',
     })),
   p: {
-    p1: ['s1', 's2'],
+    // Every station must be served by at least one pattern
+    p1: ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10'],
     p2: ['s2', 's1'],
   },
   r: {
@@ -39,7 +41,7 @@ const VALID_MINIMAL: StaticSchedule = {
   },
   f: { zones: {}, fares: {} },
   x: {},
-  o: ['s1', 's2'],
+  o: ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10'],
 };
 
 describe('validateSchedule', () => {
@@ -76,11 +78,33 @@ describe('validateSchedule', () => {
 
   it('fails on stop times length mismatch', () => {
     const schedule = JSON.parse(JSON.stringify(VALID_MINIMAL));
-    schedule.t[0].st = [0, 0]; // Expected 4 for 2 stops
+    schedule.t[0].st = [0, 0]; // Expected 20 for 10 stops
     const errors = validateSchedule(schedule);
-    expect(errors.some((e) => e.includes('stop times length (2) mismatch pattern p1 (4)'))).toBe(
+    expect(errors.some((e) => e.includes('stop times length (2) mismatch pattern p1 (20)'))).toBe(
       true,
     );
+  });
+
+  it('fails on a station served by no pattern (zero trips)', () => {
+    const schedule = JSON.parse(JSON.stringify(VALID_MINIMAL));
+    schedule.p.p1 = ['s1', 's2']; // s3..s10 no longer served
+    const errors = validateSchedule(schedule);
+    expect(errors).toContain('Station s3 is not referenced by any pattern (zero trips)');
+    expect(errors).toContain('Station s10 is not referenced by any pattern (zero trips)');
+  });
+
+  it('fails when the ordered list omits a station', () => {
+    const schedule = JSON.parse(JSON.stringify(VALID_MINIMAL));
+    schedule.o = schedule.o.slice(0, 9); // drop s10
+    const errors = validateSchedule(schedule);
+    expect(errors).toContain('Ordered list is missing station: s10');
+  });
+
+  it('fails when the ordered list contains a duplicate station', () => {
+    const schedule = JSON.parse(JSON.stringify(VALID_MINIMAL));
+    schedule.o = ['s1', 's1', ...schedule.o.slice(1)];
+    const errors = validateSchedule(schedule);
+    expect(errors).toContain('Ordered list contains duplicate station: s1');
   });
 
   it('fails on missing ordered station list', () => {
