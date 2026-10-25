@@ -3,18 +3,21 @@
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
 
-import { build, files, prerendered, version } from '$service-worker';
+import { version } from '$app/env';
+import { assets, immutable, prerendered } from '$app/manifest';
 
 const CACHE = `cache-${version}`;
 
 // Filter out non-essential or potentially problematic files (like Cloudflare _headers)
 const ASSETS = new Set(
-  [...build, ...files, ...prerendered].filter((file) => {
-    // Always keep the root or directory-like paths
-    if (file.endsWith('/')) return true;
-    const filename = file.split('/').pop();
-    return filename && !filename.startsWith('_');
-  }),
+  [...immutable, ...assets, ...prerendered]
+    .map((file) => file.path)
+    .filter((file) => {
+      // Always keep the root or directory-like paths
+      if (file.endsWith('/')) return true;
+      const filename = file.split('/').pop();
+      return filename && !filename.startsWith('_');
+    }),
 );
 
 const sw = self as unknown as ServiceWorkerGlobalScope;

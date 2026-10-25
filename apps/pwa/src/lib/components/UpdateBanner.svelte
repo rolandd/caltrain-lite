@@ -2,14 +2,15 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import { updated, page } from '$app/stores';
-  import { dev } from '$app/environment';
+  import { updated, page } from '$app/state';
 
-  let showBanner = $derived($updated || (dev && $page.url.searchParams.has('test-update')));
+  import { dev } from '$app/env';
+
+  let showBanner = $derived(updated.current || (dev && page.url.searchParams.has('test-update')));
 
   $effect(() => {
     // Clean up update query parameter from address bar if present
-    if (typeof window !== 'undefined' && $page.url.searchParams.has('v')) {
+    if (typeof window !== 'undefined' && page.url.searchParams.has('v')) {
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete('v');
       const newSearch = cleanUrl.searchParams.toString();
@@ -74,7 +75,7 @@
           stroke-linecap="round"
           stroke-linejoin="round"
           d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-9-3.75h.008v.008H12z"
-        />
+        ></path>
       </svg>
       A new version is available!
     </div>

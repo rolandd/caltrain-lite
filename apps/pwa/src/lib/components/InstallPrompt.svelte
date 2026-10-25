@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getFavorites } from '$lib/favorites';
+  import { getFavorites } from '#lib/favorites.js';
 
   interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;

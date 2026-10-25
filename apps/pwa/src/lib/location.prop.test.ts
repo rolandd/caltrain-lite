@@ -192,8 +192,12 @@ describe('Property-Based Testing: Track Geometry & Projection (location)', () =>
             const dAB = getDistanceFromLatLonInMeters(latA, lonA, latB, lonB);
             const dBC = getDistanceFromLatLonInMeters(latB, lonB, latC, lonC);
 
-            // Allow 0.01m (1 cm) margin for IEEE 754 floating point trig rounding across planetary scale
-            expect(dAC).toBeLessThanOrEqual(dAB + dBC + 0.01);
+            // Margin for IEEE 754 floating point trig rounding. Error scales
+            // with distance (~1e-8 relative for Haversine's trig pipeline),
+            // so near-antipodal points (~2e7 m arcs) can violate the strict
+            // inequality by tens of centimeters. A fixed 1 cm margin flaked.
+            const epsilon = 1e-8 * (dAB + dBC) + 1e-6;
+            expect(dAC).toBeLessThanOrEqual(dAB + dBC + epsilon);
           },
         ),
         { numRuns: 500 },

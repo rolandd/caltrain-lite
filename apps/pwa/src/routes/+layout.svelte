@@ -2,7 +2,7 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import { initSchedule, initPerformance } from '$lib/sync';
+  import { initSchedule, initPerformance } from '#lib/sync.js';
   import type { StaticSchedule, TrainPerformanceProfile } from '@packages/types/schema';
   import { setContext } from 'svelte';
   import '@fontsource-variable/inter';
@@ -27,8 +27,8 @@
     },
   });
 
-  import InstallPrompt from '$lib/components/InstallPrompt.svelte';
-  import UpdateBanner from '$lib/components/UpdateBanner.svelte';
+  import InstallPrompt from '#lib/components/InstallPrompt.svelte';
+  import UpdateBanner from '#lib/components/UpdateBanner.svelte';
 
   // Eagerly kick off cache read at component init to avoid waiting for $effect post-mount
   initSchedule((newSchedule) => {
