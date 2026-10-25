@@ -22,6 +22,41 @@ export function getFavorites(): string[] {
   }
 }
 
+/**
+ * Drop favorites that reference stations no longer present in the schedule
+ * (the parser prunes stations with zero trips, so a station can disappear
+ * when a new schedule is published) and persist the pruned list.
+ *
+ * Returns the kept favorites.
+ */
+export function pruneFavorites(
+  isValidPair: (origin: string, destination: string) => boolean,
+): string[] {
+  if (typeof localStorage === 'undefined') return [];
+  const favorites = getFavorites();
+  const kept = favorites.filter((pair) => {
+    const [origin, destination] = pair.split('-');
+    return origin !== undefined && destination !== undefined && isValidPair(origin, destination);
+  });
+  if (kept.length !== favorites.length) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(kept));
+    } catch (err) {
+      // Storage can reject (quota, privacy mode); the in-memory prune still
+      // applies, only persistence is lost.
+      console.warn('Failed to persist pruned favorites:', err);
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('transit:favorite-toggled', {
+          detail: { hasFavorites: kept.length > 0 },
+        }),
+      );
+    }
+  }
+  return kept;
+}
+
 export function toggleFavorite(origin: string, destination: string): boolean {
   if (typeof localStorage === 'undefined') return false;
 
