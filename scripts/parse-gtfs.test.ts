@@ -78,8 +78,10 @@ describe('parseGtfsZip – synthetic data', () => {
     const result = await parseGtfsZip(zipBuf);
 
     // -- Metadata --
-    const expectedHash = createHash('sha256').update(zipBuf).digest('hex');
-    expect(result.m.v).toBe(expectedHash);
+    // Version hash is content-addressed (sha256 of the parsed schedule),
+    // not the sha256 of the raw zip bytes.
+    expect(result.m.v).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.m.v).not.toBe(createHash('sha256').update(zipBuf).digest('hex'));
     expect(result.m.e).toBe(20261231);
 
     // -- Stations --
@@ -363,6 +365,41 @@ describe('parseGtfsZip – real Caltrain fixture', () => {
 
     expect(sfIdx).toBeLessThan(paIdx);
     expect(paIdx).toBeLessThan(sjIdx);
+  });
+
+  it('12: prunes stations with zero trips (Stanford)', async () => {
+    const result = await getFixtureResult();
+
+    // The fixture includes Stanford (platform in stops.txt, parent_station
+    // attached, but no stop_times in the base schedule). It must be absent
+    // from both the station map and the ordered list.
+    const stationNames = Object.values(result.s).map((s) => s.n.toLowerCase());
+    expect(stationNames.some((n) => n.includes('stanford'))).toBe(false);
+    expect(result.o.map((id) => result.s[id].n.toLowerCase())).not.toContain('stanford');
+
+    // Every remaining station must be served by at least one pattern.
+    const served = new Set(Object.values(result.p).flat());
+    for (const id of Object.keys(result.s)) {
+      expect(served.has(id)).toBe(true);
+    }
+
+    // The ordered list must be a permutation of the station map.
+    expect(new Set(result.o)).toEqual(new Set(Object.keys(result.s)));
+    expect(result.o.length).toBe(Object.keys(result.s).length);
+  });
+
+  it('13: version hash is derived from schedule content, not zip bytes', async () => {
+    const { parseGtfsZip } = await import('./parse-gtfs');
+    const zipBuffer = readFileSync(FIXTURE_PATH);
+    const a = await parseGtfsZip(zipBuffer);
+    const b = await parseGtfsZip(zipBuffer);
+
+    // Same input -> same content hash (deterministic)
+    expect(b.m.v).toBe(a.m.v);
+    // Hash is 64 hex chars (sha256) and unrelated to the raw zip sha256
+    expect(a.m.v).toMatch(/^[0-9a-f]{64}$/);
+    const zipSha = createHash('sha256').update(zipBuffer).digest('hex');
+    expect(a.m.v).not.toBe(zipSha);
   });
 });
 

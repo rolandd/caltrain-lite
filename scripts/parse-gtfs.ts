@@ -305,6 +305,26 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
   // ----- Deduplicate patterns -----
   const { patterns, tripPatternMap } = deduplicatePatterns(tripStopSequences);
 
+  // ----- Prune stations with no service -----
+  // A station that appears in no pattern can never be part of a trip (e.g.
+  // Stanford, which has platforms in stops.txt but no stop_times in the base
+  // schedule). Dropping them keeps the station map and the ordered
+  // North-to-South station list free of entries that would yield zero trips
+  // in the UI. If a future schedule adds service (e.g. game-day trains),
+  // the station reappears automatically because it will be referenced by a
+  // pattern again — no special-casing.
+  const usedStationIds = new Set<string>();
+  for (const patternStops of Object.values(patterns)) {
+    for (const id of patternStops) {
+      usedStationIds.add(id);
+    }
+  }
+  for (const id of Object.keys(stationMap)) {
+    if (!usedStationIds.has(id)) {
+      delete stationMap[id];
+    }
+  }
+
   // ----- Build trips -----
   const outputTrips: Trip[] = [];
   for (const t of trips) {
@@ -403,7 +423,6 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
   }
 
   // ----- Compute metadata -----
-  const versionHash = createHash('sha256').update(zipBuffer).digest('hex');
   let maxEndDate = 0;
   for (const cal of Object.values(calendarEntries)) {
     if (cal.end > maxEndDate) maxEndDate = cal.end;
@@ -473,6 +492,30 @@ export async function parseGtfsZip(zipBuffer: Buffer): Promise<StaticSchedule> {
     .filter((id) => !visited.has(id))
     .sort((a, b) => stationMap[b].lat - stationMap[a].lat);
   orderedStationIds.push(...remainingIds);
+
+  // ----- Compute version hash -----
+  // Hash the parsed schedule content rather than the raw GTFS zip bytes: the
+  // version must change whenever the schedule clients receive changes (e.g. a
+  // parser fix that prunes an unused station), even if the upstream zip is
+  // byte-identical. Clients compare m.v against their cached schedule to
+  // decide whether to refetch, so a content-addressed hash guarantees that
+  // any output change propagates and identical output never triggers a
+  // pointless redownload.
+  const versionHash = createHash('sha256')
+    .update(
+      JSON.stringify({
+        e: maxEndDate,
+        sv: SCHEMA_VERSION,
+        p: patterns,
+        t: outputTrips,
+        r: { c: calendarEntries, e: calendarExceptions },
+        s: stationMap,
+        o: orderedStationIds,
+        f: fareRulesOutput,
+        x: pairIndex,
+      }),
+    )
+    .digest('hex');
 
   return {
     m: {
