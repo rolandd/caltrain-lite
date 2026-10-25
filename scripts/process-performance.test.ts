@@ -3,6 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  getLocalMidnightUtcSec,
   pavaIsotonicRegression,
   percentile,
   processTrainPerformance,
@@ -35,6 +36,32 @@ describe('process-performance', () => {
     });
   });
 
+  describe('getLocalMidnightUtcSec', () => {
+    it('resolves 08:00 UTC for local midnight during PST (winter regression)', () => {
+      expect(getLocalMidnightUtcSec('2026-01-15')).toBe(Date.UTC(2026, 0, 15, 8) / 1000);
+      expect(getLocalMidnightUtcSec('2026-11-02')).toBe(Date.UTC(2026, 10, 2, 8) / 1000);
+    });
+
+    it('resolves 07:00 UTC for local midnight during PDT (summer)', () => {
+      expect(getLocalMidnightUtcSec('2026-07-15')).toBe(Date.UTC(2026, 6, 15, 7) / 1000);
+      expect(getLocalMidnightUtcSec('2026-03-09')).toBe(Date.UTC(2026, 2, 9, 7) / 1000);
+    });
+
+    it('handles the spring DST transition day (PST until 2 AM, then PDT)', () => {
+      // 2026-03-08: clocks spring forward at 2 AM; midnight is still PST.
+      expect(getLocalMidnightUtcSec('2026-03-08')).toBe(Date.UTC(2026, 2, 8, 8) / 1000);
+      // 2026-03-07: full PST day before the transition.
+      expect(getLocalMidnightUtcSec('2026-03-07')).toBe(Date.UTC(2026, 2, 7, 8) / 1000);
+    });
+
+    it('handles the fall DST transition day (PDT until 2 AM, then PST)', () => {
+      // 2026-11-01: clocks fall back at 2 AM; midnight is still PDT.
+      expect(getLocalMidnightUtcSec('2026-11-01')).toBe(Date.UTC(2026, 10, 1, 7) / 1000);
+      // 2026-11-02: full PST day after the transition.
+      expect(getLocalMidnightUtcSec('2026-11-02')).toBe(Date.UTC(2026, 10, 2, 8) / 1000);
+    });
+  });
+
   describe('percentile', () => {
     it('calculates median (p50) correctly', () => {
       expect(percentile([10, 20, 30, 40, 50], 50)).toBe(30);
@@ -47,6 +74,60 @@ describe('process-performance', () => {
   });
 
   describe('processTrainPerformance', () => {
+    it('derives zero delay for an on-time train with only a predicted time in winter (PST)', () => {
+      // Regression: the scheduled-epoch derivation once hardcoded UTC-7, which
+      // inflated every winter t-based delay by one hour (3600 s).
+      const schedule = {
+        s: {
+          '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
+        },
+        t: [{ i: '101', p: 'P1', st: [null, null, 10, null] }],
+        p: { P1: ['7002'] },
+      } as unknown as StaticSchedule;
+
+      // 2026-01-15 00:10 PST = 08:10 UTC. Trip 101 arrives at stop 7002 at
+      // minute 10 (st[2] = 10), so an on-time predicted time is exactly
+      // localMidnight + 600 s.
+      const arrivalEpoch = getLocalMidnightUtcSec('2026-01-15') + 600;
+      expect(arrivalEpoch).toBe(Date.UTC(2026, 0, 15, 8, 10) / 1000);
+
+      const snapshots: RawTrainSnapshot[] = [
+        {
+          id: 1,
+          timestamp: arrivalEpoch,
+          data: JSON.stringify({ '101': { t: arrivalEpoch, s: '70021', st: 1 } }),
+        },
+      ];
+
+      const profile = processTrainPerformance(snapshots, 90, schedule);
+      expect(profile.trips['101']?.stops['70021']?.p50Delay).toBe(0);
+    });
+
+    it('derives zero delay for an on-time train with only a predicted time in summer (PDT)', () => {
+      const schedule = {
+        s: {
+          '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
+        },
+        t: [{ i: '101', p: 'P1', st: [null, null, 10, null] }],
+        p: { P1: ['7002'] },
+      } as unknown as StaticSchedule;
+
+      // 2026-07-15 00:10 PDT = 07:10 UTC.
+      const arrivalEpoch = getLocalMidnightUtcSec('2026-07-15') + 600;
+      expect(arrivalEpoch).toBe(Date.UTC(2026, 6, 15, 7, 10) / 1000);
+
+      const snapshots: RawTrainSnapshot[] = [
+        {
+          id: 1,
+          timestamp: arrivalEpoch,
+          data: JSON.stringify({ '101': { t: arrivalEpoch, s: '70021', st: 1 } }),
+        },
+      ];
+
+      const profile = processTrainPerformance(snapshots, 90, schedule);
+      expect(profile.trips['101']?.stops['70021']?.p50Delay).toBe(0);
+    });
+
     it('aggregates train location snapshots into performance profile', () => {
       const snapshots: RawTrainSnapshot[] = [
         {

@@ -28,6 +28,61 @@ const pstDateFormatter = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 });
 
+const TRANSIT_TIMEZONE = 'America/Los_Angeles';
+
+// Wall-clock formatter used only to resolve the timezone's UTC offset for a
+// given date (see getLocalMidnightUtcSec).
+const wallClockFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: TRANSIT_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});
+
+/**
+ * Return the epoch seconds of local midnight (00:00:00) in the transit
+ * timezone for a given local date string (YYYY-MM-DD).
+ *
+ * The UTC offset is resolved per date via fixed-point iteration: guess the
+ * instant of local midnight as if it were UTC, correct the guess by the
+ * timezone's offset at that instant, and repeat until stable. This yields
+ * 07:00 UTC during PDT and 08:00 UTC during PST — including on the DST
+ * transition days themselves — whereas a hardcoded offset would corrupt
+ * every epoch-derived delay by one hour for roughly four months each year.
+ * Converges in one correction because US transitions happen at 2 AM local,
+ * so midnight never falls inside a transition.
+ */
+export function getLocalMidnightUtcSec(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const midnightAsUtcMs = Date.UTC(y!, m! - 1, d!); // local midnight treated as if UTC
+  let guessMs = midnightAsUtcMs;
+
+  for (let i = 0; i < 2; i++) {
+    const parts = wallClockFormatter.formatToParts(new Date(guessMs));
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    const wallAsUtcMs = Date.UTC(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour') % 24,
+      get('minute'),
+      get('second'),
+    );
+    // Correct the guess by the difference between the wall clock at the
+    // guessed instant and the desired wall clock (midnight). With PST (-8h)
+    // this resolves local midnight to 08:00 UTC; with PDT (-7h), to 07:00 UTC.
+    const correctedMs = guessMs - (wallAsUtcMs - midnightAsUtcMs);
+    if (correctedMs === guessMs) break;
+    guessMs = correctedMs;
+  }
+
+  return Math.floor(guessMs / 1000);
+}
+
 /**
  * Combine and deduplicate snapshot lists by timestamp.
  */
@@ -346,9 +401,7 @@ export function processTrainPerformance(
         const canonicalStop = stopIdToCanonical[stopId] ?? stopIdToCanonical[stopId.slice(0, 4)];
         const schedSec = canonicalStop ? schedLookup[trainNum]?.[canonicalStop] : undefined;
         if (typeof schedSec === 'number') {
-          const [y, m, d] = dateStr.split('-').map(Number);
-          const localMidnightUtcSec = Math.floor(Date.UTC(y!, m! - 1, d!) / 1000) + 7 * 3600;
-          let schedEpoch = localMidnightUtcSec + schedSec;
+          let schedEpoch = getLocalMidnightUtcSec(dateStr) + schedSec;
 
           if (Math.abs(status.t - (schedEpoch + 86400)) < Math.abs(status.t - schedEpoch)) {
             schedEpoch += 86400;
