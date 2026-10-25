@@ -20,27 +20,33 @@
     "format": "pnpm -w run format -- apps/pwa",
     "format:check": "pnpm -w run format:check -- apps/pwa",
     "prepare": "svelte-kit sync || echo ''",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && pnpm run check:sw",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "check:sw": "tsc --project src/service-worker"
   },
   "devDependencies": {
-    "@kennethwkz/unplugin-typia": "^2.6.7",
-    "@sveltejs/kit": "^2.50.2",
-    "@sveltejs/vite-plugin-svelte": "^6.2.4",
-    "@tailwindcss/vite": "^4.2.0",
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.1.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@typia/unplugin": "^12.1.1",
     "fast-check": "^4.10.2",
-    "svelte": "^5.49.2",
-    "svelte-check": "^4.3.6",
-    "tailwindcss": "^4.2.0",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.7",
-    "vite-plugin-devtools-json": "^1.0.0",
-    "vitest": "^4.0.18"
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.7",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5",
+    "vite-plugin-devtools-json": "^1.1.2",
+    "vitest": "^5.0.5"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.2.8",
-    "@sveltejs/adapter-static": "^3.0.10",
-    "dexie": "^4.3.0",
-    "typia": "^11.0.3"
+    "@fontsource-variable/inter": "^5.3.0",
+    "@sveltejs/adapter-static": "^4.0.0",
+    "dexie": "^4.4.7",
+    "typia": "^12.2.1"
+  },
+  "imports": {
+    "#lib": "./src/lib/index.js",
+    "#lib/*": "./src/lib/*"
   }
 }

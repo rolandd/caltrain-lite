@@ -2,9 +2,9 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import type { TripResult } from '$lib/schedule';
-  import type { RealtimeStatusWithMetadata } from '$lib/realtime';
-  import { getTransitDateAtNoon, formatNoTripsDate } from '$lib/time';
+  import type { TripResult } from '#lib/schedule.js';
+  import type { RealtimeStatusWithMetadata } from '#lib/realtime.js';
+  import { getTransitDateAtNoon, formatNoTripsDate } from '#lib/time.js';
   import TripColumn, { type TripRealtimeRenderData, type RouteStyle } from './TripColumn.svelte';
 
   interface Props {

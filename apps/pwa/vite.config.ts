@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Roland Dreier <roland@rolandd.dev>
+import adapter from '@sveltejs/adapter-static';
+
 import devtoolsJson from 'vite-plugin-devtools-json';
 
 // SPDX-License-Identifier: MIT
@@ -9,7 +13,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import UnpluginTypia from '@kennethwkz/unplugin-typia/vite';
+import UnpluginTypia from '@typia/unplugin/vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scheduleDataPath = resolve(__dirname, 'src/lib/schedule-data.json');
@@ -75,5 +79,25 @@ function devScheduleApiPlugin() {
 }
 
 export default defineConfig({
-  plugins: [UnpluginTypia(), tailwindcss(), sveltekit(), devScheduleApiPlugin(), devtoolsJson()],
+  resolve: {
+    alias: {
+      // Mirrors the `paths` entry in tsconfig.json (kit's `alias` option is
+      // deprecated in favor of subpath imports, which cannot point outside
+      // the package root).
+      '@packages': resolve(__dirname, '../../packages'),
+    },
+  },
+  plugins: [
+    UnpluginTypia(),
+    tailwindcss(),
+    sveltekit({
+      version: { pollInterval: 300000 /* 5 minutes */ },
+      adapter: adapter({
+        // SPA mode: single fallback page for all routes (Cloudflare Pages uses 404.html by default)
+        fallback: '404.html',
+      }),
+    }),
+    devScheduleApiPlugin(),
+    devtoolsJson(),
+  ],
 });

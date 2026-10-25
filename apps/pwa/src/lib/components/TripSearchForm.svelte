@@ -2,7 +2,7 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import type { StationInfo } from '$lib/schedule';
+  import type { StationInfo } from '#lib/schedule.js';
 
   interface Props {
     stations: StationInfo[];

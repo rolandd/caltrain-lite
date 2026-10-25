@@ -11,3 +11,7 @@ allowBuilds:
 onlyBuiltDependencies:
   - esbuild
   - workerd
+overrides:
+  # kit 3 imports cookie v2 as ESM, but wrangler -> miniflare -> youch pins
+  # cookie v1 (CJS); without this the hoisted v1 shadows v2 during build.
+  cookie: ^2.0.1

@@ -14,30 +14,30 @@
     getTripByIdMap,
     type StaticSchedule,
     type TripResult,
-  } from '$lib/schedule';
-  import { getFavorites, toggleFavorite } from '$lib/favorites';
+  } from '#lib/schedule.js';
+  import { getFavorites, toggleFavorite } from '#lib/favorites.js';
   import {
     fetchRealtime,
     isRealtimeApplicable,
     type RealtimeStatusWithMetadata,
-  } from '$lib/realtime';
-  import { getTrainLocationDescription, metersToMiles } from '$lib/location';
-  import { estimateDelay, computeDistanceBehind } from '$lib/delay-estimation';
+  } from '#lib/realtime.js';
+  import { getTrainLocationDescription, metersToMiles } from '#lib/location.js';
+  import { estimateDelay, computeDistanceBehind } from '#lib/delay-estimation.js';
   import {
     getTransitDateStr,
     getTransitDateAtNoon,
     getTransitDayStartEpoch,
     formatTransitDateLong,
     formatScheduleEndDate,
-  } from '$lib/time';
+  } from '#lib/time.js';
 
   import type { TrainPerformanceProfile } from '@packages/types/schema';
-  import FavoritesList from '$lib/components/FavoritesList.svelte';
-  import TripSearchForm from '$lib/components/TripSearchForm.svelte';
-  import ServiceAlertsBanner from '$lib/components/ServiceAlertsBanner.svelte';
-  import TripTooltipModal, { type ActiveTooltip } from '$lib/components/TripTooltipModal.svelte';
-  import TripTable from '$lib/components/TripTable.svelte';
-  import type { TripRealtimeRenderData, RouteStyle } from '$lib/components/TripColumn.svelte';
+  import FavoritesList from '#lib/components/FavoritesList.svelte';
+  import TripSearchForm from '#lib/components/TripSearchForm.svelte';
+  import ServiceAlertsBanner from '#lib/components/ServiceAlertsBanner.svelte';
+  import TripTooltipModal, { type ActiveTooltip } from '#lib/components/TripTooltipModal.svelte';
+  import TripTable from '#lib/components/TripTable.svelte';
+  import type { TripRealtimeRenderData, RouteStyle } from '#lib/components/TripColumn.svelte';
 
   // Context from layout
   const scheduleCtx = getContext<{ value: StaticSchedule }>('schedule');

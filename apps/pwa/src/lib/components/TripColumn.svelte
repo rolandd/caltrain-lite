@@ -2,7 +2,7 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import type { TripResult } from '$lib/schedule';
+  import type { TripResult } from '#lib/schedule.js';
 
   export interface TripRealtimeRenderData {
     delay?: number;

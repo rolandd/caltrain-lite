@@ -1,17 +1,17 @@
+import type { Handle } from '@sveltejs/kit/hooks';
+
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
-
-import type { Handle } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
+import { PUBLIC_DOMAIN } from '$app/env/public';
 
 export const handle: Handle = async ({ event, resolve }) => {
   return resolve(event, {
     transformPageChunk: ({ html }) => {
       // Prioritize environment variable, fallback to default for local dev if not defined
       let domain = 'https://transit.example.com';
-      if (env.PUBLIC_DOMAIN) {
+      if (PUBLIC_DOMAIN) {
         try {
-          const url = new URL(env.PUBLIC_DOMAIN);
+          const url = new URL(PUBLIC_DOMAIN);
           if (url.protocol === 'https:') {
             domain = url.origin;
           }
