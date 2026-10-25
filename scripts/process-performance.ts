@@ -57,6 +57,9 @@ const wallClockFormatter = new Intl.DateTimeFormat('en-US', {
  * so midnight never falls inside a transition.
  */
 export function getLocalMidnightUtcSec(dateStr: string): number {
+  const cached = midnightUtcCache.get(dateStr);
+  if (cached !== undefined) return cached;
+
   const [y, m, d] = dateStr.split('-').map(Number);
   const midnightAsUtcMs = Date.UTC(y!, m! - 1, d!); // local midnight treated as if UTC
   let guessMs = midnightAsUtcMs;
@@ -80,7 +83,72 @@ export function getLocalMidnightUtcSec(dateStr: string): number {
     guessMs = correctedMs;
   }
 
-  return Math.floor(guessMs / 1000);
+  const resultSec = Math.floor(guessMs / 1000);
+  midnightUtcCache.set(dateStr, resultSec);
+  return resultSec;
+}
+
+/** Memoization for getLocalMidnightUtcSec (pure function of dateStr). */
+const midnightUtcCache = new Map<string, number>();
+
+/**
+ * Zone offset (local wall clock minus UTC) in seconds in effect at the given
+ * UTC epoch second. In Los Angeles this is -8h (PST) or -7h (PDT).
+ */
+function zoneOffsetSec(epochSec: number): number {
+  const parts = wallClockFormatter.formatToParts(new Date(epochSec * 1000));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const wallAsUtcSec =
+    Date.UTC(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour') % 24,
+      get('minute'),
+      get('second'),
+    ) / 1000;
+  return wallAsUtcSec - epochSec;
+}
+
+/**
+ * Resolve a local wall-clock time to a UTC epoch second.
+ *
+ * `secSinceMidnight` is seconds since local midnight of `dateStr` (the GTFS
+ * convention, so values >= 86400 spill into the following calendar day and
+ * negative values reach into the preceding one).
+ *
+ * `getLocalMidnightUtcSec(dateStr) + secSinceMidnight` is only correct when
+ * no DST transition lies between local midnight and the target time. On a
+ * spring-forward day like 2026-03-08 in Los Angeles (02:00 -> 03:00), a
+ * 03:10 wall time is in PDT while midnight is PST, so the naive sum lands an
+ * hour late; on a fall-back day like 2026-11-01 it lands an hour early.
+ * This resolves the offset at the target instant itself: an instant E
+ * displays as wall clock E + off(E), so we need the fixed point of
+ *
+ *   E = midnightUtcSec + off(midnight) + secSinceMidnight - off(E)
+ *
+ * For real wall times this converges in at most two steps. For wall times
+ * skipped by a spring-forward transition (02:00-02:59, which no real
+ * schedule should contain) no instant displays that wall clock; the
+ * iteration oscillates and the last iterate (an adjacent real time) is
+ * returned.
+ */
+export function getLocalWallTimeUtcSec(dateStr: string, secSinceMidnight: number): number {
+  const midnightUtcSec = getLocalMidnightUtcSec(dateStr);
+  const midnightOffsetSec = zoneOffsetSec(midnightUtcSec);
+
+  // Initial guess: exact unless a transition lies between midnight and the
+  // target instant (only the two transition days per year reach the loop).
+  let epochSec = midnightUtcSec + secSinceMidnight;
+  if (zoneOffsetSec(epochSec) === midnightOffsetSec) return epochSec;
+
+  for (let i = 0; i < 3; i++) {
+    const correctedSec =
+      midnightUtcSec + midnightOffsetSec + secSinceMidnight - zoneOffsetSec(epochSec);
+    if (correctedSec === epochSec) break;
+    epochSec = correctedSec;
+  }
+  return epochSec;
 }
 
 /**
@@ -401,12 +469,22 @@ export function processTrainPerformance(
         const canonicalStop = stopIdToCanonical[stopId] ?? stopIdToCanonical[stopId.slice(0, 4)];
         const schedSec = canonicalStop ? schedLookup[trainNum]?.[canonicalStop] : undefined;
         if (typeof schedSec === 'number') {
-          let schedEpoch = getLocalMidnightUtcSec(dateStr) + schedSec;
-
-          if (Math.abs(status.t - (schedEpoch + 86400)) < Math.abs(status.t - schedEpoch)) {
-            schedEpoch += 86400;
-          } else if (Math.abs(status.t - (schedEpoch - 86400)) < Math.abs(status.t - schedEpoch)) {
-            schedEpoch -= 86400;
+          // Resolve the scheduled wall time with the zone offset in effect at
+          // the scheduled instant itself, and compare against the same wall
+          // time on the adjacent calendar days (trains running past midnight
+          // are observed on the next/previous local date). Fixed 86400-second
+          // shifts would misplace the candidates across DST transitions,
+          // where adjacent local midnights are 23 or 25 hours apart.
+          const candidates = [
+            getLocalWallTimeUtcSec(dateStr, schedSec - 86400),
+            getLocalWallTimeUtcSec(dateStr, schedSec),
+            getLocalWallTimeUtcSec(dateStr, schedSec + 86400),
+          ];
+          let schedEpoch = candidates[1]!;
+          for (const candidate of [candidates[0]!, candidates[2]!]) {
+            if (Math.abs(status.t - candidate) < Math.abs(status.t - schedEpoch)) {
+              schedEpoch = candidate;
+            }
           }
 
           delaySec = Math.max(0, status.t - schedEpoch);
