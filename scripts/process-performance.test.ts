@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getLocalMidnightUtcSec,
+  getLocalWallTimeUtcSec,
   pavaIsotonicRegression,
   percentile,
   processTrainPerformance,
@@ -62,6 +63,69 @@ describe('process-performance', () => {
     });
   });
 
+  describe('getLocalWallTimeUtcSec', () => {
+    it('matches midnight + offset on ordinary days', () => {
+      // Winter (PST): 03:10 local = 11:10 UTC
+      expect(getLocalWallTimeUtcSec('2026-01-15', 3 * 3600 + 600)).toBe(
+        Date.UTC(2026, 0, 15, 11, 10) / 1000,
+      );
+      // Summer (PDT): 03:10 local = 10:10 UTC
+      expect(getLocalWallTimeUtcSec('2026-07-15', 3 * 3600 + 600)).toBe(
+        Date.UTC(2026, 6, 15, 10, 10) / 1000,
+      );
+    });
+
+    it('resolves wall times after the spring-forward transition in the new offset (PDT)', () => {
+      // 2026-03-08: 02:00 PST becomes 03:00 PDT, so 03:10 local is PDT
+      expect(getLocalWallTimeUtcSec('2026-03-08', 3 * 3600 + 600)).toBe(
+        Date.parse('2026-03-08T03:10:00-07:00') / 1000,
+      );
+    });
+
+    it('resolves wall times before the spring-forward transition in the old offset (PST)', () => {
+      expect(getLocalWallTimeUtcSec('2026-03-08', 1800)).toBe(
+        Date.parse('2026-03-08T00:30:00-08:00') / 1000,
+      );
+    });
+
+    it('resolves wall times after the fall-back transition in the new offset (PST)', () => {
+      // 2026-11-01: 02:00 PDT becomes 01:00 PST, so 03:10 local is PST
+      expect(getLocalWallTimeUtcSec('2026-11-01', 3 * 3600 + 600)).toBe(
+        Date.parse('2026-11-01T03:10:00-08:00') / 1000,
+      );
+    });
+
+    it('picks the first occurrence for the ambiguous fall-back hour', () => {
+      // 01:30 occurs twice on 2026-11-01 (PDT, then PST); resolve to the first
+      expect(getLocalWallTimeUtcSec('2026-11-01', 5400)).toBe(
+        Date.parse('2026-11-01T01:30:00-07:00') / 1000,
+      );
+    });
+
+    it('spills GTFS times past midnight (>= 24:00) into the next calendar day across a transition', () => {
+      // 2026-03-07 + 27:10 = 03:10 PDT on 2026-03-08
+      expect(getLocalWallTimeUtcSec('2026-03-07', 27 * 3600 + 600)).toBe(
+        Date.parse('2026-03-08T03:10:00-07:00') / 1000,
+      );
+      // 2026-03-08 + 24:10 = 00:10 PDT on 2026-03-09 (not 01:10)
+      expect(getLocalWallTimeUtcSec('2026-03-08', 24 * 3600 + 600)).toBe(
+        Date.parse('2026-03-09T00:10:00-07:00') / 1000,
+      );
+    });
+
+    it('probes the previous calendar day for negative inputs across a transition', () => {
+      // 2026-03-09 + (03:10 - 24:00) = 03:10 PDT on 2026-03-08
+      expect(getLocalWallTimeUtcSec('2026-03-09', 3 * 3600 + 600 - 86400)).toBe(
+        Date.parse('2026-03-08T03:10:00-07:00') / 1000,
+      );
+    });
+
+    it('agrees with getLocalMidnightUtcSec for secSinceMidnight = 0 on transition days', () => {
+      expect(getLocalWallTimeUtcSec('2026-03-08', 0)).toBe(getLocalMidnightUtcSec('2026-03-08'));
+      expect(getLocalWallTimeUtcSec('2026-11-01', 0)).toBe(getLocalMidnightUtcSec('2026-11-01'));
+    });
+  });
+
   describe('percentile', () => {
     it('calculates median (p50) correctly', () => {
       expect(percentile([10, 20, 30, 40, 50], 50)).toBe(30);
@@ -81,13 +145,14 @@ describe('process-performance', () => {
         s: {
           '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
         },
-        t: [{ i: '101', p: 'P1', st: [null, null, 10, null] }],
+        // Trip 101 arrives at stop 7002 at minute 10: st[0] is the arrival
+        // time for the first pattern stop (the derivation reads st[2*idx]).
+        t: [{ i: '101', p: 'P1', st: [10, null] }],
         p: { P1: ['7002'] },
       } as unknown as StaticSchedule;
 
-      // 2026-01-15 00:10 PST = 08:10 UTC. Trip 101 arrives at stop 7002 at
-      // minute 10 (st[2] = 10), so an on-time predicted time is exactly
-      // localMidnight + 600 s.
+      // 2026-01-15 00:10 PST = 08:10 UTC, so an on-time predicted time is
+      // exactly localMidnight + 600 s.
       const arrivalEpoch = getLocalMidnightUtcSec('2026-01-15') + 600;
       expect(arrivalEpoch).toBe(Date.UTC(2026, 0, 15, 8, 10) / 1000);
 
@@ -108,7 +173,7 @@ describe('process-performance', () => {
         s: {
           '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
         },
-        t: [{ i: '101', p: 'P1', st: [null, null, 10, null] }],
+        t: [{ i: '101', p: 'P1', st: [10, null] }],
         p: { P1: ['7002'] },
       } as unknown as StaticSchedule;
 
@@ -126,6 +191,90 @@ describe('process-performance', () => {
 
       const profile = processTrainPerformance(snapshots, 90, schedule);
       expect(profile.trips['101']?.stops['70021']?.p50Delay).toBe(0);
+    });
+
+    it('derives a 30-minute delay on the spring-forward day (2026-03-08, after the transition)', () => {
+      // Regression: resolving the offset at local midnight placed wall times
+      // after the 02:00 -> 03:00 transition an hour late, so late arrivals
+      // were clamped to zero delay.
+      const schedule = {
+        s: {
+          '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
+        },
+        // Scheduled arrival 03:10 local on 2026-03-08 (minute 190).
+        t: [{ i: '101', p: 'P1', st: [190, null] }],
+        p: { P1: ['7002'] },
+      } as unknown as StaticSchedule;
+
+      // 03:10 PDT = 10:10 UTC; predicted arrival 30 minutes late.
+      const predictedEpoch = Date.parse('2026-03-08T03:40:00-07:00') / 1000;
+      const snapshots: RawTrainSnapshot[] = [
+        {
+          id: 1,
+          timestamp: predictedEpoch,
+          data: JSON.stringify({ '101': { t: predictedEpoch, s: '70021', st: 1 } }),
+        },
+      ];
+
+      const profile = processTrainPerformance(snapshots, 90, schedule);
+      expect(profile.trips['101']?.stops['70021']?.p50Delay).toBe(1800);
+    });
+
+    it('derives zero delay for an on-time train on the fall-back day (2026-11-01, after the transition)', () => {
+      // Regression: resolving the offset at local midnight placed wall times
+      // after the 02:00 -> 01:00 transition an hour early, so on-time
+      // arrivals recorded a phantom 3600 s delay.
+      const schedule = {
+        s: {
+          '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
+        },
+        // Scheduled arrival 03:10 local on 2026-11-01 (minute 190).
+        t: [{ i: '101', p: 'P1', st: [190, null] }],
+        p: { P1: ['7002'] },
+      } as unknown as StaticSchedule;
+
+      // 03:10 PST = 11:10 UTC, exactly on time.
+      const arrivalEpoch = Date.parse('2026-11-01T03:10:00-08:00') / 1000;
+      const snapshots: RawTrainSnapshot[] = [
+        {
+          id: 1,
+          timestamp: arrivalEpoch,
+          data: JSON.stringify({ '101': { t: arrivalEpoch, s: '70021', st: 1 } }),
+        },
+      ];
+
+      const profile = processTrainPerformance(snapshots, 90, schedule);
+      expect(profile.trips['101']?.stops['70021']?.p50Delay).toBe(0);
+    });
+
+    it('derives a 30-minute delay for a next-day arrival observed before the DST transition', () => {
+      // Regression: the adjacent-day candidates were built with fixed
+      // 86400-second shifts, which are wrong across a transition (adjacent
+      // local midnights are 23 or 25 hours apart).
+      const schedule = {
+        s: {
+          '7002': { ids: ['70021'], lat: 37.662, lon: -122.404, n: 'SSF' },
+        },
+        // GTFS time 24:10 = 00:10 on the following calendar day.
+        t: [{ i: '101', p: 'P1', st: [1450, null] }],
+        p: { P1: ['7002'] },
+      } as unknown as StaticSchedule;
+
+      // Snapshot late on 2026-03-08; predicted arrival 00:40 PDT on 2026-03-09
+      // (30 minutes late). The scheduled epoch must resolve to 00:10 PDT
+      // 2026-03-09 = 07:10 UTC, not midnight+24h10m = 01:10 PDT.
+      const snapshotTs = Date.parse('2026-03-08T23:50:00-07:00') / 1000;
+      const predictedEpoch = Date.parse('2026-03-09T00:40:00-07:00') / 1000;
+      const snapshots: RawTrainSnapshot[] = [
+        {
+          id: 1,
+          timestamp: snapshotTs,
+          data: JSON.stringify({ '101': { t: predictedEpoch, s: '70021', st: 1 } }),
+        },
+      ];
+
+      const profile = processTrainPerformance(snapshots, 90, schedule);
+      expect(profile.trips['101']?.stops['70021']?.p50Delay).toBe(1800);
     });
 
     it('aggregates train location snapshots into performance profile', () => {
