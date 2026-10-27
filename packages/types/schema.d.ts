@@ -43,7 +43,7 @@ export type Direction = 0 | 1;
 export interface StaticSchedule {
   /** Metadata. */
   m: {
-    /** Version hash (SHA-256 of the source GTFS ZIP). */
+    /** Version hash (SHA-256 of the parsed schedule content). */
     v: string;
     /** Max end date across all service calendars (YYYYMMDD integer). */
     e: number;

@@ -70,9 +70,15 @@ describe('Property-Based Testing: GTFS Pipeline & Schedule Invariants', () => {
         endDate: fc.constant(endDate),
       });
     })
-    .map(({ stations, patterns, trips, versionHash, endDate }): StaticSchedule => {
+    .map(({ patterns, trips, versionHash, endDate }): StaticSchedule | null => {
+      // Only stations actually served by a pattern may appear in s and o:
+      // validateSchedule enforces that every station has trips (the parser
+      // prunes unserved stations) and that o is a permutation of s.
+      const usedStations = [...new Set(Object.values(patterns).flat())];
+      if (usedStations.length < 10) return null; // validator requires >= 10
+
       const stationRecord: StaticSchedule['s'] = {};
-      stations.forEach((id, idx) => {
+      usedStations.forEach((id, idx) => {
         stationRecord[id] = {
           n: `Station ${id.toUpperCase()}`,
           z: String((idx % 5) + 1),
@@ -97,7 +103,7 @@ describe('Property-Based Testing: GTFS Pipeline & Schedule Invariants', () => {
       return {
         m: { v: versionHash, e: endDate, sv: 1 },
         s: stationRecord,
-        o: stations,
+        o: usedStations,
         p: patterns,
         t: trips,
         r: {
@@ -113,7 +119,8 @@ describe('Property-Based Testing: GTFS Pipeline & Schedule Invariants', () => {
         f: { zones: {}, fares: {} },
         x,
       };
-    });
+    })
+    .filter((schedule): schedule is StaticSchedule => schedule !== null);
 
   describe('toV2Schedule Conversion Invariants', () => {
     it('sets schema version to 2 and completely removes pair index x without mutating original', () => {

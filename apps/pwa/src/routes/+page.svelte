@@ -2,7 +2,7 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-  import { getContext, onMount, onDestroy, tick } from 'svelte';
+  import { getContext, onMount, onDestroy, tick, untrack } from 'svelte';
   import {
     getStationList,
     queryTrips,
@@ -15,7 +15,7 @@
     type StaticSchedule,
     type TripResult,
   } from '#lib/schedule.js';
-  import { getFavorites, toggleFavorite } from '#lib/favorites.js';
+  import { getFavorites, pruneFavorites, toggleFavorite } from '#lib/favorites.js';
   import {
     fetchRealtime,
     isRealtimeApplicable,
@@ -98,6 +98,37 @@
   function loadFavorites() {
     favorites = getFavorites();
   }
+
+  // Gracefully handle stations that disappear from the schedule (the parser
+  // prunes stations with zero trips, so a station can be dropped when a new
+  // schedule is published): once the schedule is available, clear saved form
+  // selections pointing at removed stations and drop favorites that
+  // reference them. Re-runs on every schedule update (cache or network).
+  let lastSchedule: StaticSchedule | undefined;
+  $effect(() => {
+    if (!schedule) return;
+    const stationIds = schedule.s;
+    if (origin && !(origin in stationIds)) origin = '';
+    if (destination && !(destination in stationIds)) destination = '';
+    const pruned = pruneFavorites((o, d) => o in stationIds && d in stationIds);
+    if (pruned.length !== favorites.length) favorites = pruned;
+
+    // A schedule update replaces the trip data, so results computed against
+    // the previous schedule are stale: re-run the search if the selection is
+    // still valid, otherwise drop the stale results entirely.
+    if (schedule !== lastSchedule) {
+      const isFirstSchedule = lastSchedule === undefined;
+      lastSchedule = schedule;
+      if (!isFirstSchedule && untrack(() => searched)) {
+        if (origin && destination) {
+          search();
+        } else {
+          results = [];
+          searched = false;
+        }
+      }
+    }
+  });
 
   function handleToggleFavorite() {
     if (origin && destination) {
