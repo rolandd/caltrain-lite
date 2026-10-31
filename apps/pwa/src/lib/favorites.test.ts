@@ -2,7 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getFavorites, pruneFavorites, toggleFavorite } from './favorites';
+import { getFavorites, partitionFavorites, toggleFavorite } from './favorites';
 
 class MemoryStorage implements Storage {
   private store = new Map<string, string>();
@@ -64,58 +64,63 @@ describe('favorites store', () => {
     expect(getFavorites()).toEqual([]);
   });
 
-  describe('pruneFavorites', () => {
-    it('drops favorites referencing stations removed from the schedule and persists the prune', () => {
+  describe('partitionFavorites', () => {
+    it('partitions favorites by whether both stations are in the schedule', () => {
       toggleFavorite('sf', 'sj_diridon');
       toggleFavorite('stanford', 'sj_diridon');
       toggleFavorite('pa', 'gilroy');
 
-      const kept = pruneFavorites((o, d) => o !== 'stanford' && d !== 'stanford');
+      const { available, unavailable } = partitionFavorites(
+        getFavorites(),
+        (id) => id !== 'stanford',
+      );
 
-      // toggleFavorite prepends, so the surviving order is pa-gilroy first
-      expect(kept).toEqual(['pa-gilroy', 'sf-sj_diridon']);
-      expect(getFavorites()).toEqual(['pa-gilroy', 'sf-sj_diridon']);
+      // toggleFavorite prepends, so the order is pa-gilroy first
+      expect(available).toEqual(['pa-gilroy', 'sf-sj_diridon']);
+      expect(unavailable).toEqual(['stanford-sj_diridon']);
     });
 
-    it('leaves storage untouched when every favorite is still valid', () => {
-      toggleFavorite('sf', 'sj_diridon');
-      const before = localStorage.getItem('transit-favorites');
-
-      const kept = pruneFavorites(() => true);
-
-      expect(kept).toEqual(['sf-sj_diridon']);
-      expect(localStorage.getItem('transit-favorites')).toBe(before);
-    });
-
-    it('still returns kept favorites when persisting throws', () => {
+    it('never modifies storage, even when some favorites are unavailable', () => {
       toggleFavorite('sf', 'sj_diridon');
       toggleFavorite('stanford', 'sj_diridon');
+      const before = localStorage.getItem('transit-favorites');
 
-      const realSetItem = localStorage.setItem;
-      localStorage.setItem = () => {
-        throw new Error('QuotaExceededError');
-      };
-      let kept: string[];
-      try {
-        kept = pruneFavorites((o, d) => o !== 'stanford' && d !== 'stanford');
-      } finally {
-        localStorage.setItem = realSetItem;
-      }
+      const { available, unavailable } = partitionFavorites(
+        getFavorites(),
+        (id) => id !== 'stanford',
+      );
 
-      // The in-memory prune result is returned even though persistence failed
-      expect(kept).toEqual(['sf-sj_diridon']);
-      // Storage keeps the old (unpruned) list
+      // A station missing from one schedule version (feed glitch, short-term
+      // suspension) may reappear, so its favorites survive in storage.
+      expect(available).toEqual(['sf-sj_diridon']);
+      expect(unavailable).toEqual(['stanford-sj_diridon']);
+      expect(localStorage.getItem('transit-favorites')).toBe(before);
       expect(getFavorites()).toEqual(['stanford-sj_diridon', 'sf-sj_diridon']);
     });
 
-    it('keeps favorites whose stations are still valid on either end', () => {
-      toggleFavorite('stanford', 'sf');
-      toggleFavorite('sf', 'stanford');
+    it('counts a pair missing a station on either end as unavailable', () => {
+      const { available, unavailable } = partitionFavorites(
+        ['sf-stanford', 'stanford-sf', 'sf-sj_diridon'],
+        (id) => id !== 'stanford',
+      );
 
-      const kept = pruneFavorites((o, d) => o !== 'stanford' && d !== 'stanford');
+      expect(available).toEqual(['sf-sj_diridon']);
+      expect(unavailable).toEqual(['sf-stanford', 'stanford-sf']);
+    });
 
-      expect(kept).toEqual([]);
-      expect(getFavorites()).toEqual([]);
+    it('counts malformed pairs as unavailable rather than dropping them', () => {
+      const { available, unavailable } = partitionFavorites(['sf', 'sf-sj_diridon'], () => true);
+
+      // Corrupt entries stay visible so the user can remove them.
+      expect(available).toEqual(['sf-sj_diridon']);
+      expect(unavailable).toEqual(['sf']);
+    });
+
+    it('returns empty partitions for empty input', () => {
+      const { available, unavailable } = partitionFavorites([], () => true);
+
+      expect(available).toEqual([]);
+      expect(unavailable).toEqual([]);
     });
   });
 });

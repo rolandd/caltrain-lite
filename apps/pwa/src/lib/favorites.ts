@@ -23,38 +23,38 @@ export function getFavorites(): string[] {
 }
 
 /**
- * Drop favorites that reference stations no longer present in the schedule
- * (the parser prunes stations with zero trips, so a station can disappear
- * when a new schedule is published) and persist the pruned list.
+ * Partition favorites into pairs whose stations are all present in the
+ * current schedule and pairs that reference at least one missing station.
  *
- * Returns the kept favorites.
+ * Pure: never touches storage. A station missing from one schedule version
+ * (feed glitch, short-term service suspension) may reappear in the next
+ * version, so its favorites stay in storage and re-activate automatically;
+ * callers just filter unavailable pairs out of the UI. A permanently removed
+ * station simply stays unavailable until the user removes the favorite.
+ *
+ * A pair that does not parse into two ids counts as unavailable (not
+ * silently dropped) so corrupt entries stay visible and removable.
  */
-export function pruneFavorites(
-  isValidPair: (origin: string, destination: string) => boolean,
-): string[] {
-  if (typeof localStorage === 'undefined') return [];
-  const favorites = getFavorites();
-  const kept = favorites.filter((pair) => {
+export function partitionFavorites(
+  favorites: string[],
+  hasStation: (id: string) => boolean,
+): { available: string[]; unavailable: string[] } {
+  const available: string[] = [];
+  const unavailable: string[] = [];
+  for (const pair of favorites) {
     const [origin, destination] = pair.split('-');
-    return origin !== undefined && destination !== undefined && isValidPair(origin, destination);
-  });
-  if (kept.length !== favorites.length) {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(kept));
-    } catch (err) {
-      // Storage can reject (quota, privacy mode); the in-memory prune still
-      // applies, only persistence is lost.
-      console.warn('Failed to persist pruned favorites:', err);
-    }
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('transit:favorite-toggled', {
-          detail: { hasFavorites: kept.length > 0 },
-        }),
-      );
+    if (
+      origin !== undefined &&
+      destination !== undefined &&
+      hasStation(origin) &&
+      hasStation(destination)
+    ) {
+      available.push(pair);
+    } else {
+      unavailable.push(pair);
     }
   }
-  return kept;
+  return { available, unavailable };
 }
 
 export function toggleFavorite(origin: string, destination: string): boolean {
