@@ -4,12 +4,15 @@
 
   interface Props {
     favorites: string[];
+    /** False for favorites referencing stations missing from the current schedule. */
+    isAvailable: (pair: string) => boolean;
     getStationName: (id: string) => string;
     onSelectFavorite: (pair: string) => void;
     onRemoveFavorite: (origin: string, destination: string) => void;
   }
 
-  let { favorites, getStationName, onSelectFavorite, onRemoveFavorite }: Props = $props();
+  let { favorites, isAvailable, getStationName, onSelectFavorite, onRemoveFavorite }: Props =
+    $props();
 </script>
 
 {#if favorites.length > 0}
@@ -20,16 +23,25 @@
     <div class="grid grid-cols-1 gap-3">
       {#each favorites as pair (pair)}
         {@const [o, d] = pair.split('-')}
+        {@const available = isAvailable(pair)}
         <div
-          class="bg-transit-surface-card border border-transit-border-subtle rounded-xl flex items-center justify-between p-1 pr-3 transition-colors hover:border-transit-border-strong"
+          class="bg-transit-surface-card border border-transit-border-subtle rounded-xl flex items-center justify-between p-1 pr-3 transition-colors {available
+            ? 'hover:border-transit-border-strong'
+            : 'opacity-60'}"
         >
           <button
-            class="flex-1 text-left flex items-center gap-2 p-3 cursor-pointer bg-transparent border-none text-transit-text-primary text-base font-inherit focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-lg"
+            class="flex-1 text-left flex items-center gap-2 p-3 bg-transparent border-none text-base font-inherit focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-lg {available
+              ? 'cursor-pointer text-transit-text-primary'
+              : 'cursor-not-allowed text-transit-text-muted'}"
+            disabled={!available}
             onclick={() => onSelectFavorite(pair)}
           >
             <span class="font-semibold">{getStationName(o)}</span>
             <span class="text-transit-text-muted text-sm">→</span>
             <span class="font-semibold">{getStationName(d)}</span>
+            {#if !available}
+              <span class="text-transit-text-muted text-xs italic">not in current schedule</span>
+            {/if}
           </button>
 
           <button
