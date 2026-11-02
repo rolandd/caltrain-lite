@@ -3,6 +3,7 @@
 
 import type { Trip, StaticSchedule, TripPerformance } from '@packages/types/schema';
 import { getDistanceFromLatLonInMeters } from './location';
+import { getLocalWallTimeUtcSec } from './time';
 
 export interface DelayEstimate {
   /** Best estimate of current delay in seconds. */
@@ -51,30 +52,35 @@ export function estimateDelay(
   schedule: StaticSchedule,
   perf: TripPerformance | undefined,
   now: number, // epoch seconds
-  dayStartEpoch: number, // transit day start epoch seconds
+  dateStr: string, // transit service date (YYYY-MM-DD)
+  predictedTimeEpoch?: number, // predicted arrival/departure epoch seconds (entity.t)
 ): DelayEstimate {
+  const pattern = currentStopCanonical && trip.p ? schedule.p[trip.p] : undefined;
+  const stopIdx = pattern && currentStopCanonical ? pattern.indexOf(currentStopCanonical) : -1;
+
+  let effectiveFeedDelaySec = feedDelaySec;
+  if (effectiveFeedDelaySec === 0 && predictedTimeEpoch && stopIdx !== -1) {
+    const scheduledMins = trip.st[stopIdx * 2] ?? trip.st[stopIdx * 2 + 1];
+    if (scheduledMins != null) {
+      const scheduledEpoch = getLocalWallTimeUtcSec(dateStr, scheduledMins * 60);
+      effectiveFeedDelaySec = predictedTimeEpoch - scheduledEpoch;
+    }
+  }
+
   const fallback: DelayEstimate = {
-    delaySec: Math.max(0, feedDelaySec),
-    confidence: feedDelaySec !== 0 ? 'medium' : 'low',
+    delaySec: Math.max(0, effectiveFeedDelaySec),
+    confidence: effectiveFeedDelaySec !== 0 ? 'medium' : 'low',
     source: 'feed',
   };
 
-  if (!currentStopCanonical || !trip.p) {
+  if (!pattern || stopIdx <= 0 || !position) {
     return fallback;
   }
 
-  const pattern = schedule.p[trip.p];
-  if (!pattern) return fallback;
-
-  const stopIdx = pattern.indexOf(currentStopCanonical);
-  if (stopIdx <= 0) return fallback;
-
   const prevStopCanonical = pattern[stopIdx - 1];
 
-  if (!position) return fallback;
-
   const prevStation = schedule.s[prevStopCanonical];
-  const currentStation = schedule.s[currentStopCanonical];
+  const currentStation = schedule.s[currentStopCanonical!];
   if (!prevStation || !currentStation) return fallback;
 
   const totalDist = getDistanceFromLatLonInMeters(
@@ -105,9 +111,9 @@ export function estimateDelay(
     return fallback;
   }
 
-  const equivalentScheduledTime =
-    dayStartEpoch +
-    (schedDepartPrevMin + timeFrac * (schedArriveNextMin - schedDepartPrevMin)) * 60;
+  const equivalentScheduledMin =
+    schedDepartPrevMin + timeFrac * (schedArriveNextMin - schedDepartPrevMin);
+  const equivalentScheduledTime = getLocalWallTimeUtcSec(dateStr, equivalentScheduledMin * 60);
   const positionDelaySec = now - equivalentScheduledTime;
 
   let feedWeight = 0.45;
@@ -118,9 +124,9 @@ export function estimateDelay(
     posWeight = 0.2;
   }
 
-  const fusedDelaySec = feedWeight * feedDelaySec + posWeight * positionDelaySec;
+  const fusedDelaySec = feedWeight * effectiveFeedDelaySec + posWeight * positionDelaySec;
 
-  const diff = Math.abs(feedDelaySec - positionDelaySec);
+  const diff = Math.abs(effectiveFeedDelaySec - positionDelaySec);
   let confidence: 'high' | 'medium' | 'low';
   if (diff <= 120) {
     confidence = 'high';
@@ -183,7 +189,7 @@ export function computeDistanceBehind(
   schedule: StaticSchedule,
   perf: TripPerformance | undefined,
   now: number,
-  dayStartEpoch: number,
+  dateStr: string,
 ): number | undefined {
   const pattern = schedule.p[trip.p];
   if (!pattern) return undefined;
@@ -224,7 +230,7 @@ export function computeDistanceBehind(
   const scheduledLegDurationSec = (schedArriveNextMin - schedDepartPrevMin) * 60;
   if (scheduledLegDurationSec <= 0) return undefined;
 
-  const scheduledDepartEpoch = dayStartEpoch + schedDepartPrevMin * 60;
+  const scheduledDepartEpoch = getLocalWallTimeUtcSec(dateStr, schedDepartPrevMin * 60);
   const elapsedSec = now - scheduledDepartEpoch;
   const timeFrac = clamp(elapsedSec / scheduledLegDurationSec, 0, 1);
 
