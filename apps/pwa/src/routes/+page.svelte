@@ -10,7 +10,6 @@
     normalizeDate,
     getScheduleType,
     getCanonicalStationId,
-    findStopIndex,
     getTripByIdMap,
     type StaticSchedule,
     type TripResult,
@@ -24,9 +23,10 @@
   import { getTrainLocationDescription, metersToMiles } from '#lib/location.js';
   import { estimateDelay, computeDistanceBehind } from '#lib/delay-estimation.js';
   import {
+    addLocalDays,
     getTransitDateStr,
     getTransitDateAtNoon,
-    getTransitDayStartEpoch,
+    getLocalWallTimeUtcSec,
     formatTransitDateLong,
     formatScheduleEndDate,
   } from '#lib/time.js';
@@ -57,8 +57,6 @@
   let destination = $state('');
   let dateStr = $state(getTransitDateStr());
   let scrollLeft = $state(0);
-
-  const dayStartEpoch = $derived(getTransitDayStartEpoch(dateStr));
 
   const formattedDate = $derived.by(() => {
     if (!dateStr) return '';
@@ -276,9 +274,7 @@
 
   // Date navigation helpers
   function shiftDate(days: number) {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const shifted = new Date(Date.UTC(y, m - 1, d + days));
-    dateStr = shifted.toISOString().slice(0, 10);
+    dateStr = addLocalDays(dateStr, days);
     search();
   }
   const prevDay = () => shiftDate(-1);
@@ -293,9 +289,10 @@
 
   function scrollToNow() {
     if (!tripScrollEl || !results.length) return;
-    const dayStart = getTransitDayStartEpoch(dateStr);
-    const nowMinutes = (Date.now() / 1000 - dayStart) / 60;
-    const firstFutureIdx = results.findIndex((t) => t.departureMinutes >= nowMinutes);
+    const nowSec = Date.now() / 1000;
+    const firstFutureIdx = results.findIndex(
+      (t) => getLocalWallTimeUtcSec(dateStr, t.departureMinutes * 60) >= nowSec,
+    );
     if (firstFutureIdx > 0) {
       tripScrollEl.scrollLeft = firstFutureIdx * 84;
     }
@@ -357,7 +354,6 @@
       const canonicalStop = getCanonicalStationId(schedule, entity.s);
       if (fullTrip && canonicalStop) {
         const perf = performance?.trips[trainNum];
-        const dayStart = dayStartEpoch;
         const behindMeters = computeDistanceBehind(
           entity.p,
           canonicalStop,
@@ -365,7 +361,7 @@
           schedule,
           perf,
           Date.now() / 1000,
-          dayStart,
+          dateStr,
         );
         if (behindMeters !== undefined && behindMeters > 400) {
           const behindMiles = metersToMiles(behindMeters).toFixed(1);
@@ -395,7 +391,6 @@
     }
 
     let delay = entity.d ?? 0;
-    const dayStart = dayStartEpoch;
     const fullTrip = schedule ? getTripByIdMap(schedule).get(trainNum) : undefined;
 
     if (schedule && fullTrip) {
@@ -409,21 +404,11 @@
         schedule,
         perf,
         Date.now() / 1000,
-        dayStart,
+        dateStr,
+        entity.t,
       );
 
       delay = estimate.delaySec;
-
-      if (delay === 0 && estimate.source === 'feed' && entity.t && entity.s) {
-        const predictedMins = (entity.t - dayStart) / 60;
-        const stopIdx = fullTrip.p ? findStopIndex(schedule, fullTrip.p, entity.s) : -1;
-        if (stopIdx !== -1) {
-          const scheduledMins = fullTrip.st[stopIdx * 2];
-          if (scheduledMins != null) {
-            delay = (predictedMins - scheduledMins) * 60;
-          }
-        }
-      }
     }
 
     const alert = realtime?.a.find((a) => a.tr?.includes(trainNum));
@@ -482,33 +467,7 @@
     const entity = getRealtimeTrip(trip.trainNumber);
     const isRealtimeActive = !!entity;
     const realtimeData = getTripRealtimeRenderData(trip);
-
-    let liveDelaySec = realtimeData.delay;
-    if (liveDelaySec === undefined) {
-      if (isRealtimeAvailable && schedule && entity) {
-        const fullTrip = getTripByIdMap(schedule).get(trip.trainNumber);
-        const dayStart = dayStartEpoch;
-        if (fullTrip) {
-          const currentStopCanonical = entity.s
-            ? getCanonicalStationId(schedule, entity.s)
-            : undefined;
-          liveDelaySec = estimateDelay(
-            entity.d ?? 0,
-            entity.p,
-            currentStopCanonical,
-            fullTrip,
-            schedule,
-            perf,
-            Date.now() / 1000,
-            dayStart,
-          ).delaySec;
-        } else {
-          liveDelaySec = entity.d ?? 0;
-        }
-      } else {
-        liveDelaySec = entity?.d ?? 0;
-      }
-    }
+    const liveDelaySec = realtimeData.delay ?? entity?.d ?? 0;
     const currentStopCanonical =
       entity?.s && schedule ? getCanonicalStationId(schedule, entity.s) : entity?.s;
     let perfNote: string | undefined;

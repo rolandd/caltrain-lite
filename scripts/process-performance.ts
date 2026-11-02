@@ -14,208 +14,18 @@ import type {
   RealtimeTripStatus,
 } from '../packages/types/schema.d.ts';
 
+import {
+  formatTransitCalendarDate,
+  getLocalMidnightUtcSec,
+  getLocalWallTimeUtcSec,
+} from '../packages/utils/time';
+
+export { getLocalMidnightUtcSec, getLocalWallTimeUtcSec };
+
 export interface RawTrainSnapshot {
   id: number;
   timestamp: number;
   data: string; // JSON string of Record<string, RealtimeTripStatus>
-}
-
-// Cache formatter to avoid repeated instantiations in snapshot loops
-const pstDateFormatter = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'America/Los_Angeles',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-const TRANSIT_TIMEZONE = 'America/Los_Angeles';
-
-// Wall-clock formatter used only to resolve the timezone's UTC offset for a
-// given date (see getLocalMidnightUtcSec).
-const wallClockFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: TRANSIT_TIMEZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: false,
-});
-
-/**
- * Return the epoch seconds of local midnight (00:00:00) in the transit
- * timezone for a given local date string (YYYY-MM-DD).
- *
- * The UTC offset is resolved per date via fixed-point iteration: guess the
- * instant of local midnight as if it were UTC, correct the guess by the
- * timezone's offset at that instant, and repeat until stable. This yields
- * 07:00 UTC during PDT and 08:00 UTC during PST — including on the DST
- * transition days themselves — whereas a hardcoded offset would corrupt
- * every epoch-derived delay by one hour for roughly four months each year.
- * Converges in one correction because US transitions happen at 2 AM local,
- * so midnight never falls inside a transition.
- */
-/**
- * Zone profile of a single calendar day in the transit timezone.
- *
- * A day has at most one DST transition, so the offset in effect at any wall
- * time within the day is fully determined by midnight's offset plus, on the
- * two transition days per year, the instant at which it flips.
- */
-interface DayZoneInfo {
-  /** UTC epoch second of local midnight. */
-  midnightUtcSec: number;
-  /** Zone offset (wall clock - UTC) in seconds in effect at midnight. */
-  offsetSec: number;
-  /** First instant (UTC epoch second) whose offset differs, if any. */
-  transitionUtcSec?: number;
-  /** Offset in effect from transitionUtcSec onward. */
-  transitionOffsetSec?: number;
-  /** Wall-clock pseudo-epoch at/after which transitionOffsetSec applies. */
-  transitionWallSec?: number;
-}
-
-/** Memoization for getDayZoneInfo (pure function of dateStr). */
-const dayZoneCache = new Map<string, DayZoneInfo>();
-
-/**
- * Compute (and memoize) the zone profile of a calendar day.
- */
-function getDayZoneInfo(dateStr: string): DayZoneInfo {
-  const cached = dayZoneCache.get(dateStr);
-  if (cached) return cached;
-
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const midnightAsUtcMs = Date.UTC(y!, m! - 1, d!); // local midnight treated as if UTC
-  let guessMs = midnightAsUtcMs;
-
-  for (let i = 0; i < 2; i++) {
-    const parts = wallClockFormatter.formatToParts(new Date(guessMs));
-    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
-    const wallAsUtcMs = Date.UTC(
-      get('year'),
-      get('month') - 1,
-      get('day'),
-      get('hour') % 24,
-      get('minute'),
-      get('second'),
-    );
-    // Correct the guess by the difference between the wall clock at the
-    // guessed instant and the desired wall clock (midnight). With PST (-8h)
-    // this resolves local midnight to 08:00 UTC; with PDT (-7h), to 07:00 UTC.
-    const correctedMs = guessMs - (wallAsUtcMs - midnightAsUtcMs);
-    if (correctedMs === guessMs) break;
-    guessMs = correctedMs;
-  }
-
-  const midnightUtcSec = Math.floor(guessMs / 1000);
-  const offsetSec = zoneOffsetSec(midnightUtcSec);
-
-  let info: DayZoneInfo = { midnightUtcSec, offsetSec };
-
-  // If the offsets at the first and last second of the day differ, the day
-  // contains a DST transition. Binary-search the flip instant (a handful of
-  // Intl calls, computed once per date and memoized).
-  if (zoneOffsetSec(midnightUtcSec + 86399) !== offsetSec) {
-    let lo = midnightUtcSec;
-    let hi = midnightUtcSec + 86399;
-    while (lo < hi) {
-      const mid = lo + Math.floor((hi - lo) / 2);
-      if (zoneOffsetSec(mid) === offsetSec) lo = mid + 1;
-      else hi = mid;
-    }
-    info = {
-      midnightUtcSec,
-      offsetSec,
-      transitionUtcSec: lo,
-      transitionOffsetSec: zoneOffsetSec(lo),
-      // The new offset applies to wall times at or after the transition
-      // instant displayed in the old offset (e.g. 02:00 on a spring-forward
-      // day, which the old offset displays last before the gap).
-      transitionWallSec: lo + offsetSec,
-    };
-  }
-
-  dayZoneCache.set(dateStr, info);
-  return info;
-}
-
-/**
- * UTC epoch second of local midnight of the given date in the transit
- * timezone (08:00 UTC during PST, 07:00 UTC during PDT).
- */
-export function getLocalMidnightUtcSec(dateStr: string): number {
-  return getDayZoneInfo(dateStr).midnightUtcSec;
-}
-
-/**
- * Zone offset (local wall clock minus UTC) in seconds in effect at the given
- * UTC epoch second. In Los Angeles this is -8h (PST) or -7h (PDT).
- */
-function zoneOffsetSec(epochSec: number): number {
-  const parts = wallClockFormatter.formatToParts(new Date(epochSec * 1000));
-  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
-  const wallAsUtcSec =
-    Date.UTC(
-      get('year'),
-      get('month') - 1,
-      get('day'),
-      get('hour') % 24,
-      get('minute'),
-      get('second'),
-    ) / 1000;
-  return wallAsUtcSec - epochSec;
-}
-
-/**
- * Shift a YYYY-MM-DD date string by a whole number of days.
- */
-function addLocalDays(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
-}
-
-/**
- * Resolve a local wall-clock time to a UTC epoch second.
- *
- * `secSinceMidnight` is seconds since local midnight of `dateStr` (the GTFS
- * convention, so values >= 86400 spill into the following calendar day and
- * negative values reach into the preceding one).
- *
- * `getLocalMidnightUtcSec(dateStr) + secSinceMidnight` is only correct when
- * no DST transition lies between local midnight and the target time. On a
- * spring-forward day like 2026-03-08 in Los Angeles (02:00 -> 03:00), a
- * 03:10 wall time is in PDT while midnight is PST, so the naive sum lands an
- * hour late; on a fall-back day like 2026-11-01 it lands an hour early.
- *
- * Instead, work on the naive local time line, where wall clocks are linear:
- * the target wall clock is `midnightWall(targetDay) + withinDaySec`, and the
- * offset in effect there is picked with a single comparison against the
- * day's transition point (see DayZoneInfo). All Intl work happens once per
- * calendar day inside getDayZoneInfo; this function is pure integer
- * arithmetic.
- *
- * Edge cases: for the ambiguous fall-back hour (a wall time that occurs
- * twice) the first occurrence is used; for wall times skipped by a
- * spring-forward transition (02:00-02:59, which no real schedule should
- * contain) no instant displays that wall clock and the preceding real time
- * is returned.
- */
-export function getLocalWallTimeUtcSec(dateStr: string, secSinceMidnight: number): number {
-  const dayOffset = Math.floor(secSinceMidnight / 86400);
-  const withinDaySec = secSinceMidnight - dayOffset * 86400;
-  const info = getDayZoneInfo(addLocalDays(dateStr, dayOffset));
-
-  // Target wall clock as a pseudo-epoch on the naive local time line.
-  const targetWallSec = info.midnightUtcSec + info.offsetSec + withinDaySec;
-
-  const offsetSec =
-    info.transitionWallSec !== undefined && targetWallSec >= info.transitionWallSec
-      ? info.transitionOffsetSec!
-      : info.offsetSec;
-
-  return targetWallSec - offsetSec;
 }
 
 /**
@@ -323,11 +133,11 @@ export function loadArchivedSnapshots(historyDir: string, windowDays = 90): RawT
  * Archive completed past dates to data/history in Zstandard format (.json.zst).
  */
 export function archiveCompletedDays(snapshots: RawTrainSnapshot[], historyDir: string): number {
-  const pstDateStr = pstDateFormatter.format(new Date());
+  const pstDateStr = formatTransitCalendarDate(new Date());
 
   const byDate: Record<string, RawTrainSnapshot[]> = Object.create(null);
   for (const s of snapshots) {
-    const d = pstDateFormatter.format(s.timestamp * 1000);
+    const d = formatTransitCalendarDate(s.timestamp * 1000);
 
     if (d >= pstDateStr) continue;
 
@@ -521,7 +331,7 @@ export function processTrainPerformance(
       continue;
     }
 
-    const dateStr = pstDateFormatter.format(snapshot.timestamp * 1000);
+    const dateStr = formatTransitCalendarDate(snapshot.timestamp * 1000);
 
     for (const [trainNum, status] of Object.entries(byTrip)) {
       if (!runStopDelays[trainNum]) runStopDelays[trainNum] = Object.create(null);

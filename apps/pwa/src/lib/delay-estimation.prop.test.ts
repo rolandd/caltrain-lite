@@ -3,7 +3,13 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { interpolateCurve, inverseCurve } from './delay-estimation';
+import {
+  interpolateCurve,
+  inverseCurve,
+  estimateDelay,
+  computeDistanceBehind,
+} from './delay-estimation';
+import type { StaticSchedule, Trip, TripPerformance } from '@packages/types/schema';
 
 describe('Property-Based Testing: Delay Estimation Curve Inversion & Interpolation', () => {
   // Generator for strictly increasing 10-bin progress curves with values strictly in (0, 1)
@@ -129,6 +135,135 @@ describe('Property-Based Testing: Delay Estimation Curve Inversion & Interpolati
           expect(interpolateCurve(linearCurve, x)).toBeCloseTo(x, 5);
           expect(inverseCurve(linearCurve, x)).toBeCloseTo(x, 5);
         }),
+        { numRuns: 500 },
+      );
+    });
+  });
+
+  describe('Property 5: DST-Transition Invariance of estimateDelay & computeDistanceBehind', () => {
+    const schedule = {
+      s: {
+        '7001': { ids: ['70011'], lat: 37.7, lon: -122.4, n: 'Origin' },
+        '7002': { ids: ['70021'], lat: 37.6, lon: -122.4, n: 'Dest' },
+      },
+      p: { P1: ['7001', '7002'] },
+      t: [],
+    } as unknown as StaticSchedule;
+
+    const linearPerf: TripPerformance = {
+      stops: {},
+      legs: {
+        '7001->7002': {
+          medianTravelSec: 1200,
+          p90TravelSec: 1400,
+          medianSpeedMS: 25,
+          curve: linearCurve,
+        },
+      },
+    };
+
+    // Independent ISO-8601 oracle with explicit post-2AM America/Los_Angeles offsets:
+    // - 2026-01-15: PST (-08:00)
+    // - 2026-07-15: PDT (-07:00)
+    // - 2026-03-08: Spring Forward (after 03:00 AM, offset is PDT -07:00)
+    // - 2026-11-01: Fall Back (after 02:00 AM, offset is PST -08:00)
+    const dstScenarioArb = fc.constantFrom(
+      { dateStr: '2026-01-15', postCutoffOffset: '-08:00' },
+      { dateStr: '2026-07-15', postCutoffOffset: '-07:00' },
+      { dateStr: '2026-03-08', postCutoffOffset: '-07:00' },
+      { dateStr: '2026-11-01', postCutoffOffset: '-08:00' },
+    );
+
+    function wallMinToIsoEpochOracle(
+      dateStr: string,
+      offset: string,
+      minutesFromMidnight: number,
+    ): number {
+      const totalSec = Math.round(minutesFromMidnight * 60);
+      const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const ss = String(totalSec % 60).padStart(2, '0');
+      return Date.parse(`${dateStr}T${hh}:${mm}:${ss}${offset}`) / 1000;
+    }
+
+    it('recovers trueDelaySec across PST, PDT, spring-forward, and fall-back days without 60-min DST skew', () => {
+      fc.assert(
+        fc.property(
+          dstScenarioArb,
+          fc.integer({ min: 180, max: 1320 }), // departMin between 03:00 and 22:00
+          fc.integer({ min: 10, max: 60 }), // leg duration in minutes
+          fc.integer({ min: 0, max: 7200 }), // true delay in seconds
+          (scenario, departMin, durationMin, trueDelaySec) => {
+            const arriveMin = departMin + durationMin;
+            const trip: Trip = {
+              i: '101',
+              p: 'P1',
+              st: [departMin, departMin, arriveMin, arriveMin],
+              rt: 'Local',
+              s: '7001',
+              d: 0,
+            };
+
+            const scheduledArriveEpoch = wallMinToIsoEpochOracle(
+              scenario.dateStr,
+              scenario.postCutoffOffset,
+              arriveMin,
+            );
+            const predictedArriveEpoch = scheduledArriveEpoch + trueDelaySec;
+
+            // Midpoint of leg (distFrac = 0.5, timeFrac = 0.5 on linearCurve)
+            const midPos = { la: 37.65, lo: -122.4 };
+            const scheduledMidEpoch = wallMinToIsoEpochOracle(
+              scenario.dateStr,
+              scenario.postCutoffOffset,
+              departMin + durationMin * 0.5,
+            );
+            const nowEpoch = scheduledMidEpoch + trueDelaySec;
+
+            // 1. Predicted-time-only feed (feedDelaySec = 0, predictedTimeEpoch set)
+            const feedOnly = estimateDelay(
+              0,
+              undefined,
+              '7002',
+              trip,
+              schedule,
+              linearPerf,
+              nowEpoch,
+              scenario.dateStr,
+              predictedArriveEpoch,
+            );
+            expect(feedOnly.delaySec).toBe(trueDelaySec);
+
+            // 2. Blended GPS + predictedTimeEpoch
+            const blended = estimateDelay(
+              0,
+              midPos,
+              '7002',
+              trip,
+              schedule,
+              linearPerf,
+              nowEpoch,
+              scenario.dateStr,
+              predictedArriveEpoch,
+            );
+            expect(Math.abs(blended.delaySec - trueDelaySec)).toBeLessThanOrEqual(2);
+
+            // 3. When on time (trueDelaySec === 0), distance behind is ~0m
+            if (trueDelaySec === 0) {
+              const behind = computeDistanceBehind(
+                midPos,
+                '7002',
+                trip,
+                schedule,
+                linearPerf,
+                scheduledMidEpoch,
+                scenario.dateStr,
+              );
+              expect(behind).toBeDefined();
+              expect(Math.abs(behind!)).toBeLessThan(10);
+            }
+          },
+        ),
         { numRuns: 500 },
       );
     });
