@@ -15,3 +15,9 @@
 **Vulnerability:** Dictionaries keyed by external GTFS string IDs (like stop or trip IDs) were initialized using `{}` (e.g., `const stationMap: Record<string, Station> = {};`), making them susceptible to prototype pollution if malicious IDs like `__proto__` are ingested.
 **Learning:** Build-time scripts parsing external untrusted CSVs face the same prototype pollution risks as runtime servers. Plain objects used as lookup maps should not inherit from `Object.prototype`.
 **Prevention:** Always initialize dictionaries keyed by external or unvalidated strings with `Object.create(null)` instead of `{}`. Alternatively, use ES6 `Map` objects.
+
+## 2024-05-15 - Missing Content-Security-Policy on Static Assets
+
+**Vulnerability:** The Content-Security-Policy (CSP) header was missing from the Cloudflare Pages static assets `_headers` file, despite being documented in `docs/SECURITY.md`.
+**Learning:** Security headers must be explicitly defined in the `_headers` file for Cloudflare Pages static assets; merely documenting them does not automatically enforce them.
+**Prevention:** Always verify that security headers documented in security policies are actually implemented in the configuration files (like `_headers` or worker middleware) and tested in deployment.

@@ -1,0 +1,25 @@
+$ pnpm run generate
+$ pnpm --filter @transit/scripts run generate
+$ tsx generate-schedule.ts
+Reading: /app/scripts/fixtures/caltrain-gtfs.zip
+Wrote 74295 bytes to /app/apps/pwa/src/lib/schedule-data.json
+  Stations: 30
+  Trips: 257
+$ vite dev
+1:27:56 AM [vite] (ssr) connected.
+
+ ╭───────────────────────────────────╮
+ │                                   │
+ │  [unplugin-typia] Cache disabled  │
+ │                                   │
+ ╰───────────────────────────────────╯
+
+1:27:57 AM [vite] (client) Forced re-optimization of dependencies
+
+  VITE v8.3.5  ready in 2532 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+200 GET /
+200 GET /_app/env.js
+[ELIFECYCLE] Command failed with exit code 143.
