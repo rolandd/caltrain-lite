@@ -57,6 +57,28 @@ export function partitionFavorites(
   return { available, unavailable };
 }
 
+function saveFavorites(newFavorites: string[]): void {
+  localStorage.setItem(KEY, JSON.stringify(newFavorites));
+
+  // Dispatch event so other components (like InstallPrompt) can react
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('transit:favorite-toggled', {
+        detail: { hasFavorites: newFavorites.length > 0 },
+      }),
+    );
+  }
+}
+
+export function removeFavorite(pair: string): void {
+  if (typeof localStorage === 'undefined') return;
+  const favorites = getFavorites();
+  const newFavorites = favorites.filter((f) => f !== pair);
+  if (newFavorites.length !== favorites.length) {
+    saveFavorites(newFavorites);
+  }
+}
+
 export function toggleFavorite(origin: string, destination: string): boolean {
   if (typeof localStorage === 'undefined') return false;
 
@@ -77,16 +99,7 @@ export function toggleFavorite(origin: string, destination: string): boolean {
     isNowFavorite = true;
   }
 
-  localStorage.setItem(KEY, JSON.stringify(newFavorites));
-
-  // Dispatch event so other components (like InstallPrompt) can react
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('transit:favorite-toggled', {
-        detail: { hasFavorites: newFavorites.length > 0 },
-      }),
-    );
-  }
+  saveFavorites(newFavorites);
 
   return isNowFavorite;
 }

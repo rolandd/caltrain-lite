@@ -2,7 +2,7 @@
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getFavorites, partitionFavorites, toggleFavorite } from './favorites';
+import { getFavorites, partitionFavorites, removeFavorite, toggleFavorite } from './favorites';
 
 class MemoryStorage implements Storage {
   private store = new Map<string, string>();
@@ -47,6 +47,14 @@ describe('favorites store', () => {
     toggleFavorite('st1', 'st2');
     const isFav = toggleFavorite('st1', 'st2');
     expect(isFav).toBe(false);
+    expect(getFavorites()).toEqual([]);
+  });
+
+  it('removes a favorite by raw pair string, including malformed entries', () => {
+    localStorage.setItem('transit-favorites', JSON.stringify(['sf', 'st1-st2']));
+    removeFavorite('sf');
+    expect(getFavorites()).toEqual(['st1-st2']);
+    removeFavorite('st1-st2');
     expect(getFavorites()).toEqual([]);
   });
 
