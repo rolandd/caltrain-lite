@@ -9,9 +9,11 @@ import {
   isServiceActive,
   getScheduleType,
   getCanonicalStationId,
+  getStationAbbreviation,
   findStopIndex,
 } from './schedule';
 import type { StaticSchedule } from './schedule';
+import realScheduleData from './schedule-data.json';
 import { getTransitDateAtNoon } from './time';
 
 /**
@@ -393,5 +395,42 @@ describe('getCanonicalStationId and findStopIndex', () => {
     expect(findStopIndex(sched, 'p1', '70021')).toBe(1);
     expect(findStopIndex(sched, 'p1', 'st1')).toBe(0);
     expect(findStopIndex(sched, 'p1', '70999')).toBe(-1);
+  });
+});
+
+describe('getStationAbbreviation', () => {
+  const realSchedule = realScheduleData as unknown as StaticSchedule;
+
+  it('produces unique, compact (2-5 char) abbreviations for all schedule stations', () => {
+    const stationIds = Object.keys(realSchedule.s);
+    expect(stationIds.length).toBeGreaterThan(0);
+
+    const seen = new Set<string>();
+    for (const id of stationIds) {
+      const abbr = getStationAbbreviation(realSchedule, id);
+      expect(abbr.length).toBeGreaterThanOrEqual(2);
+      expect(abbr.length).toBeLessThanOrEqual(5);
+      expect(seen.has(abbr)).toBe(false);
+      seen.add(abbr);
+    }
+  });
+
+  it('maps known Caltrain station IDs and child GTFS stop IDs', () => {
+    expect(getStationAbbreviation(realSchedule, 'mountain_view')).toBe('MV');
+    expect(getStationAbbreviation(realSchedule, 'san_francisco')).toBe('SF');
+    expect(getStationAbbreviation(realSchedule, '22nd_street')).toBe('22nd');
+    expect(getStationAbbreviation(realSchedule, 'sj_diridon')).toBe('SJD');
+    expect(getStationAbbreviation(realSchedule, 'place_MLBR')).toBe('Mlbr');
+    expect(getStationAbbreviation(realSchedule, '70011')).toBe('SF');
+    expect(getStationAbbreviation(realSchedule, 'stanford')).toBe('Stfd');
+    expect(getStationAbbreviation(null, 'palo_alto')).toBe('PA');
+  });
+
+  it('falls back gracefully for unknown stations and untrusted keys', () => {
+    expect(getStationAbbreviation(mockSchedule, 'st1')).toBe('SA');
+    expect(getStationAbbreviation(mockSchedule, 'unknown_station')).toBe('unkn');
+    expect(getStationAbbreviation(mockSchedule, '')).toBe('');
+    expect(getStationAbbreviation(mockSchedule, '__proto__')).toBe('__pr');
+    expect(getStationAbbreviation(mockSchedule, 'constructor')).toBe('cons');
   });
 });

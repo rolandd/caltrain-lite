@@ -2,6 +2,7 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
+  import type { Snippet } from 'svelte';
   import type { StationInfo } from '#lib/schedule.js';
 
   interface Props {
@@ -16,8 +17,8 @@
     onPrevDay: () => void;
     onNextDay: () => void;
     onGoNow: () => void;
-    onClear: () => void;
     onToggleFavorite: () => void;
+    children?: Snippet;
   }
 
   let {
@@ -32,8 +33,8 @@
     onPrevDay,
     onNextDay,
     onGoNow,
-    onClear,
     onToggleFavorite,
+    children,
   }: Props = $props();
 </script>
 
@@ -43,7 +44,7 @@
   >
     <div class="col-start-1 row-start-1 flex items-center gap-3 min-w-0">
       <label
-        class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right"
+        class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right shrink-0"
         for="origin">From</label
       >
       <select
@@ -61,6 +62,7 @@
 
     <!-- Swap button (centered horizontally between FROM/TO on desktop, vertically on right on mobile) -->
     <button
+      type="button"
       class="col-start-2 row-start-1 max-[480px]:row-span-2 self-center w-8 h-8 max-[480px]:w-10 max-[480px]:h-10 bg-transparent hover:bg-transit-surface-hover-soft border-none text-transit-brand hover:text-transit-text-primary text-xl cursor-pointer flex-shrink-0 flex items-center justify-center active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent rounded-full"
       onclick={onSwap}
       aria-label="Swap stations"
@@ -75,7 +77,7 @@
       class="col-start-3 row-start-1 max-[480px]:col-start-1 max-[480px]:row-start-2 flex items-center gap-3 min-w-0"
     >
       <label
-        class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right"
+        class="text-xs font-semibold text-transit-text-muted uppercase w-8 min-[481px]:w-auto text-right shrink-0"
         for="destination">To</label
       >
       <select
@@ -93,14 +95,15 @@
   </div>
 
   <div class="flex items-end gap-2 max-[480px]:flex-col max-[480px]:items-stretch">
-    <div class="flex-1 flex items-center gap-3">
+    <div class="flex-1 flex items-center gap-3 min-w-0">
       <label
-        class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right"
+        class="text-xs font-semibold text-transit-text-muted uppercase w-8 text-right shrink-0"
         for="date">Date</label
       >
       <!-- Date navigation: prev / input / next -->
       <div class="flex items-center gap-1 flex-1 min-w-0">
         <button
+          type="button"
           class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
           onclick={onPrevDay}
           aria-label="Previous day"
@@ -126,6 +129,7 @@
           onblur={onDateChange}
         />
         <button
+          type="button"
           class="w-11 h-11 bg-transit-surface-input hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-text-primary text-base cursor-pointer flex items-center justify-center flex-shrink-0 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
           onclick={onNextDay}
           aria-label="Next day"
@@ -145,9 +149,10 @@
       </div>
     </div>
 
-    <!-- Actions: Now / Clear / Favorite -->
-    <div class="flex items-center gap-2 max-[480px]:w-full">
+    <!-- Actions: Now / Favorite -->
+    <div class="flex items-center gap-2 shrink-0 max-[480px]:w-full">
       <button
+        type="button"
         class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-brand text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
         onclick={onGoNow}
         aria-label="Jump to now"
@@ -170,18 +175,8 @@
         Now
       </button>
 
-      {#if origin || destination}
-        <button
-          class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-danger text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
-          onclick={onClear}
-          aria-label="Clear selections"
-          title="Clear selections"
-        >
-          <span class="text-lg leading-none pb-[2px]">✕</span> Clear
-        </button>
-      {/if}
-
       <button
+        type="button"
         class="h-11 px-3 bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle rounded-[10px] text-transit-favorite text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 flex-1 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-2 focus-visible:outline-transparent"
         onclick={onToggleFavorite}
         disabled={!origin || !destination}
@@ -194,4 +189,6 @@
       </button>
     </div>
   </div>
+
+  {@render children?.()}
 </section>

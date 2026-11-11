@@ -184,6 +184,41 @@ export function getScheduleType(schedule: StaticSchedule, date: Date): ScheduleT
 
 const canonicalStationCache = new WeakMap<StaticSchedule, Map<string, string>>();
 
+const STATION_ABBREVIATIONS = new Map<string, string>([
+  ['san_francisco', 'SF'],
+  ['22nd_street', '22nd'],
+  ['bayshore', 'Bay'],
+  ['south_sf', 'SSF'],
+  ['san_bruno', 'SBr'],
+  ['place_MLBR', 'Mlbr'],
+  ['broadway', 'Bway'],
+  ['burlingame', 'Burl'],
+  ['san_mateo', 'SM'],
+  ['hayward_park', 'HayPk'],
+  ['hillsdale', 'Hdale'],
+  ['belmont', 'Bel'],
+  ['san_carlos', 'SCar'],
+  ['redwood_city', 'RWC'],
+  ['atherton', 'Ath'],
+  ['menlo_park', 'MP'],
+  ['palo_alto', 'PA'],
+  ['stanford', 'Stfd'],
+  ['california_ave', 'CalAv'],
+  ['san_antonio', 'SAnt'],
+  ['mountain_view', 'MV'],
+  ['sunnyvale', 'Sun'],
+  ['lawrence', 'Lawr'],
+  ['santa_clara', 'SCla'],
+  ['college_park', 'ColPk'],
+  ['sj_diridon', 'SJD'],
+  ['tamien', 'Tam'],
+  ['capitol', 'Cap'],
+  ['blossom_hill', 'BHill'],
+  ['morgan_hill', 'MHill'],
+  ['san_martin', 'SMar'],
+  ['gilroy', 'Gil'],
+]);
+
 /**
  * Maps a station ID or GTFS stop_id to its canonical station ID key in schedule.s.
  */
@@ -203,6 +238,35 @@ export function getCanonicalStationId(schedule: StaticSchedule, stopId: string):
     canonicalStationCache.set(schedule, cache);
   }
   return cache.get(stopId) || stopId;
+}
+
+/**
+ * Get a compact, human-readable abbreviation for a station ID.
+ * Falls back to a short derived code if the station is not in the known table.
+ */
+export function getStationAbbreviation(
+  schedule: StaticSchedule | null | undefined,
+  stopId: string,
+): string {
+  if (!stopId) return '';
+  const canonicalId = schedule ? getCanonicalStationId(schedule, stopId) : stopId;
+  const known = STATION_ABBREVIATIONS.get(canonicalId) ?? STATION_ABBREVIATIONS.get(stopId);
+  if (known) return known;
+
+  const fullName =
+    schedule && Object.hasOwn(schedule.s, canonicalId) ? schedule.s[canonicalId]?.n : undefined;
+  if (fullName) {
+    const words = fullName.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return words
+        .map((w) => w[0]?.toUpperCase() ?? '')
+        .join('')
+        .slice(0, 4);
+    }
+    return fullName.slice(0, 4);
+  }
+
+  return stopId.slice(0, 4);
 }
 
 /**

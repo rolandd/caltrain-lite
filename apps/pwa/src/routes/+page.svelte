@@ -10,11 +10,17 @@
     normalizeDate,
     getScheduleType,
     getCanonicalStationId,
+    getStationAbbreviation,
     getTripByIdMap,
     type StaticSchedule,
     type TripResult,
   } from '#lib/schedule.js';
-  import { getFavorites, partitionFavorites, toggleFavorite } from '#lib/favorites.js';
+  import {
+    getFavorites,
+    partitionFavorites,
+    removeFavorite,
+    toggleFavorite,
+  } from '#lib/favorites.js';
   import {
     fetchRealtime,
     isRealtimeApplicable,
@@ -82,7 +88,7 @@
   const unavailableFavorites = $derived.by(() => {
     if (!schedule) return [];
     const stationIds = schedule.s;
-    return partitionFavorites(favorites, (id) => id in stationIds).unavailable;
+    return partitionFavorites(favorites, (id) => Object.hasOwn(stationIds, id)).unavailable;
   });
 
   // Derived: is the current origin-destination pair a favorite?
@@ -118,8 +124,8 @@
   $effect(() => {
     if (!schedule) return;
     const stationIds = schedule.s;
-    if (origin && !(origin in stationIds)) origin = '';
-    if (destination && !(destination in stationIds)) destination = '';
+    if (origin && !Object.hasOwn(stationIds, origin)) origin = '';
+    if (destination && !Object.hasOwn(stationIds, destination)) destination = '';
 
     // A schedule update replaces the trip data, so results computed against
     // the previous schedule are stale: re-run the search if the selection is
@@ -145,8 +151,8 @@
     }
   }
 
-  function handleRemoveFavorite(o: string, d: string) {
-    toggleFavorite(o, d);
+  function handleRemoveFavorite(pair: string) {
+    removeFavorite(pair);
     loadFavorites();
   }
 
@@ -158,24 +164,14 @@
     search();
   }
 
-  /** Reset all form state and clear localStorage persistence. */
-  function clearState() {
-    origin = '';
-    destination = '';
-    dateStr = getTransitDateStr();
-    results = [];
-    searched = false;
-    scrollLeft = 0;
-    localStorage.removeItem(LS_ORIGIN);
-    localStorage.removeItem(LS_DEST);
-    localStorage.removeItem(LS_DATE);
-    localStorage.removeItem(LS_SCROLL);
-  }
-
   function getStationName(id: string) {
     if (!schedule) return id;
     const canonicalId = getCanonicalStationId(schedule, id);
-    return schedule.s[canonicalId]?.n || id;
+    return Object.hasOwn(schedule.s, canonicalId) ? schedule.s[canonicalId]?.n || id : id;
+  }
+
+  function getStationAbbr(id: string) {
+    return getStationAbbreviation(schedule, id);
   }
 
   // Realtime logic
@@ -591,17 +587,6 @@
       </h1>
     </header>
 
-    <!-- Favorites List -->
-    {#if !searched}
-      <FavoritesList
-        {favorites}
-        isAvailable={(pair) => !unavailableFavorites.includes(pair)}
-        {getStationName}
-        onSelectFavorite={selectFavorite}
-        onRemoveFavorite={handleRemoveFavorite}
-      />
-    {/if}
-
     <!-- Search Form -->
     <TripSearchForm
       {stations}
@@ -615,9 +600,19 @@
       onPrevDay={prevDay}
       onNextDay={nextDay}
       onGoNow={goNow}
-      onClear={clearState}
       onToggleFavorite={handleToggleFavorite}
-    />
+    >
+      <FavoritesList
+        {favorites}
+        {origin}
+        {destination}
+        isAvailable={(pair) => !unavailableFavorites.includes(pair)}
+        {getStationName}
+        {getStationAbbr}
+        onSelectFavorite={selectFavorite}
+        onRemoveFavorite={handleRemoveFavorite}
+      />
+    </TripSearchForm>
 
     <!-- Results Table -->
     {#if searched}
