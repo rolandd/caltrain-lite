@@ -48,6 +48,14 @@
     role="button"
     tabindex="0"
     aria-haspopup="dialog"
+    aria-label="View details for {style.label} train {trip.trainNumber}. Departs {trip.departure}{rt.delayLabel &&
+    rt.delayLabel !== 'on time'
+      ? ` (${rt.delayLabel})`
+      : ''}, arrives {trip.arrival}. {trip.durationMinutes} minutes, {trip.intermediateStops === 0
+      ? 'non-stop'
+      : trip.intermediateStops === 1
+        ? '1 stop'
+        : `${trip.intermediateStops} stops`}."
     onclick={(e) => onToggleTooltip(e, trip)}
     onkeydown={(e) => {
       if (e.key === 'Enter' || e.key === ' ') {
