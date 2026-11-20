@@ -48,6 +48,12 @@
     role="button"
     tabindex="0"
     aria-haspopup="dialog"
+    aria-label="{style.label} train {trip.trainNumber}, departing {trip.departure}, arriving {trip.arrival}. {trip.durationMinutes} minutes, {trip.intermediateStops ===
+    0
+      ? 'non-stop'
+      : trip.intermediateStops === 1
+        ? '1 stop'
+        : `${trip.intermediateStops} stops`}."
     onclick={(e) => onToggleTooltip(e, trip)}
     onkeydown={(e) => {
       if (e.key === 'Enter' || e.key === ' ') {
