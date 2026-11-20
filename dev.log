@@ -1,0 +1,53 @@
+Scope: all 6 workspace projects
+? Verifying lockfile against supply-chain policies (487 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +340
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 340, reused 0, downloaded 0, added 0
+Progress: resolved 340, reused 0, downloaded 4, added 0
+Progress: resolved 340, reused 0, downloaded 37, added 0
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /home/jules/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 340, reused 0, downloaded 86, added 4
+Progress: resolved 340, reused 0, downloaded 143, added 8
+Progress: resolved 340, reused 0, downloaded 218, added 12
+Progress: resolved 340, reused 0, downloaded 253, added 16
+Progress: resolved 340, reused 0, downloaded 335, added 32
+Progress: resolved 340, reused 0, downloaded 336, added 240
+Progress: resolved 340, reused 0, downloaded 337, added 339
+✓ Lockfile passes supply-chain policies (487 entries in 12.5s)
+Progress: resolved 340, reused 0, downloaded 338, added 339
+Progress: resolved 340, reused 0, downloaded 338, added 340, done
+.../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+.../node_modules/workerd postinstall$ node install.js
+.../esbuild@0.28.2/node_modules/esbuild postinstall$ node install.js
+.../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+.../esbuild@0.28.2/node_modules/esbuild postinstall: Done
+.../node_modules/workerd postinstall: Done
+
+devDependencies:
++ @cloudflare/workers-types 5.20261024.1
++ @eslint/js 10.0.1
++ csv-parse 7.0.1
++ eslint 10.13.0
++ eslint-config-prettier 10.1.8
++ eslint-plugin-svelte 3.23.1
++ fast-check 4.10.2
++ globals 17.13.0
++ jszip 3.10.1
++ prettier 3.9.10
++ prettier-plugin-svelte 4.1.1
++ svelte-check 4.7.7
++ tsx 4.23.15
++ typescript 6.0.3
++ typescript-eslint 8.72.0
++ typia 12.2.1
+
+apps/pwa prepare$ svelte-kit sync || echo ''
+apps/pwa prepare: Done
+Done in 21.5s using pnpm v11.21.0
+[ERR_PNPM_NO_SCRIPT] Missing script: dev
+
+Command "dev" not found.
