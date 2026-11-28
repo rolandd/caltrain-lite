@@ -49,6 +49,18 @@
     };
   });
 
+  $effect(() => {
+    // Proactively nudge the browser to install the new Service Worker in the
+    // background as soon as a new app version is detected, so its cache is
+    // ready before the user reloads.
+    if (updated.current && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .getRegistration()
+        .then((reg) => reg?.update())
+        .catch(() => {});
+    }
+  });
+
   const reload = () => {
     // Append a unique timestamp query parameter to bypass static asset SW cache on reload
     const url = new URL(window.location.href);
