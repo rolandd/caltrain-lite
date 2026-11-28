@@ -30,10 +30,10 @@
   import { estimateDelay, computeDistanceBehind } from '#lib/delay-estimation.js';
   import {
     addLocalDays,
+    classifyTripsByTime,
     getTransitDateStr,
     getTransitDateAtNoon,
     getLocalWallTimeUtcSec,
-    formatTransitDateLong,
     formatScheduleEndDate,
   } from '#lib/time.js';
 
@@ -61,13 +61,11 @@
   // State
   let origin = $state('');
   let destination = $state('');
+  let nowMs = $state(Date.now());
+  const todayDateStr = $derived(getTransitDateStr(new Date(nowMs)));
   let dateStr = $state(getTransitDateStr());
   let scrollLeft = $state(0);
 
-  const formattedDate = $derived.by(() => {
-    if (!dateStr) return '';
-    return formatTransitDateLong(getTransitDateAtNoon(dateStr));
-  });
   const scheduleType = $derived(
     schedule && dateStr ? getScheduleType(schedule, getTransitDateAtNoon(dateStr)) : null,
   );
@@ -77,6 +75,7 @@
   let realtime = $state<RealtimeStatusWithMetadata | null>(null);
   let lastSuccessfulFetch = $state<number | null>(null);
   let pollInterval: ReturnType<typeof setInterval> | undefined;
+  let clockInterval: ReturnType<typeof setInterval> | undefined;
 
   let activeTooltip = $state<ActiveTooltip | null>(null);
 
@@ -95,6 +94,8 @@
   const isCurrentFavorite = $derived(
     origin && destination ? favorites.includes(`${origin}-${destination}`) : false,
   );
+
+  const canToggleFavorite = $derived(Boolean(origin && destination && origin !== destination));
 
   const isRealtimeAvailable = $derived(isRealtimeApplicable(dateStr, realtime));
 
@@ -210,12 +211,16 @@
     }
     updateRealtime();
     pollInterval = setInterval(updateRealtime, 60000);
+    clockInterval = setInterval(() => {
+      nowMs = Date.now();
+    }, 30000);
   });
 
   let scrollSaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   onDestroy(() => {
     if (pollInterval) clearInterval(pollInterval);
+    if (clockInterval) clearInterval(clockInterval);
     if (scrollSaveTimer) {
       clearTimeout(scrollSaveTimer);
       localStorage.setItem(LS_SCROLL, String(scrollLeft));
@@ -276,7 +281,8 @@
   const prevDay = () => shiftDate(-1);
   const nextDay = () => shiftDate(1);
   function goNow() {
-    dateStr = getTransitDateStr();
+    nowMs = Date.now();
+    dateStr = getTransitDateStr(new Date(nowMs));
     search();
     tick().then(() => scrollToNow());
   }
@@ -285,12 +291,14 @@
 
   function scrollToNow() {
     if (!tripScrollEl || !results.length) return;
-    const nowSec = Date.now() / 1000;
-    const firstFutureIdx = results.findIndex(
-      (t) => getLocalWallTimeUtcSec(dateStr, t.departureMinutes * 60) >= nowSec,
-    );
-    if (firstFutureIdx > 0) {
-      tripScrollEl.scrollLeft = firstFutureIdx * 84;
+    const nowSec = nowMs / 1000;
+    const effectiveDepartures = results.map((t) => {
+      const rt = getTripRealtimeRenderDataFromMap(t);
+      return getLocalWallTimeUtcSec(dateStr, t.departureMinutes * 60) + (rt.delay ?? 0);
+    });
+    const { nextIndex } = classifyTripsByTime(effectiveDepartures, nowSec);
+    if (nextIndex >= 0) {
+      tripScrollEl.scrollLeft = nextIndex * 84;
     }
   }
 
@@ -441,24 +449,17 @@
   }
 
   function toggleTooltip(event: MouseEvent | KeyboardEvent, trip: TripResult): void {
-    event.stopPropagation(); // prevent row click if we add one later
+    event.stopPropagation();
 
-    // If clicking the same one, toggle off
     if (activeTooltip?.id === trip.trainNumber) {
       activeTooltip = null;
       return;
     }
 
     const text = getTooltipText(trip.trainNumber, trip.direction);
-    // Allow tooltip if we have text or if we have stops to show
     if (!text && trip.stopIds.length < 2) return;
 
-    const target = (event.currentTarget as HTMLElement | null) ?? (event.target as HTMLElement);
-    const rect = target.getBoundingClientRect();
-    // Position centered over the element
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-
+    const style = getRouteStyle(trip.routeType);
     const perf = performance?.trips[trip.trainNumber];
     const entity = getRealtimeTrip(trip.trainNumber);
     const isRealtimeActive = !!entity;
@@ -542,11 +543,14 @@
 
     activeTooltip = {
       id: trip.trainNumber,
+      routeLabel: style.label,
+      routeBadgeClass: style.badge,
+      departure: trip.departure,
+      arrival: trip.arrival,
+      durationMinutes: trip.durationMinutes,
       text,
       perfNote,
       stops,
-      x,
-      y,
     };
   }
 
@@ -579,10 +583,8 @@
 
 <main class="p-4 max-w-[600px] mx-auto pb-12">
   <div class="container">
-    <header class="text-center mb-6">
-      <h1
-        class="text-2xl font-bold text-transit-text-primary flex items-center justify-center gap-3"
-      >
+    <header class="text-center mb-4 sm:mb-6">
+      <h1 class="text-2xl font-bold text-foreground flex items-center justify-center gap-3">
         Caltrain <img src="/icon.svg" alt="Logo" class="h-8 w-auto" width="32" height="32" />
       </h1>
     </header>
@@ -593,24 +595,26 @@
       bind:origin
       bind:destination
       bind:dateStr
-      {isCurrentFavorite}
+      {todayDateStr}
       onSearch={search}
       onDateChange={handleDateChange}
       onSwap={swap}
       onPrevDay={prevDay}
       onNextDay={nextDay}
       onGoNow={goNow}
-      onToggleFavorite={handleToggleFavorite}
     >
       <FavoritesList
         {favorites}
         {origin}
         {destination}
+        {isCurrentFavorite}
+        {canToggleFavorite}
         isAvailable={(pair) => !unavailableFavorites.includes(pair)}
         {getStationName}
         {getStationAbbr}
         onSelectFavorite={selectFavorite}
         onRemoveFavorite={handleRemoveFavorite}
+        onToggleFavorite={handleToggleFavorite}
       />
     </TripSearchForm>
 
@@ -621,7 +625,6 @@
         {origin}
         {destination}
         {currentFare}
-        {formattedDate}
         {scheduleType}
         {isRealtimeAvailable}
         {realtime}
@@ -629,6 +632,8 @@
         {isPastEndOfSchedule}
         {scheduleEndDate}
         {dateStr}
+        {todayDateStr}
+        {nowMs}
         bind:scrollLeft
         bind:tripScrollEl
         {getStationName}
@@ -644,9 +649,9 @@
     {/if}
 
     <!-- Spacer for better scrolling -->
-    <div class="h-32"></div>
+    <div class="h-24"></div>
 
-    <!-- Active Tooltip Modal -->
+    <!-- Active Trip Details Dialog -->
     <TripTooltipModal {activeTooltip} onClose={closeTooltip} />
   </div>
 </main>

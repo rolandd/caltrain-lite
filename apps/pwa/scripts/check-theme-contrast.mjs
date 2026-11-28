@@ -83,6 +83,48 @@ const checks = [
     min: 3.0,
     label: 'Danger border on alert bg',
   },
+  {
+    fg: 'primary-foreground',
+    bg: 'primary',
+    min: 4.5,
+    label: 'Primary button foreground on primary',
+  },
+  {
+    fg: 'destructive-foreground',
+    bg: 'destructive',
+    min: 4.5,
+    label: 'Destructive foreground on destructive',
+  },
+  {
+    fg: 'card-foreground',
+    bg: 'card',
+    min: 4.5,
+    label: 'Card foreground on card',
+  },
+  {
+    fg: 'popover-foreground',
+    bg: 'popover',
+    min: 4.5,
+    label: 'Popover foreground on popover',
+  },
+  {
+    fg: 'muted-foreground',
+    bg: 'muted',
+    min: 4.5,
+    label: 'Muted foreground on muted',
+  },
+  {
+    fg: 'transit-text-tertiary',
+    bg: 'background',
+    min: 4.5,
+    label: 'Departed trip metadata on canvas',
+  },
+  {
+    fg: 'transit-text-tertiary',
+    bg: 'muted',
+    min: 4.5,
+    label: 'Departed trip badge text on muted',
+  },
 ];
 
 function parseTokens(cssSource) {

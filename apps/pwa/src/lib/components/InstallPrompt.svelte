@@ -1,6 +1,13 @@
 <script lang="ts">
+  // SPDX-License-Identifier: MIT
+  // Copyright 2026 Roland Dreier <roland@rolandd.dev>
+
   import { onMount } from 'svelte';
+  import ShareIcon from '@lucide/svelte/icons/share';
+  import XIcon from '@lucide/svelte/icons/x';
   import { getFavorites } from '#lib/favorites.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Card } from '#lib/components/ui/card/index.js';
 
   interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
@@ -128,84 +135,62 @@
 </script>
 
 {#if showPrompt}
-  <div
-    class="fixed bottom-[env(safe-area-inset-bottom,_1rem)] left-4 right-4 z-[100] flex flex-col items-center justify-center p-4 bg-transit-surface-card border border-transit-border-subtle rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4"
+  <Card
+    class="fixed bottom-[env(safe-area-inset-bottom,_1rem)] left-4 right-4 max-w-[568px] mx-auto z-[100] flex flex-col items-center justify-center p-4 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 mb-4"
     role="dialog"
     aria-labelledby="install-title"
   >
     <div class="flex items-start justify-between w-full mb-3">
       <div class="flex items-center gap-3">
-        <!-- Icon placeholder - in a real app this would be the app icon -->
         <div
-          class="w-10 h-10 rounded-lg bg-gradient-to-br from-transit-brand to-transit-brand-strong flex items-center justify-center text-transit-text-primary font-bold text-lg"
+          class="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0 p-1.5"
         >
-          C
+          <img src="/icon.svg" alt="" class="w-full h-full object-contain" width="28" height="28" />
         </div>
         <div>
-          <h3 id="install-title" class="font-bold text-transit-text-primary text-lg leading-tight">
+          <h3 id="install-title" class="font-bold text-foreground text-base leading-tight">
             Install App
           </h3>
           <p class="text-transit-text-tertiary text-sm">Offline access & fullscreen</p>
         </div>
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        class="-mt-1 -mr-1"
         onclick={dismiss}
-        class="text-transit-tooltip-node hover:text-transit-text-primary p-1 transition-colors focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none rounded-sm"
         aria-label="Close"
         title="Close"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          class="w-5 h-5"
-          viewBox="0 0 24 24"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-        </svg>
-      </button>
+        <XIcon class="h-4 w-4" aria-hidden="true" />
+      </Button>
     </div>
 
     {#if platform === 'chromium'}
-      <button
-        onclick={install}
-        class="w-full bg-transit-brand hover:bg-transit-brand-strong text-transit-text-primary font-semibold py-3 px-4 rounded-lg transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
-      >
-        Install
-      </button>
+      <Button variant="default" size="default" class="w-full" onclick={install}>Install</Button>
     {:else if platform === 'ios'}
-      <div
-        class="bg-transit-surface-elevated p-3 rounded-lg w-full text-sm text-transit-text-secondary"
-      >
+      <div class="bg-muted p-3 rounded-lg w-full text-sm text-transit-text-secondary">
         <p class="flex items-center gap-2 mb-2">
-          1. Tap the <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            class="text-transit-brand stroke-current stroke-2"
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            ><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path
-              d="m16 6-4-4-4 4M12 2v13"
-            /></svg
-          > Share button
+          1. Tap the <ShareIcon
+            class="h-4 w-4 text-transit-brand inline shrink-0"
+            aria-hidden="true"
+          />
+          Share button
         </p>
         <p class="flex items-center gap-2">
-          2. Select <span class="font-semibold text-transit-text-primary">Add to Home Screen</span>
+          2. Select <span class="font-semibold text-foreground">Add to Home Screen</span>
         </p>
       </div>
       <!-- Pointing arrow for iOS bottom bar -->
       <div
-        class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-transit-surface-card border-b border-r border-transit-border-subtle rotate-45"
+        class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-card border-b border-r border-border rotate-45"
+        aria-hidden="true"
       ></div>
     {:else if platform === 'firefox'}
-      <div
-        class="bg-transit-surface-elevated p-3 rounded-lg w-full text-sm text-transit-text-secondary"
-      >
+      <div class="bg-muted p-3 rounded-lg w-full text-sm text-transit-text-secondary">
         <p class="mb-1">1. Tap the menu button (⋮)</p>
-        <p>2. Select <span class="font-semibold text-transit-text-primary">Install</span></p>
+        <p>2. Select <span class="font-semibold text-foreground">Install</span></p>
       </div>
     {/if}
-  </div>
+  </Card>
 {/if}

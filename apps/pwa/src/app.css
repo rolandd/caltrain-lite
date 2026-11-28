@@ -2,9 +2,17 @@
 /* Copyright 2026 Roland Dreier <roland@rolandd.dev> */
 
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
 @theme {
   --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
+
+  /* Radius scale */
+  --radius: 0.75rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
   /* Core surfaces */
   --color-transit-surface-canvas: #0f1118;
@@ -59,4 +67,51 @@
   --color-route-bullet-border: #6b2c34;
   --color-route-bullet-badge-bg: #4a2329;
   --color-route-bullet-badge-text: #ff9da8;
+
+  /* shadcn semantic tokens aliased directly to the transit palette */
+  --color-background: var(--color-transit-surface-canvas);
+  --color-foreground: var(--color-transit-text-primary);
+  --color-card: var(--color-transit-surface-card);
+  --color-card-foreground: var(--color-transit-text-primary);
+  --color-popover: var(--color-transit-tooltip-bg);
+  --color-popover-foreground: var(--color-transit-text-primary);
+  --color-primary: var(--color-transit-brand);
+  --color-primary-foreground: var(--color-transit-surface-canvas);
+  --color-secondary: var(--color-transit-surface-input);
+  --color-secondary-foreground: var(--color-transit-text-primary);
+  --color-muted: var(--color-transit-surface-elevated);
+  --color-muted-foreground: var(--color-transit-text-muted);
+  --color-accent: var(--color-transit-surface-hover-soft);
+  --color-accent-foreground: var(--color-transit-text-primary);
+  --color-destructive: var(--color-transit-danger);
+  --color-destructive-foreground: var(--color-transit-surface-canvas);
+  --color-border: var(--color-transit-border-subtle);
+  --color-input: var(--color-transit-border-subtle);
+  --color-ring: var(--color-transit-brand);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
+
+/*
+ * Expand the WebKit/Chromium native date-picker indicator to fill the entire
+ * transparent overlay input so clicking anywhere on desktop opens the calendar.
+ */
+.date-picker-overlay::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
 }
