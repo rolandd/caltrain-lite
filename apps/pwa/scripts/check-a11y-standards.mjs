@@ -199,7 +199,8 @@ async function main() {
       }
 
       // Rule 2: Buttons with aria-label should also have title attributes for desktop tooltips
-      if (tagName === 'button' && attrs['aria-label']) {
+      const isButtonLike = tagName === 'button' || tagName === 'Button';
+      if (isButtonLike && attrs['aria-label']) {
         // Exempt standard text-only buttons where aria-label is redundant
         const hasTitle = Boolean(attrs.title);
         const isBackdrop = attrs.tabindex === '-1' || attrs['aria-label'] === 'Close tooltip';
@@ -207,7 +208,7 @@ async function main() {
           failures.push({
             file: relPath,
             rule: 'Button Title Tooltip',
-            message: `<button aria-label="${attrs['aria-label']}"> is missing a title="..." attribute for desktop browser tooltips.`,
+            message: `<${tagName} aria-label="${attrs['aria-label']}"> is missing a title="..." attribute for desktop browser tooltips.`,
           });
         }
       }

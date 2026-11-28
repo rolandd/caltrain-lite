@@ -2,9 +2,10 @@
   // SPDX-License-Identifier: MIT
   // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
+  import InfoIcon from '@lucide/svelte/icons/info';
   import { updated, page } from '$app/state';
-
   import { dev } from '$app/env';
+  import { Button } from '#lib/components/ui/button/index.js';
 
   let showBanner = $derived(updated.current || (dev && page.url.searchParams.has('test-update')));
 
@@ -58,32 +59,20 @@
 
 {#if showBanner}
   <div
-    class="fixed top-0 left-0 right-0 z-50 bg-transit-brand/10 backdrop-blur-lg border-b border-transit-brand/20 px-4 py-3 flex items-center justify-between shadow-lg"
+    class="fixed top-0 left-0 right-0 z-50 bg-transit-brand/10 backdrop-blur-lg border-b border-transit-brand/20 px-4 py-3 flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200"
     role="alert"
   >
-    <div class="font-medium text-transit-text-primary flex items-center gap-2">
-      <!-- Info icon for visual interest -->
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        class="w-5 h-5 text-transit-brand"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-9-3.75h.008v.008H12z"
-        ></path>
-      </svg>
-      A new version is available!
+    <div class="font-medium text-foreground flex items-center gap-2 text-sm">
+      <InfoIcon class="w-4 h-4 text-transit-brand shrink-0" aria-hidden="true" />
+      <span>A new version is available!</span>
     </div>
-    <button
+    <Button
+      variant="outline"
+      size="sm"
+      class="text-transit-brand border-transit-border-brand/70 hover:bg-transit-brand-soft-bg/35 ml-4"
       onclick={reload}
-      class="bg-transparent hover:bg-transit-surface-hover-soft border border-transit-border-subtle text-transit-brand px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ml-4 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
     >
       Update Now
-    </button>
+    </Button>
   </div>
 {/if}

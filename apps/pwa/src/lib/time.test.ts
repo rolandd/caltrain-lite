@@ -8,6 +8,8 @@ import {
   getTransitDateAtNoon,
   getTransitTimeStr,
   formatTransitDateLong,
+  formatTransitDateSmart,
+  classifyTripsByTime,
   formatScheduleEndDate,
   formatNoTripsDate,
   getTransitDayStartEpoch,
@@ -69,6 +71,73 @@ describe('time utilities', () => {
     const date = new Date(2026, 4, 15, 12, 0, 0); // May 15, 2026
     const formatted = formatTransitDateLong(date);
     expect(formatted).toContain('May 15, 2026');
+  });
+
+  it('formats smart transit dates with relative hints and elided current year', () => {
+    const ref = '2026-11-27';
+
+    expect(formatTransitDateSmart('2026-11-27', ref)).toEqual({
+      relative: 'Today',
+      dateLabel: 'Fri, Nov 27',
+      text: 'Today · Fri, Nov 27',
+    });
+
+    expect(formatTransitDateSmart('2026-11-28', ref)).toEqual({
+      relative: 'Tomorrow',
+      dateLabel: 'Sat, Nov 28',
+      text: 'Tomorrow · Sat, Nov 28',
+    });
+
+    expect(formatTransitDateSmart('2026-11-26', ref)).toEqual({
+      relative: 'Yesterday',
+      dateLabel: 'Thu, Nov 26',
+      text: 'Yesterday · Thu, Nov 26',
+    });
+
+    expect(formatTransitDateSmart('2026-12-05', ref)).toEqual({
+      relative: undefined,
+      dateLabel: 'Sat, Dec 5',
+      text: 'Sat, Dec 5',
+    });
+
+    expect(formatTransitDateSmart('2027-01-15', ref)).toEqual({
+      relative: undefined,
+      dateLabel: 'Fri, Jan 15, 2027',
+      text: 'Fri, Jan 15, 2027',
+    });
+
+    // Across year boundary: Tomorrow in the next year still shows Tomorrow + year
+    expect(formatTransitDateSmart('2027-01-01', '2026-12-31')).toEqual({
+      relative: 'Tomorrow',
+      dateLabel: 'Fri, Jan 1, 2027',
+      text: 'Tomorrow · Fri, Jan 1, 2027',
+    });
+  });
+
+  it('classifies trips against current time including out-of-order delayed trains', () => {
+    // Normal chronological departures: 10:00, 10:15, 10:30 at now = 10:10
+    expect(classifyTripsByTime([600, 615, 630], 610)).toEqual({
+      statuses: ['past', 'next', 'upcoming'],
+      nextIndex: 1,
+    });
+
+    // Delayed 10:00 train (+30m -> 10:30), departed 10:10 train, on-time 10:25 train at now = 10:20
+    expect(classifyTripsByTime([630, 610, 625], 620)).toEqual({
+      statuses: ['upcoming', 'past', 'next'],
+      nextIndex: 2,
+    });
+
+    // Equal effective departure times break ties in list order
+    expect(classifyTripsByTime([625, 625, 640], 620)).toEqual({
+      statuses: ['next', 'upcoming', 'upcoming'],
+      nextIndex: 0,
+    });
+
+    // All trains already departed
+    expect(classifyTripsByTime([500, 550], 600)).toEqual({
+      statuses: ['past', 'past'],
+      nextIndex: -1,
+    });
   });
 
   it('formats schedule end date integer', () => {

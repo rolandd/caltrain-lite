@@ -5,8 +5,12 @@
   import { initSchedule, initPerformance } from '#lib/sync.js';
   import type { StaticSchedule, TrainPerformanceProfile } from '@packages/types/schema';
   import { setContext } from 'svelte';
+  import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
   import '@fontsource-variable/inter';
   import '../app.css';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import InstallPrompt from '#lib/components/InstallPrompt.svelte';
+  import UpdateBanner from '#lib/components/UpdateBanner.svelte';
 
   let { children } = $props();
 
@@ -26,9 +30,6 @@
       return performance;
     },
   });
-
-  import InstallPrompt from '#lib/components/InstallPrompt.svelte';
-  import UpdateBanner from '#lib/components/UpdateBanner.svelte';
 
   // Eagerly kick off cache read at component init to avoid waiting for $effect post-mount
   initSchedule((newSchedule) => {
@@ -58,21 +59,21 @@
   <UpdateBanner />
 
   {#if schedule}
-    <div class="min-h-screen bg-transit-surface-canvas text-transit-text-primary flex flex-col">
+    <div class="min-h-screen bg-background text-foreground flex flex-col">
       <div class="flex-grow">
         {@render children()}
       </div>
       <footer class="text-center py-6 text-xs text-transit-text-tertiary">
         <a
           href="https://github.com/rolandd/caltrain-lite"
-          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none rounded-sm"
+          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none rounded-sm"
           target="_blank"
           rel="noopener noreferrer">free software</a
         >
         made with ❤️ in mountain view, ca by
         <a
           href="https://github.com/rolandd"
-          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none rounded-sm"
+          class="hover:text-transit-text-secondary transition-colors underline decoration-dotted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none rounded-sm"
           target="_blank"
           rel="noopener noreferrer">roland</a
         >
@@ -80,27 +81,24 @@
     </div>
   {:else if error}
     <div
-      class="flex flex-col items-center justify-center h-screen text-transit-text-primary bg-transit-surface-canvas gap-4"
+      class="flex flex-col items-center justify-center h-screen text-foreground bg-background gap-4 px-4 text-center"
       role="alert"
     >
-      <div class="text-[2rem]">⚠️</div>
+      <TriangleAlertIcon class="w-10 h-10 text-transit-warning" aria-hidden="true" />
       <p class="text-transit-danger font-semibold">{error}</p>
-      <button
-        class="bg-transit-surface-elevated border border-transit-border-subtle text-transit-text-primary px-4 py-2 rounded-lg cursor-pointer text-lg focus-visible:ring-2 focus-visible:ring-transit-brand focus-visible:outline-none"
-        onclick={() => window.location.reload()}>Retry</button
-      >
+      <Button variant="secondary" onclick={() => window.location.reload()}>Retry</Button>
     </div>
   {:else}
     <div
-      class="flex flex-col items-center justify-center h-screen text-transit-text-primary bg-transit-surface-canvas gap-4"
+      class="flex flex-col items-center justify-center h-screen text-foreground bg-background gap-4"
       role="status"
       aria-busy="true"
       aria-label="Loading schedule"
     >
       <div
-        class="w-10 h-10 border-4 border-transit-text-primary/10 border-l-transit-brand rounded-full animate-spin"
+        class="w-10 h-10 border-4 border-foreground/10 border-l-transit-brand rounded-full animate-spin"
       ></div>
-      <p>Loading schedule...</p>
+      <p class="text-sm text-muted-foreground">Loading schedule...</p>
     </div>
   {/if}
 </div>
