@@ -23,7 +23,9 @@
   } from '#lib/favorites.js';
   import {
     fetchRealtime,
+    findAlertForTrain,
     isRealtimeApplicable,
+    lookupByTrainNumber,
     type RealtimeStatusWithMetadata,
   } from '#lib/realtime.js';
   import { getTrainLocationDescription, metersToMiles } from '#lib/location.js';
@@ -330,7 +332,7 @@
 
   function getRealtimeTrip(trainNum: string) {
     if (!isRealtimeAvailable || !realtime) return undefined;
-    return realtime.byTrip[trainNum];
+    return lookupByTrainNumber(realtime.byTrip, trainNum);
   }
 
   const formatDelay = (delaySec: number): string => {
@@ -357,7 +359,7 @@
       const fullTrip = getTripByIdMap(schedule).get(trainNum);
       const canonicalStop = getCanonicalStationId(schedule, entity.s);
       if (fullTrip && canonicalStop) {
-        const perf = performance?.trips[trainNum];
+        const perf = lookupByTrainNumber(performance?.trips, trainNum);
         const behindMeters = computeDistanceBehind(
           entity.p,
           canonicalStop,
@@ -399,7 +401,7 @@
 
     if (schedule && fullTrip) {
       const currentStopCanonical = entity.s ? getCanonicalStationId(schedule, entity.s) : undefined;
-      const perf = performance?.trips[trainNum];
+      const perf = lookupByTrainNumber(performance?.trips, trainNum);
       const estimate = estimateDelay(
         entity.d ?? 0,
         entity.p,
@@ -415,7 +417,7 @@
       delay = estimate.delaySec;
     }
 
-    const alert = realtime?.a.find((a) => a.tr?.includes(trainNum));
+    const alert = findAlertForTrain(realtime?.a, trainNum);
     let delayLabel = formatDelay(delay);
     if (delayLabel === 'on time' && alert) {
       if (alert.h.toLowerCase().includes('delayed')) {
@@ -460,7 +462,7 @@
     if (!text && trip.stopIds.length < 2) return;
 
     const style = getRouteStyle(trip.routeType);
-    const perf = performance?.trips[trip.trainNumber];
+    const perf = lookupByTrainNumber(performance?.trips, trip.trainNumber);
     const entity = getRealtimeTrip(trip.trainNumber);
     const isRealtimeActive = !!entity;
     const realtimeData = getTripRealtimeRenderData(trip);
