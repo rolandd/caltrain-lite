@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright 2026 Roland Dreier <roland@rolandd.dev>
 
-import type { RealtimeStatus } from '@packages/types/schema';
+import type { RealtimeStatus, ServiceAlert } from '@packages/types/schema';
 import { assert } from 'typia';
 import { getTransitDateStr } from './time';
+
+const MODIFIED_SCHEDULE_PREFIX_RE = /^M(?=\d)/;
 
 export interface RealtimeStatusWithMetadata extends RealtimeStatus {
   /** Initial age of the feed in milliseconds at the moment it was fetched. */
@@ -55,4 +57,57 @@ export function isRealtimeApplicable<T extends RealtimeStatus>(
 ): realtime is T {
   if (!dateStr || !realtime) return false;
   return dateStr === todayStr;
+}
+
+/**
+ * Strip the leading "M" prefix that Caltrain adds to train numbers on Modified
+ * Weekday schedules (e.g. day after Thanksgiving, Christmas Eve: "M162" -> "162").
+ *
+ * Caltrain's static GTFS prefixes these trip IDs with "M", whereas 511.org's
+ * GTFS-RT feeds and historical performance profiles report the underlying numeric
+ * train number. Returns `undefined` if `trainNum` has no modified-schedule prefix.
+ */
+export function getUnprefixedTrainNumber(trainNum: string): string | undefined {
+  if (!MODIFIED_SCHEDULE_PREFIX_RE.test(trainNum)) return undefined;
+  return trainNum.slice(1);
+}
+
+/**
+ * Look up an entry in a train-keyed map (e.g. `realtime.byTrip` or
+ * `performance.trips`) by train number. Tries an exact match first; if that
+ * misses for a modified-schedule train (e.g. "M162"), retries without the
+ * leading "M" ("162").
+ */
+export function lookupByTrainNumber<T>(
+  record: Record<string, T> | null | undefined,
+  trainNum: string,
+): T | undefined {
+  if (!record) return undefined;
+  if (Object.hasOwn(record, trainNum) && record[trainNum] !== undefined) {
+    return record[trainNum];
+  }
+  const fallback = getUnprefixedTrainNumber(trainNum);
+  if (fallback !== undefined && Object.hasOwn(record, fallback) && record[fallback] !== undefined) {
+    return record[fallback];
+  }
+  return undefined;
+}
+
+/**
+ * Find the first service alert referencing a train number, trying an exact
+ * match first and falling back to the unprefixed train number on modified-
+ * schedule days (e.g. "M162" -> "162").
+ */
+export function findAlertForTrain(
+  alerts: readonly ServiceAlert[] | null | undefined,
+  trainNum: string,
+): ServiceAlert | undefined {
+  if (!alerts?.length) return undefined;
+  const exact = alerts.find((a) => a.tr?.includes(trainNum));
+  if (exact) return exact;
+  const fallback = getUnprefixedTrainNumber(trainNum);
+  if (fallback !== undefined) {
+    return alerts.find((a) => a.tr?.includes(fallback));
+  }
+  return undefined;
 }
